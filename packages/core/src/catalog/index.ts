@@ -4,4 +4,5 @@ export * from "./search-text";
 export * from "./feed-parse";
 export * from "./plan";
 export * from "./sanitize";
+export * from "./storefront-menu";
 export * from "./xml-entities";
