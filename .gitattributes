@@ -1,0 +1,13 @@
+# Единые переводы строк (LF) для всех текстовых файлов, чтобы Windows и Docker/Linux не спорили о каждой строке.
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Бинарные файлы
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.woff2 binary

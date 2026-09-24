@@ -1,0 +1,1173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE yml_catalog SYSTEM "shops.dtd">
+<price date = "2026-09-24 14:44">
+<shop>
+<name>Интернет-магазин VITALS</name>
+<currency code="UAH">1.00</currency>
+<catalog>
+<category id="99169" parentId="990">Акумуляторна техніка</category>
+<category id="99275" parentId="99169">Серія SmartLine+</category>
+<category id="99282" parentId="99275">Садово-паркова техніка</category>
+<category id="99283" parentId="99275">Електроінструмент</category>
+<category id="99280" parentId="99275">Акумулятори та зарядні пристрої</category>
+<category id="99281" parentId="99275">Кейси</category>
+<category id="99426" parentId="99275">Портативні акустичні системи</category>
+<category id="99370" parentId="99169">Серія М-Type 12</category>
+<category id="99377" parentId="99370">Садово-паркова техніка</category>
+<category id="99372" parentId="99370">Електроінструмент</category>
+<category id="99375" parentId="99370">Акумулятори</category>
+<category id="99374" parentId="99370">Зарядні пристрої</category>
+<category id="99371" parentId="99169">Серія М-Type 18</category>
+<category id="99378" parentId="99371">Садово-паркова техніка</category>
+<category id="99405" parentId="99378">Акумуляторні повітродувки</category>
+<category id="99409" parentId="99378">Акумуляторні культиватори</category>
+<category id="99408" parentId="99378">Акумуляторні кущорізи</category>
+<category id="99407" parentId="99378">Акумуляторні мийки високого тиску</category>
+<category id="99406" parentId="99378">Акумуляторні обприскувачі</category>
+<category id="99402" parentId="99378">Акумуляторні пили</category>
+<category id="99404" parentId="99378">Акумуляторні секатори</category>
+<category id="99403" parentId="99378">Акумуляторні тримери та коси</category>
+<category id="99410" parentId="99378">Телескопічні подовжувачі</category>
+<category id="99373" parentId="99371">Електроінструмент</category>
+<category id="99392" parentId="99371">Обігрівачі газові</category>
+<category id="99376" parentId="99371">Акумулятори</category>
+<category id="99369" parentId="99371">Зарядні пристрої</category>
+<category id="9976" parentId="990">Електроінструмент</category>
+<category id="99136" parentId="9976">Кутові шліфувальні машини</category>
+<category id="99114" parentId="9976">Пили циркулярні</category>
+<category id="99116" parentId="9976">Пили шабельні</category>
+<category id="99115" parentId="9976">Пили торцювальні</category>
+<category id="99117" parentId="9976"> Пили відрізні</category>
+<category id="99345" parentId="9976">Плиткорізи</category>
+<category id="99113" parentId="9976">Bідбійні молотки</category>
+<category id="99122" parentId="9976">Фени будівельні</category>
+<category id="99124" parentId="9976">Фарбопульти</category>
+<category id="99273" parentId="9976">Верстати свердлильні</category>
+<category id="99112" parentId="9976">Верстати для заточування свердел</category>
+<category id="99118" parentId="9976">Фрезер</category>
+<category id="99109" parentId="9976">Дрилі</category>
+<category id="99129" parentId="99109">Дрилі ударні</category>
+<category id="99110" parentId="9976">Перфоратори</category>
+<category id="99119" parentId="9976">Лобзики</category>
+<category id="99208" parentId="9976">Шлiфувальнi машини для стiн та стелi</category>
+<category id="99121" parentId="9976">Шліфувальний інструмент</category>
+<category id="99134" parentId="99121">Cтрічкові шліфувальні машини</category>
+<category id="99132" parentId="99121">Віброшліфмашини</category>
+<category id="99347" parentId="99121">Верстати точильні</category>
+<category id="99175" parentId="99121">Орбітальні шліфмашини</category>
+<category id="99123" parentId="9976">Будівельні міксери</category>
+<category id="99176" parentId="9976">Пилососи будівельні</category>
+<category id="99236" parentId="99176">Будівельні пилососи</category>
+<category id="99237" parentId="99176">Аксесуари для будівельних пилососів</category>
+<category id="99272" parentId="9976">Паяльники для пластикових труб</category>
+<category id="99133" parentId="9976">Гравери</category>
+<category id="99328" parentId="9976">Викрутки акумуляторні</category>
+<category id="99111" parentId="9976">Гайкокрути та гвинтокрути мережеві</category>
+<category id="99120" parentId="9976">Рубанки</category>
+<category id="99135" parentId="9976">Полірувальна машина</category>
+<category id="9970" parentId="990">Садово-паркова техніка</category>
+<category id="99400" parentId="9970">Кущорізи бензинові</category>
+<category id="9982" parentId="9970"> Акумуляторна техніка</category>
+<category id="99379" parentId="9982">Серія SmartLine+</category>
+<category id="99380" parentId="99379">Садово-паркова техніка</category>
+<category id="99381" parentId="99379">Акумулятори та зарядні пристрої</category>
+<category id="99382" parentId="9982">Серія М-Type 12</category>
+<category id="99385" parentId="99382">Садово-паркова техніка</category>
+<category id="99383" parentId="99382">Акумулятори</category>
+<category id="99384" parentId="99382">Зарядні пристрої</category>
+<category id="99386" parentId="9982">Серія М-Type 18</category>
+<category id="99387" parentId="99386">Садово-паркова техніка</category>
+<category id="99427" parentId="99387">Акумуляторні повітродувки</category>
+<category id="99428" parentId="99387">Акумуляторні культиватори</category>
+<category id="99429" parentId="99387">Акумуляторні кущорізи</category>
+<category id="99430" parentId="99387">Акумуляторні мийки високого тиску</category>
+<category id="99431" parentId="99387">Акумуляторні обприскувачі</category>
+<category id="99432" parentId="99387">Акумуляторні пили</category>
+<category id="99433" parentId="99387">Акумуляторні секатори</category>
+<category id="99434" parentId="99387">Акумуляторні тримери та коси</category>
+<category id="99435" parentId="99387">Телескопічні подовжувачі</category>
+<category id="99388" parentId="99386">Акумулятори</category>
+<category id="99389" parentId="99386">Зарядні пристрої</category>
+<category id="9984" parentId="9970"> Бензопили ланцюгові</category>
+<category id="9986" parentId="9970"> Електропилки ланцюгові</category>
+<category id="9987" parentId="9970"> Аксесуари для ланцюгових пил</category>
+<category id="9988" parentId="9970"> Верстати для заточування ланцюгів</category>
+<category id="9989" parentId="9970">Гілкоподрібнювачі</category>
+<category id="99396" parentId="9970">Дровоколи</category>
+<category id="9991" parentId="9970">Пилососи садові</category>
+<category id="9990" parentId="9970">Повітродувки</category>
+<category id="9992" parentId="9970"> Висоторіз електричний</category>
+<category id="9993" parentId="9970">Газонокосарки</category>
+<category id="99104" parentId="9993">Газонокосарки бензинові</category>
+<category id="99105" parentId="9993">Газонокосарки електричні</category>
+<category id="9994" parentId="9970">Eлектрокоси</category>
+<category id="9995" parentId="9970">Тримери електричні</category>
+<category id="9996" parentId="9970">Мотокоси</category>
+<category id="9997" parentId="9970">Аксесуари для мотокос і тримерів</category>
+<category id="99390" parentId="9970">Обприскувачі</category>
+<category id="9998" parentId="99390">Мотообприскувачі</category>
+<category id="99391" parentId="99390">Обприскувачі акумуляторні</category>
+<category id="9999" parentId="9970">Мийки високого тиску</category>
+<category id="99100" parentId="9970">Аксесуари для мийок високого тиску</category>
+<category id="99101" parentId="9970">Мотобури</category>
+<category id="99102" parentId="9970">Аксесуари для мотобурів</category>
+<category id="99103" parentId="9970">Мотори човнові</category>
+<category id="99344" parentId="990">Ручний інструмент та витратні матеріали</category>
+<category id="99161" parentId="99344">Садовий ручний інструмент</category>
+<category id="99342" parentId="99161">Лопати</category>
+<category id="99329" parentId="99161">Шланги для поливу</category>
+<category id="99164" parentId="99161">Секатори</category>
+<category id="99165" parentId="99161">Гілкорізи, ножиці для живої огорожі</category>
+<category id="99324" parentId="99161">Дощувачі для поливу</category>
+<category id="99166" parentId="99161">Пили садові</category>
+<category id="99167" parentId="99161">Висоторізи, плодозбірники</category>
+<category id="99325" parentId="99161">Конектори, перехідники</category>
+<category id="99326" parentId="99161">Насадки для поливу та розпилення</category>
+<category id="99168" parentId="99161">Сокири та колуни</category>
+<category id="99327" parentId="99161">Візки та напрямні для шлангів</category>
+<category id="99290" parentId="99344">Будівельно-оздоблювальний інструмент</category>
+<category id="99291" parentId="99290">Ножі будівельні</category>
+<category id="99300" parentId="99290">Міксери для фарб та сумішей</category>
+<category id="99301" parentId="99290">Пістолети для монтажної піни</category>
+<category id="99299" parentId="99290">Пістолети для герметиків</category>
+<category id="99287" parentId="99344">Кріпильний інструмент</category>
+<category id="99331" parentId="99287">Заклепки</category>
+<category id="99337" parentId="99287">Заклепники</category>
+<category id="99288" parentId="99287">Пальники на газовий балон</category>
+<category id="99297" parentId="99287">Скоби для степлера</category>
+<category id="99311" parentId="99287">Степлери будівельні</category>
+<category id="99265" parentId="99344">Вимірювальний інструмент</category>
+<category id="99266" parentId="99265">Будівельні рівні</category>
+<category id="99270" parentId="99265">Будівельні рулетки</category>
+<category id="99216" parentId="99344">Слюсарно-столярний інструмент</category>
+<category id="99336" parentId="99216">Аксесуари до шурупокрута</category>
+<category id="99340" parentId="99216">Напилки</category>
+<category id="99341" parentId="99216">Стамески</category>
+<category id="99338" parentId="99216">Стрипери</category>
+<category id="99339" parentId="99216">Труборізи</category>
+<category id="99252" parentId="99216">Бокорізи</category>
+<category id="99319" parentId="99216">Біти та тримачі</category>
+<category id="99253" parentId="99216">Довгогубці</category>
+<category id="99254" parentId="99216">Плоскогубці</category>
+<category id="99255" parentId="99216">Кліщі переставні</category>
+<category id="99256" parentId="99216">Кабелерізи</category>
+<category id="99257" parentId="99216">Кліщі затискні</category>
+<category id="99258" parentId="99216">Ключі розвідні</category>
+<category id="99259" parentId="99216">Ключі трубні</category>
+<category id="99320" parentId="99216">Набори біт</category>
+<category id="99321" parentId="99216">Набори головок торцевих</category>
+<category id="99260" parentId="99216">Ножиці</category>
+<category id="99261" parentId="99216">Ножиці по металу</category>
+<category id="99317" parentId="99216">Ножівки</category>
+<category id="99318" parentId="99216">Пиляльні полотна</category>
+<category id="99262" parentId="99216">Молотки</category>
+<category id="99263" parentId="99216">Киянки</category>
+<category id="99264" parentId="99216">Кувалди</category>
+<category id="99243" parentId="99216">Викрутки та набори викруток</category>
+<category id="99245" parentId="99243">Викрутки</category>
+<category id="99244" parentId="99243">Набори викруток</category>
+<category id="99238" parentId="99216">Струбцини</category>
+<category id="99217" parentId="99216">Лещата</category>
+<category id="99312" parentId="99216">Набір шестигранних ключів</category>
+<category id="99195" parentId="99344">Витратні матеріали</category>
+<category id="99212" parentId="99195">Диски алмазні</category>
+<category id="99211" parentId="99212">Диски алмазні по плитці</category>
+<category id="99213" parentId="99212">Диски алмазні універсальні</category>
+<category id="99214" parentId="99212">Диски алмазні сегментні</category>
+<category id="99215" parentId="99212">Диски алмазні Турбо</category>
+<category id="99205" parentId="99195">Диски відрізні по металу</category>
+<category id="99204" parentId="99195">Диски зачисні по металу </category>
+<category id="99223" parentId="99195">Диски пильні</category>
+<category id="99225" parentId="99223">Диски пильні без напайки</category>
+<category id="99224" parentId="99223">Диски пильні з напайкою</category>
+<category id="99332" parentId="99195">Набори свердл</category>
+<category id="99333" parentId="99195">Свердла пікоподібні по склу та плитці</category>
+<category id="99334" parentId="99195">Свердла по деревині пір'яні</category>
+<category id="99330" parentId="99195">Свердла по металу</category>
+<category id="99335" parentId="99195">Свердла по металу ступінчасті</category>
+<category id="99226" parentId="99195">Стрічка шліфувальна</category>
+<category id="99196" parentId="99195">Бури по бетону</category>
+<category id="99197" parentId="99195">Зубила</category>
+<category id="99198" parentId="99195">Коронки по бетону</category>
+<category id="99199" parentId="99195">Набори бурів</category>
+<category id="99200" parentId="99195">Свердла по бетону</category>
+<category id="99201" parentId="99195">Диски універсальні</category>
+<category id="99202" parentId="99195">Круги шліфувальні</category>
+<category id="99203" parentId="99195">Круги пелюсткові торцеві</category>
+<category id="99227" parentId="99195">Сітка абразивна</category>
+<category id="99228" parentId="99195">Терки для шліфування</category>
+<category id="99239" parentId="99195">Щітки з металу</category>
+<category id="99240" parentId="99239">Щітки для КШМ</category>
+<category id="99241" parentId="99239">Щітки на дриль</category>
+<category id="99242" parentId="99239">Щітки ручні</category>
+<category id="99292" parentId="99344">Автомобільний інструмент</category>
+<category id="99294" parentId="99292">Набори інструментів</category>
+<category id="99295" parentId="99292">Набори торцевих головок</category>
+<category id="99296" parentId="99292">Тріскачки</category>
+<category id="99293" parentId="99292">Набори ключів</category>
+<category id="99284" parentId="99344">Транспортування та зберігання</category>
+<category id="99285" parentId="99284">Ящики для інструментів</category>
+<category id="99286" parentId="99284">Органайзери</category>
+<category id="99360" parentId="990">Будівельна хімія</category>
+<category id="99361" parentId="99360">Піна монтажна</category>
+<category id="99362" parentId="99360">Піна-клей</category>
+<category id="99363" parentId="99360">Герметики, клеї</category>
+<category id="99218" parentId="990">Лазерна техніка</category>
+<category id="99219" parentId="99218">Лазерні рівні</category>
+<category id="99220" parentId="99218">Лазерні далекоміри</category>
+<category id="99221" parentId="99218">Аксесуари до лазерної техніки</category>
+<category id="99222" parentId="99218">Приймач для лазерного рівня</category>
+<category id="9971" parentId="990"> Зварювальне обладнання</category>
+<category id="99106" parentId="9971">Зварювальні апарати</category>
+<category id="99107" parentId="9971">Маски зварника</category>
+<category id="99170" parentId="9971"> Зварювальні електроди</category>
+<category id="99174" parentId="9971">Зварювальні тримачі та маса</category>
+<category id="99173" parentId="9971">Зварювальні магніти</category>
+<category id="99231" parentId="990">Обігрівачі</category>
+<category id="99232" parentId="99231">Електрообігрівачі</category>
+<category id="99235" parentId="99232">Електричні конвектори</category>
+<category id="99234" parentId="99232">Керамічні панелі</category>
+<category id="99153" parentId="99231">Промислові обігрівачі</category>
+<category id="99157" parentId="99153">Обігрівачі газові</category>
+<category id="99158" parentId="99153">Обігрівачі дизельні</category>
+<category id="99159" parentId="99153">Обігрівачі електричні</category>
+<category id="9981" parentId="990">Силова техніка</category>
+<category id="99138" parentId="9981">Генератори</category>
+<category id="99143" parentId="99138">Генератори бензинові</category>
+<category id="99144" parentId="99138">Генератори «газ/бензин»</category>
+<category id="99145" parentId="99138">Генератори дизельні</category>
+<category id="99365" parentId="99138">Генератори інверторні</category>
+<category id="99139" parentId="9981">Двигуни</category>
+<category id="99359" parentId="99139">Аксесуари та комплектуючі</category>
+<category id="99146" parentId="99139">Двигуни бензинові</category>
+<category id="99147" parentId="99139">Двигуни дизельні</category>
+<category id="99140" parentId="9981">Мотопомпи</category>
+<category id="99141" parentId="9981">Компресори</category>
+<category id="99367" parentId="99141">Компресори повітряні</category>
+<category id="99366" parentId="99141">Компресори автомобільні</category>
+<category id="99343" parentId="9981">Портативні акумуляторні станції</category>
+<category id="99142" parentId="9981">Зарядні та пуско-зарядні пристрої</category>
+<category id="99172" parentId="9981"> Джерела безперебійного живлення</category>
+<category id="99171" parentId="9981">Стабілізатори напруги</category>
+<category id="99401" parentId="9981">Акумулятори для ДБЖ та інверторів</category>
+<category id="9973" parentId="990">Будівельне обладнання</category>
+<category id="99148" parentId="9973">Бензорізи</category>
+<category id="99149" parentId="9973">Віброплити</category>
+<category id="99150" parentId="9973">Віброрейки</category>
+<category id="99151" parentId="9973">Вібротрамбовки</category>
+<category id="99152" parentId="9973">Затиральні машини</category>
+<category id="99155" parentId="9973">Бетонозмішувачі</category>
+<category id="99156" parentId="9973">Тачки садово-будівельні</category>
+<category id="9975" parentId="990">Технічні оливи</category>
+<category id="99442" parentId="990">Драбини</category>
+<category id="99443" parentId="99442">Драбини двосторонні</category>
+<category id="99444" parentId="99442">Драбини універсальні</category>
+<category id="99445" parentId="99442">Стремянки</category>
+<category id="99160" parentId="990">Архів продукції</category>
+<category id="99422" parentId="99160">Акумуляторна техніка</category>
+<category id="99421" parentId="99422">Серія SmartLine+</category>
+<category id="99423" parentId="99421">Електроінструмент</category>
+<category id="99437" parentId="99422">Серія М18</category>
+<category id="99438" parentId="99437">Садово-паркова техніка</category>
+<category id="99439" parentId="99438">Акумуляторні пили</category>
+<category id="99274" parentId="99422">Акумуляторна техніка SmartLine</category>
+<category id="99276" parentId="99274">Акумулятори та зарядні пристрої</category>
+<category id="99277" parentId="99274">Кейси</category>
+<category id="99278" parentId="99274">Садово-паркова техніка</category>
+<category id="99279" parentId="99274">Електроінструмент</category>
+<category id="99302" parentId="99160">Будівельне обладнання</category>
+<category id="99358" parentId="99302">Бензорізи</category>
+<category id="99303" parentId="99302">Бетономішалки</category>
+<category id="99357" parentId="99302">Віброплити</category>
+<category id="99304" parentId="99302">Тачки садово-будівельні</category>
+<category id="99308" parentId="99160">Обігрівачі</category>
+<category id="99307" parentId="99308">Обігрівачі електричні</category>
+<category id="99424" parentId="99308">Промислові обігрівачі</category>
+<category id="99441" parentId="99424">Обігрівачі газові</category>
+<category id="99425" parentId="99424">Обігрівачі дизельні</category>
+<category id="99209" parentId="99160">Садово-паркова техніка</category>
+<category id="99364" parentId="99209">Аксесуари для ланцюгових пил</category>
+<category id="99355" parentId="99209">Аксесуари для мийок високого тиску</category>
+<category id="99352" parentId="99209">Аксесуари для мотобурів</category>
+<category id="99310" parentId="99209">Акумуляторна техніка</category>
+<category id="99298" parentId="99209">Бензопили ланцюгові</category>
+<category id="99349" parentId="99209">Гілкоподрібнювачі</category>
+<category id="99393" parentId="99209">Газонокосарки</category>
+<category id="99394" parentId="99393">Газонокосарки бензинові</category>
+<category id="99395" parentId="99393">Газонокосарки електричні</category>
+<category id="99268" parentId="99209">Мийки високого тиску</category>
+<category id="99351" parentId="99209">Мотобури</category>
+<category id="99397" parentId="99209">Обприскувачі</category>
+<category id="99398" parentId="99397">Обприскувачі акумуляторні</category>
+<category id="99350" parentId="99209">Пилососи садові</category>
+<category id="99210" parentId="99209">Мотокоси</category>
+<category id="99229" parentId="99209">Повітродувки</category>
+<category id="99230" parentId="99209">Електропилки ланцюгові</category>
+<category id="99309" parentId="99160">Технічні оливи</category>
+<category id="99187" parentId="99160">Зварювальне обладнання</category>
+<category id="99251" parentId="99187">Маски зварника</category>
+<category id="99188" parentId="99187">Зварювальні апарати</category>
+<category id="99177" parentId="99160">Електроінструмент</category>
+<category id="99322" parentId="99177">Будівельні пилососи</category>
+<category id="99348" parentId="99322">Аксесуари для будівельних пилососів</category>
+<category id="99411" parentId="99177">Відбійні молотки</category>
+<category id="99323" parentId="99177">Гравери</category>
+<category id="99414" parentId="99177">Дрилі</category>
+<category id="99415" parentId="99414">Дрилі безударні</category>
+<category id="99416" parentId="99414">Дрилі ударні</category>
+<category id="99412" parentId="99177">Дрилі-шурупокрути акумуляторні</category>
+<category id="99413" parentId="99177">Дрилі-шурупокрути мережеві</category>
+<category id="99440" parentId="99177">Лобзики</category>
+<category id="99436" parentId="99177">Пили циркулярні</category>
+<category id="99417" parentId="99177">Шліфувальний інструмент</category>
+<category id="99419" parentId="99417">Cтрічкові шліфувальні машини</category>
+<category id="99418" parentId="99417">Електричний напилок</category>
+<category id="99420" parentId="99177">Штроборізи</category>
+<category id="99181" parentId="99177">Кутові шліфувальні машини</category>
+<category id="99182" parentId="99177">Aкумуляторний інструмент</category>
+<category id="99246" parentId="99182">Шуруповерти акумуляторні</category>
+<category id="99183" parentId="99182">Аксесуари для аккум. інструменту</category>
+<category id="99184" parentId="99182">Гайковерти акумуляторні</category>
+<category id="99180" parentId="99177">Будівельні міксери</category>
+<category id="99179" parentId="99177">Перфоратори</category>
+<category id="99185" parentId="99177">Пили торцювальні</category>
+<category id="99189" parentId="99177">Фрезери</category>
+<category id="99190" parentId="99177">Рубанки</category>
+<category id="99186" parentId="99177">Фени будівельні</category>
+<category id="99178" parentId="99177">Шлiфувальнi машини для стiн та стелi</category>
+<category id="99191" parentId="99160">Силова техніка</category>
+<category id="99353" parentId="99191">Двигуни</category>
+<category id="99267" parentId="99353">Двигуни бензинові</category>
+<category id="99354" parentId="99353">Двигуни дизельні</category>
+<category id="99306" parentId="99191">Джерела безперебійного живлення</category>
+<category id="99269" parentId="99191">Мотопомпи</category>
+<category id="99368" parentId="99191">Портативні акумуляторні станції</category>
+<category id="99305" parentId="99191">Стабілізатори напруги</category>
+<category id="99192" parentId="99191">Генератори</category>
+<category id="99356" parentId="99192">Генератори дизельні</category>
+<category id="99193" parentId="99192">Генератори бензинові</category>
+<category id="99194" parentId="99192">Генератори «газ/бензин»</category>
+<category id="99249" parentId="99191">Компресори</category>
+<category id="99399" parentId="99249">Компресори автомобільні</category>
+<category id="99250" parentId="99191">Зарядні та пуско-зарядні пристрої</category>
+</catalog>
+<items>
+<item id="992486">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-spteh-pl/pl-tsp-akk-vm-akz-1815gk-bl-pr</url>
+<oldprice>1909.0000</oldprice>
+<price>1599.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000237651</vendorCode>
+<articlCode>237651</articlCode>
+<categoryId>99432</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Номінальна потужність, Вт">400</param>
+<param name="Довжина шини, дюйм (см)">6&quot; (15)</param>
+<param name="Крок ланцюга, дюйм (мм)">1/4&quot; (6,35)</param>
+<param name="Кількість ланок ланцюга, од.">37</param>
+<param name="Швидкість ланцюга, м/с">8</param>
+<param name="Габарити паковання, мм">400х340х110</param>
+<param name="Маса нетто/брутто, кг">2,56/2,64</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-master-akz-1815gk-bl-premium/pila-lancyugova-akumulyatorna-vitals-master-akz-1815gk-bl-premium-01-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-master-akz-1815gk-bl-premium/pila-lancyugova-akumulyatorna-vitals-master-akz-1815gk-bl-premium-02-1000x1000.jpg</picture>
+<name>Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис пили ланцюгової акумуляторної Vitals Master AKZ 1815gk BL Premium&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium&lt;/strong&gt; — це сучасний, компактний і продуктивний інструмент, розроблений для точного та акуратного різання деревини, догляду за садом і виконання щоденних господарських завдань. Акумуляторне живлення забезпечує повну автономність та свободу рухів, дозволяючи працювати без обмежень кабелем і легко діставати до важкодоступних місць. Продумана, добре збалансована конструкція в поєднанні з малою вагою та ергономічним руківʼям гарантує впевнений контроль інструмента і комфорт під час тривалої роботи. Завдяки простому керуванню та високій керованості модель стане відмінним вибором як для досвідчених користувачів, так і для новачків, яким важлива безпечна, зручна та ефективна робота без зайвих зусиль.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Потужний та продуктивний двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium&lt;/b&gt; оснащена сучасним безщітковим електродвигуном з потужністю 400 Вт і робочою напругою 18 В, що забезпечує стабільну продуктивність у повсякденній експлуатації. Такий тип двигуна вирізняється підвищеною ефективністю передачі енергії, завдяки чому інструмент демонструє впевнену роботу під навантаженням. &lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;Використання безщіткової технології дозволяє зменшити енергоспоживання, що суттєво подовжує час автономної роботи на одному заряді акумулятора. Відсутність щіток мінімізує втрати на тертя, знижує нагрівання та забезпечує рівномірну роботу без просідань потужності. Крім того, безщітковий двигун вирізняється підвищеною надійністю та зносостійкістю, не потребує регулярного обслуговування і має тривалий ресурс служби.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Якісні матеріали та вузли&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium&lt;/b&gt; спроектована з урахуванням підвищених вимог до міцності, зносостійкості та тривалого ресурсу роботи. Під час виробництва застосовуються якісні матеріали, які забезпечують стабільну експлуатацію інструмента навіть за умов регулярних навантажень.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;Робочі вузли — ланцюг, шина та редуктор — виготовлені з матеріалів, стійких до зношування та впливу корозії, що дозволяє зберігати ефективність різання протягом тривалого часу. Конструкція редуктора доповнена надійними підшипниками, які зменшують тертя, забезпечують плавну передачу зусилля та подовжують строк служби механізмів.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;Корпус мініпили виконаний із міцного ABS-пластику, який вирізняється високою ударостійкістю та добре витримує механічні навантаження. Завдяки цьому інструмент зберігає привабливий зовнішній вигляд і надійність навіть під час активного використання в побутових умовах.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Зручність та комфорт роботи&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium&lt;/b&gt; вирізняється малою вагою, низьким рівнем вібрації та відмінним балансуванням, що суттєво знижує навантаження на руки користувача. Завдяки цьому інструмент забезпечує стабільний контроль і дозволяє працювати тривалий час без відчуття втоми, навіть під час виконання повторюваних операцій.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Система безключового натягу ланцюга&lt;/b&gt; — це практичне рішення, яке дозволяє швидко та точно відрегулювати натяг ланцюга без використання додаткових інструментів. Налаштування здійснюється вручну за лічені секунди, що дає змогу оперативно підтримувати оптимальний стан ланцюга під час роботи, значно спрощує обслуговування інструмента та робить роботу з пилкою максимально зручною.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Система гальмування ланцюга&lt;/b&gt; для максимального захисту користувача пилка оснащена електронним гальмом ланцюга, що миттєво зупиняє його рух одразу після відпускання кнопки живлення. Таке рішення мінімізує ризик травмування та підвищує загальний рівень безпеки під час роботи.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Кнопка блокування від випадкового увімкнення&lt;/b&gt; запобігає ненавмисному запуску пилки, що особливо важливо під час транспортування або зберігання інструмента.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Автоматична система змащення&lt;/b&gt; забезпечує постійну подачу оптимальної кількості мастила на ланцюг і шину. Це знижує тертя та нагрівання, захищає робочі елементи від корозії, сповільнює зношування та суттєво подовжує строк їх служби, водночас підвищуючи ефективність різання.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Руків’я з прогумованим покриттям&lt;/b&gt; гарантує надійний хват, запобігає ковзанню руки та забезпечує точне й упевнене керування мініпилкою за будь-яких умов.&lt;/p&gt; &lt;h2 style=&amp;quot;text-align: justify;&amp;quot;&gt;Комплектація моделі Vitals Master AKZ 1815gk BL Premium:&lt;/h2&gt; &lt;ul&gt; &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium – 1 од.;&lt;/li&gt; &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;напрямна шина 6&amp;quot; – 1 од.;&lt;/li&gt; &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;пильний ланцюг – 1 од.;&lt;/li&gt; &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;пластиковий кейс – 1 од.&lt;/li&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;&lt;i&gt;*Акумулятор та зарядний пристрій до комплекту постачання не входять.&lt;/i&gt;&lt;/b&gt;&lt;/p&gt; &lt;/ul&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals Master AKZ 1815gk BL Premium:&lt;/h2&gt;
+&lt;ul&gt;
+	&lt;li&gt;безщітковий двигун;&lt;/li&gt;
+	&lt;li&gt;система безключового натягу ланцюга;&lt;/li&gt;
+	&lt;li&gt;автоматична подача мастила;&lt;/li&gt;
+	&lt;li&gt;електроне гальмо ланцюга;&lt;/li&gt;
+	&lt;li&gt;запобіжник від випадкового увімкнення;&lt;/li&gt;
+	&lt;li&gt;прогумоване руків’я.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992487">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-spteh-pl/pl-tsp-akk-vm-akz-1815gk-bl-pr-kt</url>
+<oldprice>2539.0000</oldprice>
+<price>2129.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000237652</vendorCode>
+<articlCode>237652</articlCode>
+<categoryId>99432</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Номінальна потужність, Вт">400</param>
+<param name="Довжина шини, дюйм (см)">6&quot; (15)</param>
+<param name="Крок ланцюга, дюйм (мм)">1/4&quot; (6,35)</param>
+<param name="Кількість ланок ланцюга, од.">37</param>
+<param name="Швидкість ланцюга, м/с">8</param>
+<param name="Габарити паковання, мм">400х340х110</param>
+<param name="Маса нетто/брутто, кг">2,56/2,64</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-cepnaya-akkumulyatornaya-vitals-master-akz-1815gk-bl-premium-kit/pila-lancyugova-akumulyatorna-vitals-master-akz-1815gk-bl-premium-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-cepnaya-akkumulyatornaya-vitals-master-akz-1815gk-bl-premium-kit/pila-lancyugova-akumulyatorna-vitals-master-akz-1815gk-bl-premium-kit-02-1000x1000.jpg</picture>
+<name>Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium Kit</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис пили ланцюгової акумуляторної Vitals Master AKZ 1815gk BL Premium Kit&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium Kit&lt;/strong&gt; — це сучасний, компактний і продуктивний інструмент, розроблений для точного та акуратного різання деревини, догляду за садом і виконання щоденних господарських завдань. Акумуляторне живлення забезпечує повну автономність та свободу рухів, дозволяючи працювати без обмежень кабелем і легко діставати до важкодоступних місць. Продумана, добре збалансована конструкція в поєднанні з малою вагою та ергономічним руківʼям гарантує впевнений контроль інструмента і комфорт під час тривалої роботи. Завдяки простому керуванню та високій керованості модель стане відмінним вибором як для досвідчених користувачів, так і для новачків, яким важлива безпечна, зручна та ефективна робота без зайвих зусиль.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Потужний та продуктивний двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals Master AKZ 1815gk BL Premium Kit&lt;/b&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals Master AKZ 1815gk BL Premium Kit:&lt;/h2&gt;
+&lt;ul&gt;
+	&lt;li&gt;безщітковий двигун;&lt;/li&gt;
+	&lt;li&gt;система безключового натягу ланцюга;&lt;/li&gt;
+	&lt;li&gt;автоматична подача мастила;&lt;/li&gt;
+	&lt;li&gt;електроне гальмо ланцюга;&lt;/li&gt;
+	&lt;li&gt;запобіжник від випадкового увімкнення;&lt;/li&gt;
+	&lt;li&gt;прогумоване руків’я.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992472">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-spteh-pl/pila-lc-akk-akz-1820ak-bl-kit</url>
+<price>3775.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000237654</vendorCode>
+<articlCode>237654</articlCode>
+<categoryId>99432</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Номінальна потужність, Вт">500</param>
+<param name="Довжина шини, дюйм (см)">8&quot; (20)</param>
+<param name="Крок ланцюга, дюйм (мм)">1/4&quot; (6,35)</param>
+<param name="Кількість ланок ланцюга, од.">48</param>
+<param name="Швидкість ланцюга, м/с">12</param>
+<param name="Габарити паковання, мм">480×108×305</param>
+<param name="Маса нетто/брутто, кг">4,0/4,17</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-professional-akz-1820ak-bl-kit/pila-lancyugova-akumulyatorna-vitals-professional-akz-1820ak-bl-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-professional-akz-1820ak-bl-kit/pila-lancyugova-akumulyatorna-vitals-professional-akz-1820ak-bl-kit-02-1000x1000.jpg</picture>
+<name>Пила ланцюгова акумуляторна Vitals Professional AKZ 1820ak BL Kit</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;&lt;b&gt;Опис пили ланцюгової акумуляторної Vitals Professional AKZ 1820ak BL Kit&lt;/b&gt;&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Пила ланцюгова акумуляторна Vitals Professional AKZ 1820ak BL Kit&lt;/strong&gt; — це сучасний, компактний та продуктивний інструмент, створений для точного різання деревини, догляду за садом та виконання дрібних господарських робіт. Модель працює від акумулятора, що забезпечує повну свободу рухів без кабелів і доступ до важкодоступних зон без електромережі. Збалансована конструкція, легка вага та зручне ергономічне руківʼя дають змогу працювати довше без утоми. Пила чудово контролюється під час роботи, що робить її оптимальним вибором навіть для користувачів із мінімальним досвідом.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Потужний та продуктивний двигун&lt;/b&gt;&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals Professional AKZ 1820ak BL Kit&lt;/b&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals Professional AKZ 1820ak BL Kit:&lt;/h2&gt;
+&lt;ul&gt;
+	&lt;li&gt;безщітковий двигун;&lt;/li&gt;
+	&lt;li&gt;система автоматичного натягу ланцюга;&lt;/li&gt;
+	&lt;li&gt;автоматична подача мастила;&lt;/li&gt;
+	&lt;li&gt;електроне гальмо ланцюга;&lt;/li&gt;
+	&lt;li&gt;запобіжник від випадкового увімкнення;&lt;/li&gt;
+	&lt;li&gt;прогумоване руків’я;&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992393">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-vzdhdv/pvtrd-akk-alp-1850n-bl</url>
+<oldprice>1779.0000</oldprice>
+<price>1455.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235899</vendorCode>
+<articlCode>235899</articlCode>
+<categoryId>99427</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Потужність, Вт">480</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Швидкість повітряного потоку, м/с">36</param>
+<param name="Продуктивність повітряного потоку, м3/год">498</param>
+<param name="Габарити паковання, мм">498</param>
+<param name="Маса нетто/брутто, кг">1,4/1,8</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/povitroduvki/vitals-master-alp-1850n-bl/povitroduvka-akumulyatorna-vitals-master-alp-1850n-bl-01-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/povitroduvki/vitals-master-alp-1850n-bl/povitroduvka-akumulyatorna-vitals-master-alp-1850n-bl-03-1000x1000.jpg</picture>
+<name>Повітродувка акумуляторна Vitals Master ALP 1850n BL</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис повітродувки акумуляторної Vitals Master ALP 1850n BL&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Повітродувка акумуляторна Vitals Master ALP 1850n BL&lt;/strong&gt; – це інноваційний, потужний та надійний інструмент, що створений для швидкого, зручного й ефективного прибирання садових ділянок, доріжок, гаражів, паркових зон чи території біля будинку. Потужність, технологічність і компактність роблять її незамінним помічником для кожного, хто цінує чистоту, акуратність і комфортну роботу без зайвого шуму та клопоту.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Потужний безщітковий двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Повітродувка акумуляторна Vitals Master ALP 1850n BL&lt;/b&gt; оснащена високопродуктивним електродвигуном напругою живлення 18 В та потужністю 480 Вт, який забезпечує стабільну роботу навіть при інтенсивному навантаженні. Завдяки сучасній технології безщіткового двигуна зменшене споживання енергії від акумуляторної батареї та підвищена його ефективність. Такий двигун не потребує складного обслуговування, працює тихо й витривало, що гарантує тривалий термін служби повітродувки.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Продуктивність та швидкість&lt;/h3&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals Master ALP 1850n BL:&lt;/h2&gt;
+&lt;ul&gt;
+	&lt;li&gt;безщітковий двигун;&lt;/li&gt;
+	&lt;li&gt;легкість і компактність;&lt;/li&gt;
+	&lt;li&gt;ергономічний дизайн;&lt;/li&gt;
+	&lt;li&gt;низький рівень шуму та вібрації.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992394">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-vzdhdv/pvtrd-akk-alp-1850n-bl-kit</url>
+<oldprice>2935.0000</oldprice>
+<price>2399.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235900</vendorCode>
+<articlCode>235900</articlCode>
+<categoryId>99427</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Потужність, Вт">480</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Швидкість повітряного потоку, м/с">36</param>
+<param name="Продуктивність повітряного потоку, м3/год">498</param>
+<param name="Габарити паковання, мм">400×250×180</param>
+<param name="Маса нетто/брутто, кг">1,4/1,8</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/povitroduvki/vitals-master-alp-1850n-bl-kit/povitroduvka-akumulyatorna-vitals-master-alp-1850n-bl-kit-new-02-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/povitroduvki/vitals-master-alp-1850n-bl-kit/povitroduvka-akumulyatorna-vitals-master-alp-1850n-bl-kit-02-1000x1000.jpg</picture>
+<name>Повітродувка акумуляторна Vitals Master ALP 1850n BL Kit</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис повітродувки акумуляторної Vitals Master ALP 1850n BL Kit&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Повітродувка акумуляторна Vitals Master ALP 1850n BL Kit&lt;/strong&gt; – це інноваційний, потужний та надійний інструмент, що створений для швидкого, зручного й ефективного прибирання садових ділянок, доріжок, гаражів, паркових зон чи території біля будинку. Потужність, технологічність і компактність роблять її незамінним помічником для кожного, хто цінує чистоту, акуратність і комфортну роботу без зайвого шуму та клопоту.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Потужний безщітковий двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Повітродувка акумуляторна Vitals Master ALP 1850n BL Kit&lt;/b&gt; оснащена високопродуктивним електродвигуном напругою живлення 18 В та потужністю 480 Вт, який забезпечує стабільну роботу навіть при інтенсивному навантаженні. Завдяки сучасній технології безщіткового двигуна зменшене споживання енергії від акумуляторної батареї та підвищена його ефективність. Такий двигун не потребує складного обслуговування, працює тихо й витривало, що гарантує тривалий термін служби повітродувки.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Продуктивність та швидкість&lt;/h3&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals Master ALP 1850n BL Kit:&lt;/h2&gt;
+&lt;ul&gt;
+	&lt;li&gt;безщітковий двигун;&lt;/li&gt;
+	&lt;li&gt;легкість і компактність;&lt;/li&gt;
+	&lt;li&gt;ергономічний дизайн;&lt;/li&gt;
+	&lt;li&gt;низький рівень шуму та вібрації.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992395">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-tlsk-ud/pdv-tls-pz-1117n</url>
+<price>1119.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235893</vendorCode>
+<articlCode>235893</articlCode>
+<categoryId>99435</categoryId>
+<param name="Мінімальна довжина, м">1,1</param>
+<param name="Максимальна довжина, м">1,7</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Матеріал штанги">Сталь</param>
+<param name="Габарити паковання, мм">1140×125×80</param>
+<param name="Маса нетто/брутто, кг">1,3/1,7</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/podovzhuvachi/podovzhuvach-teleskopichnij-vitals-pz-1117n/podovzhuvach-teleskopichnij-vitals-pz-1117n-01-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/podovzhuvachi/podovzhuvach-teleskopichnij-vitals-pz-1117n/podovzhuvach-teleskopichnij-vitals-pz-1117n-02-1000x1000.jpg</picture>
+<name>Подовжувач телескопічний Vitals PZ 1117n</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис подовжувача телескопічного Vitals PZ 1117n&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Подовжувач телескопічний Vitals PZ 1117n&lt;/strong&gt; – це надійний помічник для догляду за високими деревами, який поєднує ергономіку, безпеку та ефективність у кожній деталі. Зручне та практичне рішення для перетворення пилки або секатора на висоторіз. За його допомогою можна легко обрізати гілки дерев на висоті до 4 метрів, не використовуючи драбину або «стремянку».&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Максимальний радіус роботи&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Подовжувач телескопічний Vitals PZ 1117n&lt;/b&gt; із діапазоном регулювання від 110 до 170 см дозволяє дістати навіть до найвищих гілок та верхівок дерев. Це значно розширює можливості під час догляду за садом і робить роботу комфортнішою.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Надійність і безпека&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;Система швидкого й міцного кріплення інструмента та акумулятора гарантує стабільність і безпечну роботу.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals PZ 1117n:&lt;/h2&gt;
+&lt;ul&gt;
+	&lt;li&gt;телескопічна конструкція штанги;&lt;/li&gt;
+	&lt;li&gt;регулювання довжини в діапазоні 110-170 см;&lt;/li&gt;
+	&lt;li&gt;захист від випадкового увімкнення;&lt;/li&gt;
+	&lt;li&gt;легка вага.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992396">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-tlsk-ud/pdv-tls-pz-1325n</url>
+<price>1489.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235894</vendorCode>
+<articlCode>235894</articlCode>
+<categoryId>99435</categoryId>
+<param name="Мінімальна довжина, м">1,22</param>
+<param name="Максимальна довжина, м">2,5</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Матеріал штанги">Алюміній</param>
+<param name="Габарити паковання, мм">1230×125×80</param>
+<param name="Маса нетто/брутто, кг">1,4/1,8</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/podovzhuvachi/podovzhuvach-teleskopichnij-vitals-pz-1325n/podovzhuvach-teleskopichnij-vitals-pz-1325n-02-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/podovzhuvachi/podovzhuvach-teleskopichnij-vitals-pz-1325n/podovzhuvach-teleskopichnij-vitals-pz-1325n-01-1000x1000.jpg</picture>
+<name>Подовжувач телескопічний Vitals PZ 1325n</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис подовжувача телескопічного Vitals PZ 1325n&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Подовжувач телескопічний Vitals PZ 1325n&lt;/strong&gt; – це надійний помічник для догляду за високими деревами, який поєднує ергономіку, безпеку та ефективність у кожній деталі. Зручне та практичне рішення для перетворення пилки або секатора на висоторіз. За його допомогою можна легко обрізати гілки дерев на висоті до 5 метрів, не використовуючи драбину або «стремянку».&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Максимальний радіус роботи&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify; &amp;quot;&gt;&lt;b&gt;Подовжувач телескопічний Vitals PZ 1325n&lt;/b&gt; із діапазоном регулювання від 125 до 250 см дозволяє дістати навіть до найвищих гілок та верхівок дерев. Це значно розширює можливості під час догляду за садом і робить роботу комфортнішою.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Надійність і безпека&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;Система швидкого й міцного кріплення інструмента та акумулятора гарантує стабільність і безпечну роботу.&lt;/p&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals PZ 1325n:&lt;/h2&gt;
+&lt;ul&gt;
+    &lt;li&gt;телескопічна конструкція штанги;&lt;/li&gt;
+    &lt;li&gt;регулювання довжини в діапазоні 125-250 см;&lt;/li&gt;
+    &lt;li&gt;захист від випадкового увімкнення;&lt;/li&gt;
+    &lt;li&gt;легка вага.&lt;/li&gt;
+    &lt;/ul&gt;</features_text>
+</item>
+<item id="992615">
+<url>http://vitals.ua/ak-tehnika/smart-line/sadovo-parkovaya-tehnika-sml-pl/kmpl-sm-ks-akk-azt-36540-2-akb</url>
+<price>5999.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000258195</vendorCode>
+<articlCode>258195</articlCode>
+<categoryId>99282</categoryId>
+<param name="//Коса акумуляторна Vitals Master AZT 36540 BL SmartLine+//:"></param>
+<param name="Тип двигателя">Безщітковий</param>
+<param name="Потужність, Вт">540</param>
+<param name="Напруга живлення, В">36</param>
+<param name="Максимальний діаметр жилки, мм">2,4</param>
+<param name="Максимальна ширина скошування, мм">390</param>
+<param name="Максимальна частота обертів (режим 1), об/хв">5000</param>
+<param name="Максимальна частота обертів (режим 2), об/хв">6000</param>
+<param name="Габарити паковання, мм">1710×130×170</param>
+<param name="Маса нетто/брутто, кг">4,42/4,92</param>
+<param name="//Батарея акумуляторна Vitals Master ASL 1840 SmartLine+//:"></param>
+<param name="Номінальна напруга, В">18</param>
+<param name="Ємність А.г.">4</param>
+<param name="Маса нетто/брутто, кг.">0,7 / 0,8</param>
+<param name="Час заряджання струмом 2,4 А, хв.">120</param>
+<param name="Час заряджання струмом 4,5 А, хв.">60</param>
+<param name="Тип акумуляторного елемента">Li-On</param>
+<param name="//Зарядний пристрій для акумуляторів Vitals Master LSL 1830 Dual SmartLine+//:"></param>
+<param name="Струм зарядки, А">3,0</param>
+<param name="Вихідна напруга, В">21</param>
+<param name="Вага нетто/брутто, кг">0,8 / 1,0</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/motokosy/kosa-akumulyatorna-vitals-master-azt-36540-bl-smartline/komplekt-smartline-kosa-akumulyatorna-azt-36540-2-akb-asl-1840-zp-lsl-1830-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/motokosy/kosa-akumulyatorna-vitals-master-azt-36540-bl-smartline/kosa-akumulyatorna-vitals-master-azt-36540-bl-smartline-01-1000x1000.jpg</picture>
+<name>Комплект SmartLine+ Коса акумуляторна AZT 36540 + 2 АКБ ASL 1840 + ЗП LSL 1830</name>
+<description>&lt;section&gt; &lt;div class=&amp;quot;row&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-12 col-md-12 col-sm-12 col-xs-12&amp;quot;&gt; &lt;h2&gt;&lt;strong&gt;Ідеальний газон в один клік із суперкомплектом Vitals SmartLine+ &lt;/strong&gt; &lt;/h2&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-12 col-md-12 col-sm-12 col-xs-12&amp;quot;&gt; &lt;h3&gt;&lt;strong&gt;&lt;/strong&gt;&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify; &amp;quot;&gt;Шукаєте готове рішення для бездоганного порядку на ділянці без зайвого клопоту та переплат? Пропозиція від Vitals об’єднує в один &lt;b&gt;потужний комплект акумуляторну косу Vitals Master AZT 36540 BL, преміальну батарею ASL 1840 на 4.0 А·год та двоканальний зарядний пристрій LSL 1830 Dual&lt;/b&gt;. Це ідеальний вибір для тих, хто цінує свій час, комфорт та повну незалежність від розеток чи бензину. Ви отримуєте сумісну екосистему для швидкої, тихої та екологічної роботи, де кожен елемент підсилює інший. &lt;/p&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-4 col-md-4 col-sm-12 col-xs-12&amp;quot;&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості коси акумуляторної Vitals Master AZT 36540 BL SmartLine+:&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;&lt;b&gt;тип двигуна – безщітковий&lt;/b&gt; забезпечує підвищену надійність, довший ресурс роботи та менший рівень шуму під час експлуатації;&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;потужність – 540 Вт&lt;/b&gt; гарантує високу продуктивність інструмента та ефективне скошування рослинності різної густоти;&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;напруга живлення – 36 В&lt;/b&gt; забезпечує стабільну роботу пристрою та оптимальне поєднання потужності й енергоефективності;&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;діаметр косіння жилкою – 390 мм&lt;/b&gt; дозволяє охоплювати широку смугу трави за один прохід, що прискорює виконання роботи;&lt;/li&gt;
+&lt;li&gt;&lt;b&gt;нижнє розташування двигуна&lt;/b&gt;</features_text>
+</item>
+<item id="992406">
+<url>http://vitals.ua/ak-tehnika/m18type/sadovo-parkovaya-tehnika-m18/akteh-m18-spteh-pl/pila-lnc-akk-vitals-prf-akz-1820ak-bl</url>
+<price>2495.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000237653</vendorCode>
+<articlCode>237653</articlCode>
+<categoryId>99432</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Напруга живлення, В">18</param>
+<param name="Номінальна потужність, Вт">500</param>
+<param name="Довжина шини, дюйм (см)">8&quot; (20)</param>
+<param name="Крок ланцюга, дюйм (мм)">1/4&quot; (6,35)</param>
+<param name="Кількість ланок ланцюга, од.">48</param>
+<param name="Швидкість ланцюга, м/с">12</param>
+<param name="Габарити паковання, мм">480×108×305</param>
+<param name="Маса нетто/брутто, кг">3,0/3,2</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-professional-akz-1820ak-bl/pilalancjugovaakumuljatornavitalsprofessionalakz1820akbl-10-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-professional-akz-1820ak-bl/pilalancjugovaakumuljatornavitalsprofessionalakz1820akbl-11-1000x1000.jpg</picture>
+<name>Пила ланцюгова акумуляторна Vitals Professional AKZ 1820ak BL</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис пили ланцюгової акумуляторної Vitals Professional AKZ 1820ak BL&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;strong&gt;Пила ланцюгова акумуляторна Vitals Professional AKZ 1820ak BL&lt;/strong&gt; – це сучасний, компактний та продуктивний інструмент, створений для точного різання деревини, догляду за садом та виконання дрібних господарських робіт. Модель працює від акумулятора, тож забезпечує повну свободу рухів без кабелів і доступ до важкодоступних зон без потреби в електромережі. Збалансована конструкція, легка вага та зручне ергономічне руків’я дають можливість працювати довше без утоми. Пила чудово контролюється під час роботи, що робить її оптимальним вибором навіть для користувачів із мінімальним досвідом.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Потужний та продуктивний двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals Professional AKZ 1820ak BL&lt;/b&gt;</description>
+
+<features_text></features_text>
+</item>
+<item id="992361">
+<url>http://vitals.ua/archiv/sad-park-tehnika-archive/akkumulyatornaya-tehnika-1/pl-ts-akk-akz-3640s-kit</url>
+<price>8435.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000223813</vendorCode>
+<articlCode>223813</articlCode>
+<categoryId>99310</categoryId>
+<param name="Тип двигуна">Бесщёточный</param>
+<param name="Напруга живлення, В">36</param>
+<param name="Номінальна потужність, Вт">1400</param>
+<param name="Ємність акумуляторної батареї, А/год">4.0</param>
+<param name="Довжина шини, дюйм (см)">16&quot; (40)</param>
+<param name="Крок ланцюга, дюйм (мм)">3/8&quot; (9,525)</param>
+<param name="Кількість ланок ланцюга, од.">56</param>
+<param name="Швидкість ланцюга, м/с">14</param>
+<param name="Габарити паковання, мм">472х222х238</param>
+<param name="Маса нетто/брутто, кг">6,4/6,7</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-akz-3640s-kit/pila-lancyugova-akumulyatorna-vitals-akz-3640s-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-akz-3640s-kit/pila-lancyugova-akumulyatorna-vitals-akz-3640s-kit-02-1000x1000.jpg</picture>
+<name>Пила ланцюгова акумуляторна Vitals AKZ 3640s Kit</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис пили ланцюгової акумуляторної Vitals AKZ 3640s Kit&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals AKZ 3640s Kit&lt;/b&gt; - це сучасний інструмент, який поєднує в собі потужність, мобільність та зручність. Вона стане чудовим вибором для власників приватних будинків, дачників, садівників і тих, хто цінує якість та продуктивність. Ланцюгова пила демонструє вражаючі показники ефективності, що дозволяє виконувати різноманітні завдання такі як заготівля дров, обрізання гілок дерев та чагарників, розпилювання колод та дошок з високою точністю та швидкістю.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify; &amp;quot;&gt;Потужний та продуктивний двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals AKZ 3640s Kit&lt;/b&gt; оснащена сучасним електричним безщітковим двигуном з мідною обмоткою, напругою живлення 36 В та потужністю 1400 Вт, котрий забезпечує високу продуктивність та ефективну роботу пристрою.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Якісні матеріали та вузли&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals AKZ 3640s Kit&lt;/b&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals AKZ 3640s Kit:&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;безщітковий двигун;&lt;/li&gt;
+  &lt;li&gt;безключове натягнення ланцюга;&lt;/li&gt;
+  &lt;li&gt;електроне гальмо ланцюга;&lt;/li&gt;
+  &lt;li&gt;автоматична подача мастила;&lt;/li&gt;
+  &lt;li&gt;прогумоване руків’я;&lt;/li&gt;
+  &lt;li&gt;запобіжник від випадкового увімкнення.&lt;/li&gt;
+&lt;/ul&gt;
+</features_text>
+</item>
+<item id="992360">
+<url>http://vitals.ua/archiv/sad-park-tehnika-archive/akkumulyatornaya-tehnika-1/pl-ts-akk-akz-3640s</url>
+<price>5219.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000223814</vendorCode>
+<articlCode>223814</articlCode>
+<categoryId>99310</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Напруга живлення, В">36</param>
+<param name="Номінальна потужність, Вт">1400</param>
+<param name="Довжина шини, дюйм (см)">16&quot; (40)</param>
+<param name="Крок ланцюга, дюйм (мм)">3/8&quot; (9,525)</param>
+<param name="Кількість ланок ланцюга, од.">56</param>
+<param name="Швидкість ланцюга, м/с">14</param>
+<param name="Габарити паковання, мм">472х222х238</param>
+<param name="Маса нетто/брутто, кг">4,0/5,0</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-akz-3640s-3640s/pila-lancyugova-akumulyatorna-vitals-akz-3640s-01-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/pily-lancyugovy/pila-lancyugova-akumulyatorna-vitals-akz-3640s-3640s/pila-lancyugova-akumulyatorna-vitals-akz-3640s-02-1000x1000.jpg</picture>
+<name>Пила ланцюгова акумуляторна Vitals AKZ 3640s</name>
+<description>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Опис пили ланцюгової акумуляторної Vitals AKZ 3640s&lt;/h2&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals AKZ 3640s&lt;/b&gt; - це сучасний інструмент, який поєднує в собі потужність, мобільність та зручність. Вона стане чудовим вибором для власників приватних будинків, дачників, садівників і тих, хто цінує якість та продуктивність. Ланцюгова пила демонструє вражаючі показники ефективності, що дозволяє виконувати різноманітні завдання такі як заготівля дров, обрізання гілок дерев та чагарників, розпилювання колод та дошок з високою точністю та швидкістю.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Потужний та продуктивний двигун&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals AKZ 3640s&lt;/b&gt; оснащена сучасним електричним безщітковим двигуном з мідною обмоткою, напругою живлення 36 В та потужністю 1400 Вт, котрий забезпечує високу продуктивність та ефективну роботу пристрою.&lt;/p&gt; &lt;h3 style=&amp;quot;text-align: justify;&amp;quot;&gt;Якісні матеріали та вузли&lt;/h3&gt; &lt;p style=&amp;quot;text-align: justify;&amp;quot;&gt;&lt;b&gt;Пила ланцюгова акумуляторна Vitals AKZ 3640s&lt;/b&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals AKZ 3640s:&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;безщітковий двигун;&lt;/li&gt;
+  &lt;li&gt;безключове натягнення ланцюга;&lt;/li&gt;
+  &lt;li&gt;електроне гальмо ланцюга;&lt;/li&gt;
+  &lt;li&gt;автоматична подача мастила;&lt;/li&gt;
+  &lt;li&gt;прогумоване руків’я;&lt;/li&gt;
+  &lt;li&gt;запобіжник від випадкового увімкнення.&lt;/li&gt;
+&lt;/ul&gt;
+</features_text>
+</item>
+<item id="992411">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/dsh-akk-vitals-m-au-1832c-bl-kit-p</url>
+<price>2099.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000235331</vendorCode>
+<articlCode>235331</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Модель">AU 1832c BL</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,36</param>
+<param name="Кількість режимів регулювання швидкості">2</param>
+<param name="Максимальний крутний момент, Н·м">1-й режим швидкості: 32, 2-й режим швидкості: 17</param>
+<param name="Кількість позицій муфти крутного моменту">21+1</param>
+<param name="Реверсне обертання">Є</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0-400, ІІ режим/реверс: 0-1400</param>
+<param name="Розмір свердлильного патрона, мм">0,8…10 мм</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний 3-кулачковий металевий з одною зовнішньою обоймою</param>
+<param name="Максимальний діаметр свердління, мм (метал)">10</param>
+<param name="Максимальний діаметр свердління, мм (деревина)">20</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">ІР20</param>
+<param name="Тип та наявність підсвічування">LED</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Сумісний зарядний пристрій">Інверторний, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Системи захисту">IP20</param>
+<param name="АКБ та ЗП в комплекті">Так</param>
+<param name="Маса нетто / брутто, кг">2,5/2,55</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti-akkumulyatorni/vitals-master-au-1832c-bl-kit-plyus/dril-shurupovert-akumulyatornij-vitals-master-au-1832c-bl-kit-plyus-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti-akkumulyatorni/vitals-master-au-1832c-bl-kit-plyus/dril-shurupovert-akumulyatornij-vitals-master-au-1832c-bl-kit-plyus-02-1000x1000.jpg</picture>
+<name>Дриль-шуруповерт акумуляторний Vitals Master AU 1832c BL Kit+</name>
+<description>&lt;h2&gt;Опис дрилі-шуруповерта акумуляторного Vitals Master AU 1832c BL Kit+&lt;/h2&gt; &lt;p&gt;&lt;b&gt;Дриль-шурупокрут акумуляторний ТМ «VITALS», серія «Мaster», лінійка інструментів «М-Type 18», модель «AU 1832c BL»&lt;/b&gt; — це ручний механізований інструмент з інверторним безщітковим двигуном, призначений для закручування та відкручування метизів, а також свердління отворів діаметром 0,8–10 мм. Живлення забезпечується від літій-іонної акумуляторної батареї 18 В. Інструмент має двошвидкісний редуктор, електронний регулятор швидкості та муфту регулювання крутного моменту для безпечного і точного закручування.&lt;/p&gt;</description>
+
+<features_text>&lt;h3&gt;Особливості моделі Vitals Master AU 1832c BL Kit+&lt;span style=&amp;quot;color: inherit; font-family: inherit;&amp;quot;&gt;:&lt;/span&gt;&lt;/h3&gt;
+&lt;ul&gt; 
+&lt;li&gt;безщітковий інверторний двигун для підвищеної продуктивності та довговічності;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони для зручності у темних місцях;&lt;/li&gt;
+&lt;li&gt;індикатор заряду акумулятора;&lt;/li&gt;
+&lt;li&gt;двошвидкісний редуктор із плавним регулюванням швидкості;&lt;/li&gt;
+&lt;li&gt;високий крутний момент до 32 Н·м для ефективної роботи;&lt;/li&gt;
+&lt;li&gt;металевий швидкозатискний патрон 10 мм;&lt;/li&gt;
+&lt;li&gt;муфта регулювання крутного моменту для захисту кріплень;&lt;/li&gt;
+&lt;li&gt;корпус з ударостійкого пластику для надійності та довговічності;&lt;/li&gt;</features_text>
+</item>
+<item id="992410">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/dsh-akk-vitals-m-au-1832c-bl-kit</url>
+<price>1599.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235330</vendorCode>
+<articlCode>235330</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Модель">AU 1832c BL</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,36</param>
+<param name="Кількість режимів регулювання швидкості">21+1</param>
+<param name="Максимальний крутний момент, Н·м">1-й режим швидкості: 32, 2-й режим швидкості: 17</param>
+<param name="Кількість позицій муфти крутного моменту">2</param>
+<param name="Реверсне обертання">Є</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0-400, ІІ режим/реверс: 0-1400</param>
+<param name="Розмір свердлильного патрона, мм">0,8…10 мм</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний 3-кулачковий металевий з одною зовнішньою обоймою</param>
+<param name="Максимальний діаметр свердління, мм (метал)">10</param>
+<param name="Максимальний діаметр свердління, мм (деревина)">20</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">ІР20</param>
+<param name="Тип та наявність підсвічування">LED</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Сумісний зарядний пристрій">Інверторний, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Системи захисту">Від випадкового пуску; від перегріву; від перевантаження</param>
+<param name="АКБ та ЗП в комплекті">Так</param>
+<param name="Маса нетто / брутто, кг">2,2/2,25</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti-akkumulyatorni/vitals-master-au-1832c-bl-kit/dril-shurupovert-akumulyatornij-vitals-master-au-1832c-bl-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti-akkumulyatorni/vitals-master-au-1832c-bl-kit/dril-shurupovert-akumulyatornij-vitals-master-au-1832c-bl-kit-02-1000x1000.jpg</picture>
+<name>Дриль-шуруповерт акумуляторний Vitals Master AU 1832c BL Kit</name>
+<description>&lt;h2&gt;Опис дрилі-шуруповерта акумуляторного Vitals Master AU 1832c BL Kit&lt;/h2&gt; &lt;p&gt;&lt;b&gt;Дриль-шурупокрут акумуляторний ТМ «VITALS», серія «Мaster», лінійка інструментів «М-Type 18», модель «AU 1832c BL»&lt;/b&gt; — це ручний механізований інструмент з інверторним безщітковим двигуном, призначений для закручування та відкручування метизів, а також свердління отворів діаметром 0,8–10 мм. Живлення забезпечується від літій-іонної акумуляторної батареї 18 В. Інструмент має двошвидкісний редуктор, електронний регулятор швидкості та муфту регулювання крутного моменту для безпечного і точного закручування.&lt;/p&gt;</description>
+
+<features_text>&lt;h3&gt;Особливості моделі Vitals Master AU 1832c BL Kit:&lt;/h3&gt;
+&lt;ul&gt; 
+&lt;li&gt;безщітковий інверторний двигун для підвищеної продуктивності та довговічності;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони для зручності у темних місцях;&lt;/li&gt;
+&lt;li&gt;індикатор заряду акумулятора;&lt;/li&gt;
+&lt;li&gt;двошвидкісний редуктор із плавним регулюванням швидкості;&lt;/li&gt;
+&lt;li&gt;високий крутний момент до 32 Н·м для ефективної роботи;&lt;/li&gt;
+&lt;li&gt;металевий швидкозатискний патрон 10 мм;&lt;/li&gt;
+&lt;li&gt;муфта регулювання крутного моменту для захисту кріплень;&lt;/li&gt;
+&lt;li&gt;корпус з ударостійкого пластику для надійності та довговічності;&lt;/li&gt;
+&lt;li&gt;захист від випадкового пуску, перегріву та перевантаження;&lt;/li&gt;
+&lt;li&gt;</features_text>
+</item>
+<item id="992409">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/dsh-akk-vitals-m-au-1832c-bl</url>
+<price>899.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000235329</vendorCode>
+<articlCode>235329</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Модель">AU 1832c BL</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,36</param>
+<param name="Кількість режимів регулювання швидкості">2</param>
+<param name="Максимальний крутний момент, Н·м">1-й режим швидкості: 32, 2-й режим швидкості: 17</param>
+<param name="Кількість позицій муфти крутного моменту">21+1</param>
+<param name="Реверсне обертання">Є</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0-400, ІІ режим/реверс: 0-1400</param>
+<param name="Розмір свердлильного патрона, мм">0,8…10 мм</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний 3-кулачковий металевий з одною зовнішньою обоймою</param>
+<param name="Максимальний діаметр свердління, мм (метал)">10</param>
+<param name="Максимальний діаметр свердління, мм (деревина)">20</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">ІР20</param>
+<param name="Тип та наявність підсвічування">LED</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Сумісний зарядний пристрій">Інверторний, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Системи захисту">Від випадкового пуску; від перегріву; від перевантаження</param>
+<param name="АКБ та ЗП в комплекті">Ні</param>
+<param name="Маса нетто / брутто, кг">1,6/1,65</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti-akkumulyatorni/vitals-master-au-1832c-bl/dril-shurupovert-akumulyatornij-vitals-master-au-1832c-bl-01-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti-akkumulyatorni/vitals-master-au-1832c-bl/dril-shurupovert-akumulyatornij-vitals-master-au-1832c-bl-02-1000x1000.jpg</picture>
+<name>Дриль-шуруповерт акумуляторний Vitals Master AU 1832c BL</name>
+<description>&lt;h2&gt;Опис дрилі-шуруповерта акумуляторного Vitals Master AU 1832c BL&lt;/h2&gt; &lt;p&gt;&lt;b&gt;Дриль-шурупокрут акумуляторний ТМ «VITALS», серія «Мaster», лінійка інструментів «М-Type 18», модель «AU 1832c BL»&lt;/b&gt; — це ручний механізований інструмент з інверторним безщітковим двигуном, призначений для закручування та відкручування метизів, а також свердління отворів діаметром 0,8–10 мм. Живлення забезпечується від літій-іонної акумуляторної батареї 18 В (не входить до комплекту). Інструмент має двошвидкісний редуктор, електронний регулятор швидкості та муфту регулювання крутного моменту для безпечного і точного закручування.&lt;/p&gt;</description>
+
+<features_text>&lt;h3&gt;Особливості моделі Vitals Master AU 1832c BL&lt;span style=&amp;quot;color: inherit; font-family: inherit;&amp;quot;&gt;:&lt;/span&gt;&lt;/h3&gt;
+&lt;ul&gt; 
+&lt;li&gt;безщітковий інверторний двигун для підвищеної продуктивності та довговічності;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони для зручності у темних місцях;&lt;/li&gt;
+&lt;li&gt;індикатор заряду акумулятора;&lt;/li&gt;
+&lt;li&gt;двошвидкісний редуктор із плавним регулюванням швидкості;&lt;/li&gt;
+&lt;li&gt;високий крутний момент до 32 Н·м для ефективної роботи;&lt;/li&gt;
+&lt;li&gt;металевий швидкозатискний патрон 10 мм;&lt;/li&gt;
+&lt;li&gt;муфта регулювання крутного моменту для захисту кріплень;&lt;/li&gt;
+&lt;li&gt;корпус з ударостійкого пластику для надійності та довговічності;&lt;/li&gt;
+&lt;li&gt;</features_text>
+</item>
+<item id="992462">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/drl-shrpvrt-ak-vitals-master-au-1835aq-bl-kit</url>
+<price>2549.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235977</vendorCode>
+<articlCode>235977</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,7</param>
+<param name="Кількість режимів регулювання швидкості">2</param>
+<param name="Максимальний крутний момент, Н·м">35</param>
+<param name="Кількість позицій муфти крутного моменту">11/1</param>
+<param name="Реверсне обертання">Э</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0–500; ІІ режим/реверс: 0–1500</param>
+<param name="Тип регулювання швидкості">Електронне, плавне</param>
+<param name="Розмір свердлильного патрона, мм">0,8–10 мм</param>
+<param name="Тип/розмір внутрішнього патрона шпинделя">Шестигранний, магнітний («HEX») 1/4&quot; (6,35 мм)</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний, 3-кулачковий металевий, одномуфтовий, швидкозмінний («QC»)</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">IP20</param>
+<param name="Тип та наявність підсвічування">LED</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals», лінійки «М-Type 18», модель «ASL 1820a 5С Type-c»</param>
+<param name="Сумісний зарядний пристрій">Інверторний, для моделі «AU 1835abc BL kit», лінійки «М-Type 18»</param>
+<param name="Системи захисту">Від випадкового пуску; від перегріву; від перевантаження</param>
+<param name="АКБ та ЗП в комплекті">Так</param>
+<param name="Маса нетто / брутто, кг">1,61/2,43</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/vitals-master-au-1835aq-bl-kit/dril-shurupokrut-akumulyatornij-vitals-master-au-1835aq-bl-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/vitals-master-au-1835aq-bl-kit/dril-shurupokrut-akumulyatornij-vitals-master-au-1835aq-bl-kit-02-1000x1000.jpg</picture>
+<name>Дриль-шурупокрут акумуляторний Vitals Master AU 1835aq BL Kit</name>
+<description>&lt;h2&gt;Опис дрилі-шурупокрута акумуляторного Vitals Master AU 1835aq BL Kit&lt;/h2&gt; &lt;p&gt;&lt;strong&gt;Дриль-шурупокрут акумуляторний VITALS Master AU 1835aq BL / AU 1835aq BL kit&lt;/strong&gt; — потужний інструмент із безщітковим інверторним двигуном, що забезпечує високу продуктивність, довговічність та безпеку. Призначений для закручування й відкручування кріпильних виробів, а також для свердління отворів діаметром 0,8–10 мм. Завдяки двошвидкісному редуктору, муфті регулювання крутного моменту та швидкозмінному патрону QC інструмент гарантує точність і комфорт у роботі. Металевий патрон та корпус із ударостійкого пластику підвищують міцність і строк служби виробу.&lt;/p&gt; &lt;h2&gt;Комплектація моделі Vitals Master AU 1835aq BL Kit&lt;/h2&gt;&lt;ul&gt; &lt;li&gt;Дриль-шурупокрут акумуляторний &lt;/li&gt; &lt;li&gt;Дві акумуляторні батареї 2А·год &lt;/li&gt; &lt;li&gt;Зарядний пристрій 2А &lt;/li&gt; &lt;li&gt;Інструкція з експлуатації &lt;/li&gt; &lt;li&gt;Пластиковий кейс &lt;/li&gt; &lt;/ul&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості:&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;безщітковий інверторний двигун — менше шуму, відсутність іскріння, довший ресурс роботи;&lt;/li&gt;
+&lt;li&gt;два діапазони швидкості з плавним електронним регулюванням;&lt;/li&gt;
+&lt;li&gt;великий крутний момент — 35 Н·м для ефективного закручування та свердління;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони для роботи у темних місцях;&lt;/li&gt;
+&lt;li&gt;муфта-регулятор крутного моменту — точне закручування без пошкодження кріплень;&lt;/li&gt;
+&lt;li&gt;реверсний режим для універсального використання;&lt;/li&gt;
+&lt;li&gt;швидкозмінний металевий патрон QC (0,8–10 мм) та магнітний шестигранний бітотримач HEX ¼&amp;quot;;&lt;/li&gt;
+&lt;li&gt;системи захисту: від перегріву, перевантаження та випадкового пуску;&lt;/li&gt;</features_text>
+</item>
+<item id="992432">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/drl-shrpvrt-ak-vitals-master-au-1835aq-bl</url>
+<price>1079.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235976</vendorCode>
+<articlCode>235976</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,7</param>
+<param name="Кількість режимів регулювання швидкості">2</param>
+<param name="Максимальний крутний момент, Н·м">35</param>
+<param name="Кількість позицій муфти крутного моменту">11/1</param>
+<param name="Реверсне обертання">Є</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0–500; ІІ режим/реверс: 0–1500</param>
+<param name="Тип регулювання швидкості">Плавне</param>
+<param name="Розмір свердлильного патрона, мм">0,8–10 мм</param>
+<param name="Тип/розмір внутрішнього патрона шпинделя">Шестигранний, магнітний («HEX») 1/4&quot; (6,35 мм)</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний, 3-кулачковий металевий, одномуфтовий, швидкозмінний («QC»)</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">IP20</param>
+<param name="Тип та наявність підсвічування">LED</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Сумісний зарядний пристрій">Інверторний, ТМ «Vitals», лінійки «М-Type 18» та подібні</param>
+<param name="Системи захисту">Від випадкового пуску; від перегріву; від перевантаження</param>
+<param name="АКБ та ЗП в комплекті">Ні</param>
+<param name="Маса нетто / брутто, кг">0,81 / 1,63</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/vitals-master-au-1835aq-bl/drel-shurupovertakkumuljatornajavitalsmasterau1835aqbl-4-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/vitals-master-au-1835aq-bl/drel-shurupovertakkumuljatornajavitalsmasterau1835aqbl-5-1000x1000.jpg</picture>
+<name>Дриль-шурупокрут акумуляторний Vitals Master AU 1835aq BL</name>
+<description>&lt;h2&gt;Опис дрилі-шурупокрута акумуляторного Vitals Master AU 1835aq BL&lt;/h2&gt; &lt;p&gt;&lt;strong&gt;Дриль-шурупокрут акумуляторний VITALS Master AU 1835aq BL / AU 1835aq BL kit&lt;/strong&gt; — потужний інструмент із безщітковим інверторним двигуном, що забезпечує високу продуктивність, довговічність та безпеку. Призначений для закручування й відкручування кріпильних виробів, а також для свердління отворів діаметром 0,8–10 мм. Завдяки двошвидкісному редуктору, муфті регулювання крутного моменту та швидкозмінному патрону QC інструмент гарантує точність і комфорт у роботі. Металевий патрон та корпус із ударостійкого пластику підвищують міцність і строк служби виробу.&lt;/p&gt; &lt;h2&gt;Комплектація моделі Vitals Master AU 1835aq BL&lt;/h2&gt;&lt;ul&gt; &lt;li&gt;Дриль-шурупокрут акумуляторний &lt;/li&gt; &lt;li&gt;Інструкція з експлуатації &lt;/li&gt; &lt;li&gt;Пластиковий кейс &lt;/li&gt; &lt;/ul&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості:&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;безщітковий інверторний двигун — менше шуму, відсутність іскріння, довший ресурс роботи;&lt;/li&gt;
+&lt;li&gt;два діапазони швидкості з плавним електронним регулюванням;&lt;/li&gt;
+&lt;li&gt;великий крутний момент — 35 Н·м для ефективного закручування та свердління;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони для роботи у темних місцях;&lt;/li&gt;
+&lt;li&gt;муфта-регулятор крутного моменту — точне закручування без пошкодження кріплень;&lt;/li&gt;
+&lt;li&gt;реверсний режим для універсального використання;&lt;/li&gt;
+&lt;li&gt;швидкозмінний металевий патрон QC (0,8–10 мм) та магнітний шестигранний бітотримач HEX ¼&amp;quot;;&lt;/li&gt;
+&lt;li&gt;системи захисту: від перегріву, перевантаження та випадкового пуску;&lt;/li&gt;</features_text>
+</item>
+<item id="992461">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/drl-shrpvrt-ak-vitals-master-au-1835abc-bl-kit</url>
+<price>2499.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235979</vendorCode>
+<articlCode>235979</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,7</param>
+<param name="Кількість режимів регулювання швидкості">2</param>
+<param name="Максимальний крутний момент, Н·м">35</param>
+<param name="Кількість позицій муфти крутного моменту">11/1</param>
+<param name="Реверсне обертання">Є</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0…500; ІІ режим/реверс: 0…1500</param>
+<param name="Тип регулювання швидкості">Електронна, плавне</param>
+<param name="Розмір свердлильного патрона, мм">2…13 мм</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний 3-кулачковий металевий з одною зовнішньою обоймою</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">IP20</param>
+<param name="Тип та наявність підсвічування">Світлодіодне (LED)</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals» лінійки «М-Type 18» та подібні</param>
+<param name="Сумісний зарядний пристрій">Інверторний, ТМ «Vitals» лінійки «М-Type 18» та подібні</param>
+<param name="Системи захисту">Від випадкового пуску; від перегріву; від перевантаження
+</param>
+<param name="Маса споряджена (МС), кг">1,43</param>
+<param name="АКБ та ЗП в комплекті">Так</param>
+<param name="Маса нетто / брутто, кг">0,82/0,64</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/dril-shurupokrut-akumulyatornij-vitals-master-au-1835abc-bl-kit/dril-shurupokrut-akumulyatornij-vitals-master-au-1835abc-bl-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/dril-shurupokrut-akumulyatornij-vitals-master-au-1835abc-bl-kit/dril-shurupokrut-akumulyatornij-vitals-master-au-1835abc-bl-kit-02-1000x1000.jpg</picture>
+<name>Дриль-шурупокрут акумуляторний Vitals Master AU 1835abc BL Kit</name>
+<description>&lt;h2&gt;Опис дрилі-шурупокрута акумуляторного Vitals Master AU 1835abc BL Kit&lt;/h2&gt; &lt;p&gt;&lt;b&gt;Акумуляторний дриль-шурупокрут ТМ «VITALS», серія «Master», лінійка інструментів «М-Type 18», модель «AU 1835abc BL»&lt;/b&gt; — це сучасний ручний інструмент для закручування/відкручування кріпильних виробів та свердління отворів діаметром 2–13 мм. Працює від літій-іонних акумуляторів 18 В, забезпечує високу продуктивність і безпечність завдяки безщітковому інверторному двигуну та системам захисту.&lt;/p&gt; &lt;h2&gt;Комплектація моделі Vitals Master AU 1835abc BL Kit&lt;/h2&gt;&lt;ul&gt; &lt;li&gt;Дриль-шурупокрут акумуляторний &lt;/li&gt; &lt;li&gt;Дві акумуляторні батареї ASL 1820a 5С Type-c, 2А·год &lt;/li&gt; &lt;li&gt;Зарядний пристрій 1,6А &lt;/li&gt; &lt;li&gt;Інструкція з експлуатації &lt;/li&gt; &lt;li&gt;Пластиковий кейс &lt;/li&gt; &lt;/ul&gt;</description>
+
+<features_text>&lt;h2&gt;Основні особливості:&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;безщітковий інверторний двигун — менше шуму, відсутність іскріння, довший ресурс;&lt;/li&gt;
+&lt;li&gt;двошвидкісний реверсний редуктор — плавне регулювання швидкості для різних завдань;&lt;/li&gt;
+&lt;li&gt;муфта-регулятор крутного моменту — точне закручування без пошкодження кріплення (макс. момент 35 Н·м);&lt;/li&gt;
+&lt;li&gt;металевий швидкозатискний патрон 13 мм — надійність та зручність фіксації однією рукою;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони — комфортна робота навіть у темряві;&lt;/li&gt;
+&lt;li&gt;літій-іонні АКБ «Vitals» лінійки «М-Type 18» — без ефекту пам’яті, низький саморозряд, можливість заряджання від USB-C;&lt;/li&gt;
+&lt;li&gt;</features_text>
+</item>
+<item id="992431">
+<url>http://vitals.ua/ak-tehnika/m18type/elektroinstrument-m18/drl-shrpvrt-ak-vitals-master-au-1835abc-bl</url>
+<price>999.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000235978</vendorCode>
+<articlCode>235978</articlCode>
+<categoryId>99373</categoryId>
+<param name="Тип двигуна">Інверторний, безщітковий</param>
+<param name="Номінальна напруга, В">18 (1 батарея)</param>
+<param name="Номінальна потужність, кВт">0,7</param>
+<param name="Кількість режимів регулювання швидкості">2</param>
+<param name="Максимальний крутний момент, Н·м">35</param>
+<param name="Кількість позицій муфти крутного моменту">11/1</param>
+<param name="Реверсне обертання">Є</param>
+<param name="Швидкість обертання без навантаження, об/хв">І режим/реверс: 0…500; ІІ режим/реверс: 0…1500</param>
+<param name="Тип регулювання швидкості">Електронна, плавне</param>
+<param name="Розмір свердлильного патрона, мм">13</param>
+<param name="Тип свердлильного патрона">Швидкозатискний ручний 3-кулачковий металевий з одною зовнішньою обоймою (2…13 мм)</param>
+<param name="Режим роботи">S3 (20 хв)</param>
+<param name="Ступінь захисту корпусу">IP20</param>
+<param name="Тип та наявність підсвічування">Світлодіодне (LED)</param>
+<param name="Сумісні акумуляторні батареї">18 В, ТМ «Vitals» лінійки «М-Type 18» та подібні</param>
+<param name="Сумісний зарядний пристрій">Інверторний, ТМ «Vitals» лінійки «М-Type 18» та подібні</param>
+<param name="Системи захисту">Від випадкового пуску; від перегріву; від перевантаження
+</param>
+<param name="Маса споряджена (МС), кг">1,43</param>
+<param name="АКБ та ЗП в комплекті">Ні</param>
+<param name="Маса нетто / брутто, кг">0,82 / 0,64</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/vitals-master-au-1835abc-bl/drel-shurupovertakkumuljatornajavitalsmasterau1835abcbl-5-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/elektroinstrument/dreli-shurupoverti/vitals-master-au-1835abc-bl/drel-shurupovertakkumuljatornajavitalsmasterau1835abcbl-6-1000x1000.jpg</picture>
+<name>Дриль-шурупокрут акумуляторний Vitals Master AU 1835abc BL</name>
+<description>&lt;h2&gt;Опис дрилі-шурупокрута акумуляторного Vitals Master AU 1835abc BL&lt;/h2&gt; &lt;p&gt;&lt;b&gt;Акумуляторний дриль-шурупокрут ТМ «VITALS», серія «Master», лінійка інструментів «М-Type 18», модель «AU 1835abc BL»&lt;/b&gt; — це сучасний ручний інструмент для закручування/відкручування кріпильних виробів та свердління отворів діаметром 2–13 мм. Працює від літій-іонних акумуляторів 18 В, забезпечує високу продуктивність і безпечність завдяки безщітковому інверторному двигуну та системам захисту.&lt;/p&gt; &lt;h2&gt;Комплектація моделі Vitals Master AU 1835abc BL&lt;/h2&gt;&lt;ul&gt; &lt;li&gt;Дриль-шурупокрут акумуляторний &lt;/li&gt; &lt;li&gt;Інструкція з експлуатації &lt;/li&gt; &lt;li&gt;Пластиковий кейс &lt;/li&gt; &lt;/ul&gt;</description>
+
+<features_text>&lt;h2&gt;Основні особливості:&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;безщітковий інверторний двигун — менше шуму, відсутність іскріння, довший ресурс;&lt;/li&gt;
+&lt;li&gt;двошвидкісний реверсний редуктор — плавне регулювання швидкості для різних завдань;&lt;/li&gt;
+&lt;li&gt;муфта-регулятор крутного моменту — точне закручування без пошкодження кріплення (макс. момент 35 Н·м);&lt;/li&gt;
+&lt;li&gt;металевий швидкозатискний патрон 13 мм — надійність та зручність фіксації однією рукою;&lt;/li&gt;
+&lt;li&gt;LED-підсвічування робочої зони — комфортна робота навіть у темряві;&lt;/li&gt;
+&lt;li&gt;системи захисту — від перегрівання, перевантаження та випадкового пуску;&lt;/li&gt;
+&lt;li&gt;міцний корпус із ударостійкого пластику — довговічність та безпека.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992255">
+<url>http://vitals.ua/ak-tehnika/smart-line/elektroinstrument-sml-pl/drl-sh-akk-vp-au-1840-bsqc-srtl</url>
+<oldprice>2139.0000</oldprice>
+<price>1676.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000212052</vendorCode>
+<articlCode>212052</articlCode>
+<categoryId>99283</categoryId>
+<param name="Тип двигуна">безщітковий</param>
+<param name="Номінальна напруга, В">18</param>
+<param name="Максимальний крутний момент, Нм">40</param>
+<param name="Кількість позицій муфти крутного моменту">18+1</param>
+<param name="Швидкість холостого ходу, об/хв">0-400/0-1500</param>
+<param name="Розмір свердлильного патрона, мм">10</param>
+<param name="Споряджена маса, кг"></param>
+<param name="Підсвічування робочої зони">є</param>
+<param name="Реверс">є</param>
+<param name="Регулювання швидкості обертання шпинделя">є</param>
+<param name="Блокування шпинделя">є</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/smartline%2B/drel-shurupovert-akkumulyatorna-vitals-professional-au-1840-bsqc/drel-shurupovert-akkumulyatorna-vitals-professional-au-1840-bsqc-smartline-01-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/smartline%2B/drel-shurupovert-akkumulyatorna-vitals-professional-au-1840-bsqc/drel-shurupovert-akkumulyatorna-vitals-professional-au-1840-bsqc-smartline-02-1000x1000.jpg</picture>
+<name>Дриль-шурупокрут акумуляторний Vitals Professional AU 1840 BSQC SmartLine+</name>
+<description>&lt;section&gt; &lt;div class=&amp;quot;row&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-12 col-md-12 col-sm-12 col-xs-12&amp;quot;&gt; &lt;h2&gt;&lt;strong&gt;Дриль-шурупокрут акумуляторний Vitals Professional AU 1840 BSQC SmartLine+ — професійна потужність і контроль у кожному русі&lt;/strong&gt; &lt;/h2&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-8 col-md-8 col-sm-12 col-xs-12&amp;quot;&gt; &lt;p style=&amp;quot;text-align: justify; &amp;quot;&gt;Дриль-шурупокрут акумуляторний Vitals Professional AU 1840 BSQC SmartLine+ — це еволюційна модель у професійній лінійці SmartLine+, створена для тих, хто цінує потужність, надійність і продуману ергономіку. Інструмент призначений для свердління та роботи з кріпленням у деревині, металі та інших поширених матеріалах. Живлення від акумулятора напругою 18 В забезпечує повну свободу рухів і комфортну роботу без прив’язки до електромережі.&lt;/p&gt; &lt;/div&gt; &lt;div class=&amp;quot;col-lg-4 col-md-4 col-sm-12 col-xs-12&amp;quot;&gt;</description>
+
+<features_text>&lt;h2&gt;Особливості моделі Vitals Professional AU 1840 BSQC SmartLine+:&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;безщітковий двигун;&lt;/li&gt; 
+
+  &lt;li&gt;надійна та ергономічна конструкція корпусу;&lt;/li&gt;
+  &lt;li&gt;реверс;&lt;/li&gt;
+  &lt;li&gt;швидкозатискний патрон;&lt;/li&gt; 
+  &lt;li&gt;двошвидкісний редуктор;&lt;/li&gt;
+  &lt;li&gt;LED-підсвічування робочої зони;&lt;/li&gt;
+  &lt;li&gt;серія SmartLine+.&lt;/li&gt;
+&lt;/ul&gt;</features_text>
+</item>
+<item id="992344">
+<url>http://vitals.ua/archiv/sad-park-tehnika-archive/akkumulyatornaya-tehnika-1/elks-akm-azt-36100-1n-kit</url>
+<price>5929.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000223823</vendorCode>
+<articlCode>223823</articlCode>
+<categoryId>99310</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Потужність, Вт">1000</param>
+<param name="Напруга живлення, В">36</param>
+<param name="Ємність акумуляторної батареї, А/год">4.0</param>
+<param name="Рекомендована товщина ліски, мм">2,4</param>
+<param name="Ширина скошування, мм">430</param>
+<param name="Максимальна частота обертів холостого ходу, об/хв">6500</param>
+<param name="Габарити паковання, мм">1810х105х210</param>
+<param name="Маса нетто/брутто, кг">7,5/8,5</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/seriya-m/18v/sadovo-parkova-tehnika/kosi/vitals-master-azt-36100-1n-bl-kit/elektrokosa-akumulyatorna-vitals-azt-36100-1n-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/elektokosy/elektrokosa-akumulyatorna-vitals-azt-36100-1n-kit/elektrokosa-akumulyatorna-vitals-azt-36100-1n-kit-02-1000x1000.jpg</picture>
+<name>Електрокоса акумуляторна Vitals AZT 36100-1n Kit</name>
+<description>&lt;section&gt; &lt;div class=&amp;quot;row&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-12 col-md-12 col-sm-12 col-xs-12&amp;quot;&gt; &lt;h2&gt;&lt;strong&gt;Електрокоса акумуляторна Vitals AZT 36100-1n Kit &lt;/strong&gt; &lt;/h2&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-8 col-md-8 col-sm-12 col-xs-12&amp;quot;&gt; &lt;p style=&amp;quot;text-align: justify; &amp;quot;&gt;&lt;strong&gt;Електрокоса акумуляторна Vitals AZT 36100-1n Kit &lt;/strong&gt; — це інноваційний, потужний та надійний інструмент для догляду за вашим газоном, скошування трави, бур’янів, кущів та іншої рослинності на дачі, в саду або на присадибній ділянці. Завдяки своїй високій ефективності, мобільності та зручності акумуляторна електрокоса Vitals AZT 36100-1n Kit стане ідеальним вибором для домашнього використання та професійних потреб. &lt;/p&gt; &lt;/div&gt; &lt;div class=&amp;quot;col-lg-4 col-md-4 col-sm-12 col-xs-12&amp;quot;&gt;</description>
+
+<features_text></features_text>
+</item>
+<item id="992479">
+<url>http://vitals.ua/svarochnoye-oborudovaniye/svarochnyye-apparaty/zv-ap-vitals-mig-1300-mini</url>
+<price>4199.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000237593</vendorCode>
+<articlCode>237593</articlCode>
+<categoryId>99106</categoryId>
+<param name="Напруга, В">230</param>
+<param name="Частота струму, Гц">50</param>
+<param name="Максимальна споживана потужність, кВА">3,8</param>
+<param name="Напруга холостого ходу, В">62</param>
+<param name="Діапазон регулювання зварювального струму, А (ММА/MIG/TigLift)">20-120/20-130/10-130</param>
+<param name="Тривалість увімкнення (ТУ) на максимальному струмі, % ">60</param>
+<param name="Діаметр електрода, мм">1,6-3,2</param>
+<param name="Діаметр дроту, мм">0,8-1,0</param>
+<param name="ККД, %">85</param>
+<param name="Коефіцієнт потужності">0,93</param>
+<param name="Клас ізоляції">H</param>
+<param name="Клас захисту">IP21S</param>
+<param name="Цифровий дисплей">Є</param>
+<param name="Кабель-електродотримач, А ">300</param>
+<param name="Кабель затискача «маси», А">300</param>
+<param name="Котушка зварювального дроту, кг">0,45</param>
+<param name="MIG-пальник, м">3</param>
+<param name="Довжина кабелю-електродотримача, м">2,5</param>
+<param name="Довжина кабелю затискача «маси», м">2</param>
+<param name="Маса зварювального апарата нетто, кг">6,5</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/svarki/zvaryuvalnij-aparat-vitals-mig-1300-mini/vitalsmig1300mini-2-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/svarki/zvaryuvalnij-aparat-vitals-mig-1300-mini/vitalsmig1300mini-1-1000x1000.jpg</picture>
+<name>Зварювальний апарат Vitals MIG 1300 mini</name>
+<description>&lt;section&gt; &lt;div class=&amp;quot;row&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-12 col-md-12 col-sm-12 col-xs-12&amp;quot;&gt; &lt;h2&gt;&lt;strong&gt;Зварювальний апарат Vitals MIG 1300 mini&lt;/strong&gt; &lt;/h2&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-8 col-md-8 col-sm-12 col-xs-12&amp;quot;&gt; &lt;p&gt;&lt;b&gt;Зварювальний напівавтомат Vitals MIG 1300 mini&lt;/b&gt; є компактним рішенням для тих, хто шукає універсальний апарат без зайвої складності. Він підходить для різних завдань і вирізняється простотою використання, що особливо зручно в повсякденній роботі.&lt;/p&gt; &lt;/div&gt; &lt;div class=&amp;quot;col-lg-4 col-md-4 col-sm-12 col-xs-12&amp;quot;&gt; &lt;img src=&amp;quot;https://vitals.ua/image/catalog/rich-cont/svarki/zvaruvalni-apparaty/zvaryuvalnij-aparat-vitals-mig-1300-mini/zvaryuvalnij-aparat-vitals-mig-1300-mini-rich2026-01.jpg&amp;quot; loading=&amp;quot;lazy&amp;quot; alt=&amp;quot;Зварювальний апарат Vitals MIG 1300 mini&amp;quot; title=&amp;quot;Купити зварювальний апарат Vitals MIG 1300 mini&amp;quot;&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-4 col-md-4 col-sm-12 col-xs-12&amp;quot;&gt;</description>
+
+<features_text>&lt;h2 style=&amp;quot;text-align: justify; &amp;quot;&gt;Особливості моделі Vitals MIG 1300 mini:&lt;/h2&gt;
+&lt;ul&gt;
+      &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;ForceArc (форсаж дуги) — функція апарата, яка збільшує зварювальний струм у момент відокремлення краплі металу від електрода, знижує ймовірність прилипання електрода та підвищує стабільність горіння дуги.&lt;/li&gt;
+      &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;Hot Start (гарячий старт) — піковий струм у момент підпалу дуги для плавного старту.&lt;/li&gt;
+      &lt;li style=&amp;quot;text-align: justify;&amp;quot;&gt;</features_text>
+</item>
+<item id="992345">
+<url>http://vitals.ua/archiv/sad-park-tehnika-archive/akkumulyatornaya-tehnika-1/elks-akm-azt-3645-1n-kit</url>
+<price>6419.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000223824</vendorCode>
+<articlCode>223824</articlCode>
+<categoryId>99310</categoryId>
+<param name="Тип двигуна">Безщітковий</param>
+<param name="Потужність, Вт">450</param>
+<param name="Напруга живлення, В">36</param>
+<param name="Ємність акумуляторної батареї, А/год">4.0</param>
+<param name="Рекомендована товщина ліски, мм">2,4</param>
+<param name="Ширина скошування, мм">360</param>
+<param name="Максимальна частота обертів холостого ходу, об/хв">5000</param>
+<param name="Габарити паковання, мм">920х250х130</param>
+<param name="Маса нетто/брутто, кг">6,2/7,1</param>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/elektokosy/elektrokosa-akumulyatorna-vitals-azt-3645-1n-kit/elektrokosa-akumulyatorna-vitals-azt-3645-1n-kit-new-00-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/akkamulyatornaya-tehnika/elektokosy/elektrokosa-akumulyatorna-vitals-azt-3645-1n-kit/elektrokosa-akumulyatorna-vitals-azt-3645-1n-kit-02-1000x1000.jpg</picture>
+<name>Електрокоса акумуляторна Vitals AZT 3645-1n Kit</name>
+<description>&lt;section&gt; &lt;div class=&amp;quot;row&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-12 col-md-12 col-sm-12 col-xs-12&amp;quot;&gt; &lt;h2&gt;&lt;strong&gt;Електрокоса акумуляторна Vitals AZT 3645-1n Kit &lt;/strong&gt; &lt;/h2&gt; &lt;/div&gt; &lt;/div&gt; &lt;/section&gt; &lt;section&gt; &lt;div class=&amp;quot;row vitals_container&amp;quot;&gt; &lt;div class=&amp;quot;col-lg-8 col-md-8 col-sm-12 col-xs-12&amp;quot;&gt; &lt;p style=&amp;quot;text-align: justify; &amp;quot;&gt;&lt;strong&gt;Електрокоса акумуляторна Vitals AZT 3645-1n Kit &lt;/strong&gt; — це інноваційний, потужний та надійний інструмент для догляду за вашим газоном, скошування трави, бур’янів, кущів та іншої рослинності на дачі, в саду або на присадибній ділянці. Завдяки своїй високій ефективності, мобільності та зручності акумуляторна електрокоса Vitals AZT 3645-1n Kit стане ідеальним вибором для домашнього використання та професійних потреб. &lt;/p&gt; &lt;/div&gt; &lt;div class=&amp;quot;col-lg-4 col-md-4 col-sm-12 col-xs-12&amp;quot;&gt;</description>
+
+<features_text></features_text>
+</item>
+<item id="991683">
+<url>http://vitals.ua/index.php?route=product/product&amp;path=&amp;product_id=1683</url>
+<price>27813.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000187987</vendorCode>
+<articlCode>187987</articlCode>
+<name>-</name>
+<description></description>
+
+<features_text></features_text>
+</item>
+<item id="991684">
+<url>http://vitals.ua/index.php?route=product/product&amp;path=&amp;product_id=1684</url>
+<price>28703.0000</price>
+<available></available>
+<quantity_in_stock>0</quantity_in_stock>
+<vendorCode>000187985</vendorCode>
+<articlCode>187985</articlCode>
+<name>-</name>
+<description></description>
+
+<features_text></features_text>
+</item>
+<item id="991056">
+<url>http://vitals.ua/sadovo-parkovaya-tehnika/aksessuary-dlya-motokos-i-trimmerov/h017-professional</url>
+<price>325.0000</price>
+<available>true</available>
+<quantity_in_stock>1</quantity_in_stock>
+<vendorCode>000148466</vendorCode>
+<articlCode>148466</articlCode>
+<categoryId>9997</categoryId>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/h017-professional/h017-professional-1-1000x1000.jpg</picture>
+<picture>https://vitals.ua/image/cache/catalog/demo/sad-park/h017-professional/h017-professional-2-1000x1000.jpg</picture>
+<name>Ранцева жилетка H017 Professional</name>
+<description></description>
+
+<features_text></features_text>
+</item>
+</items>
+</shop>
+</price>

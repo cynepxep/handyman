@@ -1,0 +1,18 @@
+node_modules/
+# Секреты и локальные значения: НИКОГДА не попадают в git (шаблон без секретов — .env.example)
+.env
+.env.*
+!.env.example
+.data/
+.next/
+dist/
+.turbo/
+*.log
+.DS_Store
+/packages/db/generated/
+# Личные настройки Claude Code на этом компьютере
+.claude/settings.local.json
+# Служебные и временные файлы
+*.tsbuildinfo
+next-env.d.ts
+Thumbs.db

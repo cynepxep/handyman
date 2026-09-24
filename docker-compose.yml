@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: handyman
+      POSTGRES_PASSWORD: handyman
+      POSTGRES_DB: handyman
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U handyman"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-change-me-search-key}
+      MEILI_NO_ANALYTICS: "true"
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili_data:/meili_data
+
+  # Хранилище картинок (S3-совместимое) появится на этапе загрузки фото: образ minio/minio
+  # больше не публикуется на Docker Hub, выберем замену тогда.
+
+  # web и bot запускаются в Docker только с профилем "full" (docker compose --profile full up).
+  # Для ежедневной разработки на Windows проще запускать сайт напрямую: pnpm dev.
+  web:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://handyman:handyman@postgres:5432/handyman?schema=public
+      REDIS_URL: redis://redis:6379
+      MEILI_HOST: http://meilisearch:7700
+      S3_ENDPOINT: http://minio:9000
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/bot/node_modules
+      - /app/packages/db/node_modules
+      - /app/packages/core/node_modules
+      - /app/packages/db/generated
+      - /app/apps/web/.next
+    command: sh -c "pnpm --filter @handyman/db run migrate:deploy && pnpm --filter @handyman/db run seed && pnpm --filter web dev"
+
+  bot:
+    profiles: ["full"]
+    build:
+      context: .
+      dockerfile: apps/bot/Dockerfile.dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://handyman:handyman@postgres:5432/handyman?schema=public
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/apps/web/node_modules
+      - /app/apps/bot/node_modules
+      - /app/packages/db/node_modules
+      - /app/packages/core/node_modules
+      - /app/packages/db/generated
+    command: sh -c "pnpm --filter bot dev"
+
+volumes:
+  postgres_data:
+  redis_data:
+  meili_data:

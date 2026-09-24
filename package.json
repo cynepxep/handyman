@@ -1,0 +1,21 @@
+{
+  "name": "handyman-next",
+  "private": true,
+  "version": "0.0.0",
+  "engines": { "node": ">=20" },
+  "packageManager": "pnpm@12.6.0",
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm --filter web build",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "infra:up": "docker compose up -d postgres redis meilisearch",
+    "infra:down": "docker compose down",
+    "db:migrate": "pnpm --filter @handyman/db run migrate:deploy",
+    "db:migrate:dev": "pnpm --filter @handyman/db run migrate:dev",
+    "db:generate": "pnpm --filter @handyman/db run generate",
+    "db:seed": "pnpm --filter @handyman/db run seed",
+    "db:studio": "pnpm --filter @handyman/db run studio",
+    "search:reindex": "pnpm --filter @handyman/db run search:reindex"
+  }
+}

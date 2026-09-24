@@ -1,0 +1,713 @@
+// Схема БД Handyman (Этап 0 — только структура, без бизнес-логики).
+// Соответствие старой схеме (SQLite, src/db.js) описано в docs/MIGRATION-NOTES.md.
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../generated/client"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- перечисления ----------
+
+enum OrderStatus {
+  NEW
+  PAID
+  PACKED
+  SHIPPED
+  DONE
+  CANCELLED
+  NO_ANSWER // "Не дозвонились" (новое, из ТЗ)
+  AWAITING_SUPPLIER // "Ждём товар от поставщика" (новое, из ТЗ)
+  RETURNED // "Возврат" (новое, из ТЗ)
+}
+
+enum PayMode {
+  PREPAY
+  FULL
+  CARD
+}
+
+enum DeliveryMethod {
+  NOVA_POSHTA
+  COURIER_ODESA
+}
+
+enum ProductSource {
+  MANUAL
+  FEED
+  TABLE
+}
+
+enum ClientTier {
+  START
+  MASTER
+  PRO
+  LEGEND
+  WHOLESALE // новое, из ТЗ: оптовый уровень для бригад
+}
+
+enum Locale {
+  UK
+  RU
+}
+
+enum StockMoveReason {
+  IMPORT
+  SALE
+  RETURN
+  ADJUSTMENT
+  RECEIVING
+}
+
+enum SyncJobKind {
+  PUSH_ORDER
+  UPDATE_STATUS
+}
+
+enum OutboxState {
+  PENDING
+  SENT
+  DEV
+  FAILED
+}
+
+enum WebhookSource {
+  MONO
+  KEYCRM
+  NOVA_POSHTA
+}
+
+enum PriceLogSource {
+  MANUAL
+  IMPORT
+  SUPPLIER
+  BULK
+}
+
+enum CompatibilityRole {
+  HOST // сам инструмент (напр. УШМ)
+  ACCESSORY // расходник/аксессуар (напр. круг)
+}
+
+enum PromoKind {
+  AMOUNT
+  PERCENT
+}
+
+enum PromoScope {
+  ALL
+  CATEGORY
+  FIRST_ORDER
+}
+
+// ---------- каталог ----------
+
+model Category {
+  id       String     @id
+  nameUk   String
+  nameRu   String
+  sort     Int        @default(0)
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryTree")
+
+  products      Product[]
+  feedMappings  FeedCategoryMap[]
+  promoCodes    PromoCode[]
+
+  @@index([parentId])
+}
+
+model Brand {
+  id      String    @id @default(cuid())
+  name    String    @unique
+  logo    String?
+  sort    Int       @default(0)
+  visible Boolean   @default(true)
+  products Product[]
+}
+
+model Supplier {
+  id           String    @id @default(cuid())
+  name         String    @unique
+  contact      String?
+  note         String?
+  markupPct    Float? // наценка к цене фида; у Vitals пусто: цена фида = РРЦ
+  feedUrl      String? // ссылка на XML-фид
+  defaultBrand String? // бренд, если в фиде нет тега vendor
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  products     Product[]
+  feedMaps     FeedCategoryMap[]
+  importRuns   ImportRun[]
+}
+
+model Product {
+  id             String         @id @default(cuid())
+  sku            String         @unique
+  nameUk         String
+  nameRu         String
+  descUk         String?
+  descRu         String?
+  price          Decimal        @db.Decimal(10, 2)
+  oldPrice       Decimal?       @db.Decimal(10, 2)
+  categoryId     String
+  category       Category       @relation(fields: [categoryId], references: [id])
+  brandId        String?
+  brand          Brand?         @relation(fields: [brandId], references: [id])
+  supplierId     String?
+  supplier       Supplier?      @relation(fields: [supplierId], references: [id])
+  supplierPrice  Decimal?       @db.Decimal(10, 2) // цена по фиду (РРЦ Vitals)
+  purchasePrice  Decimal?       @db.Decimal(10, 2) // закупочная цена (наша); импорт её не трогает, в фиде её нет
+  priceConflict  Boolean        @default(false)
+  supplierAvailable    Boolean   @default(false) // есть у поставщика (не наш остаток, он появится на Этапе 4)
+  articleCode          String? // второй артикул из фида (articlCode)
+  supplierUrl          String? // страница товара на сайте поставщика
+  missingFromFeedSince DateTime? // с какого импорта товара нет в фиде
+  source         ProductSource  @default(MANUAL)
+  visible        Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  attributes     ProductAttribute[]
+  images         ProductImage[]
+  fieldLocks     ProductFieldLock[]
+  packaging      ProductPackaging[]
+  priceBreaks    PriceBreak[]
+  compatibility  ProductCompatibility[]
+  stockItems     StockItem[]
+  priceLogs      PriceLog[]
+  orderItems     OrderItem[]
+  recommendedBy  Recommendation[] @relation("RecommendedProduct")
+  recommends     Recommendation[] @relation("SourceProduct")
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([supplierId])
+}
+
+model ProductAttribute {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  key       String
+  value     String
+  sort      Int     @default(0) // порядок как в фиде
+
+  @@index([productId])
+  @@index([key, value])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  sort      Int     @default(0)
+
+  @@index([productId])
+}
+
+// Какие поля товара редактировали руками — импорт их больше не перезаписывает.
+model ProductFieldLock {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  fieldName String
+  lockedAt  DateTime @default(now())
+  lockedBy  String?
+
+  @@unique([productId, fieldName])
+}
+
+// Память сопоставления "путь категории в фиде поставщика" -> наша категория.
+// Действует самый длинный совпавший путь: можно сопоставить корень, а отдельную ветку переопределить.
+// skip = true — товары этой ветки не загружаем (напр. "Архів продукції").
+model FeedCategoryMap {
+  supplierId String
+  supplier   Supplier  @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  path       String
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id])
+  skip       Boolean   @default(false)
+
+  @@id([supplierId, path])
+}
+
+enum ImportStatus {
+  PREVIEW // фид разобран, изменения показаны, ничего не записано
+  RUNNING
+  DONE
+  FAILED
+}
+
+// Один запуск импорта. Файл фида хранится на диске (feedFile), чтобы применить ровно то, что показали при проверке.
+model ImportRun {
+  id         String       @id @default(cuid())
+  supplierId String
+  supplier   Supplier     @relation(fields: [supplierId], references: [id])
+  sourceKind String // "url" | "file"
+  sourceRef  String? // ссылка или имя файла
+  status     ImportStatus @default(PREVIEW)
+  feedFile   String?
+  total      Int          @default(0) // сколько шагов предстоит (для полосы прогресса)
+  progress   Int          @default(0)
+  summary    Json? // счётчики: created, updated, unchanged, skipped, priceChanged, conflicts, needConfirm, missing, errors
+  report     Json? // списки: ошибки по строкам, товары «нужно подтвердить», пропущенные
+  error      String?
+  who        String?
+  startedAt  DateTime     @default(now())
+  finishedAt DateTime?
+
+  @@index([supplierId, startedAt])
+}
+
+// ---------- под будущее: упаковка/опт (не используется на Этапе 0) ----------
+
+model ProductPackaging {
+  id           String  @id @default(cuid())
+  productId    String
+  product      Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  unitLabel    String // напр. "шт", "уп."
+  unitsPerPack Int
+  packPrice    Decimal @db.Decimal(10, 2)
+
+  @@index([productId])
+}
+
+model PriceBreak {
+  id           String      @id @default(cuid())
+  productId    String
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  minQty       Int
+  pricePerUnit Decimal     @db.Decimal(10, 2)
+  clientTier   ClientTier?
+
+  @@index([productId])
+}
+
+// ---------- под будущее: совместимость товаров (не используется на Этапе 0) ----------
+
+model CompatibilityGroup {
+  id    String @id @default(cuid())
+  key   String @unique // напр. "disc-125mm", "battery-mtype18"
+  label String
+
+  products ProductCompatibility[]
+}
+
+model ProductCompatibility {
+  id        String              @id @default(cuid())
+  productId String
+  product   Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  groupId   String
+  group     CompatibilityGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  role      CompatibilityRole
+
+  @@unique([productId, groupId, role])
+}
+
+// ---------- под будущее: свой склад (не используется на Этапе 0) ----------
+
+model Warehouse {
+  id        String      @id @default(cuid())
+  name      String
+  isDefault Boolean     @default(false)
+  stockItems StockItem[]
+}
+
+model StockItem {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id])
+  onHand      Int       @default(0)
+  reserved    Int       @default(0)
+  incomingQty Int       @default(0)
+  incomingEta DateTime?
+
+  movements StockMovement[]
+
+  @@unique([productId, warehouseId])
+}
+
+model StockMovement {
+  id          String          @id @default(cuid())
+  stockItemId String
+  stockItem   StockItem       @relation(fields: [stockItemId], references: [id], onDelete: Cascade)
+  delta       Int
+  reason      StockMoveReason
+  refOrderId  String?
+  who         String?
+  createdAt   DateTime        @default(now())
+
+  @@index([stockItemId])
+}
+
+// ---------- под будущее: маркетинг (не используется на Этапе 0) ----------
+
+model Banner {
+  id               String    @id @default(cuid())
+  zone             String // home, catalog_top, category, product, cart, miniapp
+  titleUk          String
+  titleRu          String
+  textUk           String?
+  textRu           String?
+  imageDesktopUrl  String?
+  imageMobileUrl   String?
+  linkTarget       String? // "cat:ak" | "brand:Milwaukee" | "page:offer" | URL
+  startsAt         DateTime?
+  endsAt           DateTime?
+  visible          Boolean   @default(true)
+  impressions      Int       @default(0)
+  clicks           Int       @default(0)
+}
+
+model PromoCode {
+  id         String      @id @default(cuid())
+  code       String      @unique
+  kind       PromoKind
+  value      Decimal     @db.Decimal(10, 2)
+  scope      PromoScope  @default(ALL)
+  categoryId String?
+  category   Category?   @relation(fields: [categoryId], references: [id])
+  usesLeft   Int?
+  expiresAt  DateTime?
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+
+  partners Partner[]
+}
+
+model Partner {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  utmSource   String?
+  promoCodeId String?
+  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id])
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+
+  referrals PartnerReferral[]
+}
+
+model PartnerReferral {
+  id         String   @id @default(cuid())
+  partnerId  String
+  partner    Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  orderId    String?
+  order      Order?   @relation(fields: [orderId], references: [id])
+  commission Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  @@index([partnerId])
+  @@index([orderId])
+}
+
+// ---------- клиенты ----------
+
+model Client {
+  id                String    @id @default(cuid())
+  // Телефон — основной идентификатор единого клиента (сайт+MiniApp+бот), см. ТЗ.
+  // Допускаем NULL (анонимный Telegram-покупатель до первого заказа), но уникален, если задан.
+  phone             String?   @unique
+  tgId              BigInt?   @unique
+  email             String?   @unique
+  name              String?
+  username          String?
+  lang              Locale    @default(UK)
+  spent             Decimal   @default(0) @db.Decimal(10, 2)
+  manualDiscountPct Float?
+  tier              ClientTier @default(START)
+  note              String?
+  passwordHash      String?
+  passwordSalt      String?
+  createdAt         DateTime  @default(now())
+
+  orders       Order[]
+  sessions     ClientSession[]
+  linkCodes    LinkCode[]
+  auditEntries ClientAudit[]
+}
+
+model ClientSession {
+  token     String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  @@index([clientId])
+}
+
+// Код для привязки веб-аккаунта к Telegram (t.me/bot?start=link_КОД).
+model LinkCode {
+  code      String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+}
+
+model ClientAudit {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  ts        DateTime @default(now())
+  who       String
+  field     String
+  oldValue  String?
+  newValue  String?
+
+  @@index([clientId])
+}
+
+// ---------- заказы ----------
+
+model Order {
+  id             String         @id @default(cuid())
+  seq            Int            @default(autoincrement()) // внутренний счётчик для номера "HM-####"
+  no             String         @unique
+  clientId       String
+  client         Client         @relation(fields: [clientId], references: [id])
+  status         OrderStatus    @default(NEW)
+  payMode        PayMode
+  subtotal       Decimal        @db.Decimal(10, 2)
+  discountPct    Float          @default(0)
+  total          Decimal        @db.Decimal(10, 2)
+  dueNow         Decimal        @db.Decimal(10, 2)
+  paidAmount     Decimal        @default(0) @db.Decimal(10, 2)
+  delivery       DeliveryMethod
+  city           String?
+  address        String?
+  npWarehouseRef String?
+  ttn            String?
+  comment        String?
+  keycrmId       String?
+  monoInvoiceId  String?
+  isTest         Boolean        @default(false)
+  noCallback     Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  items          OrderItem[]
+  history        OrderHistory[]
+  outboxEntries  Outbox[]
+  pendingNotifs  PendingNotif[]
+  payments       Payment[]
+  partnerRefs    PartnerReferral[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id])
+  sku        String
+  name       String
+  qty        Int
+  // Цена уже со скидкой — снимок на момент заказа. Источник истины — сервер, не клиент.
+  unitPrice  Decimal  @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderHistory {
+  id      String   @id @default(cuid())
+  orderId String
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ts      DateTime @default(now())
+  text    String
+
+  @@index([orderId])
+}
+
+model OrderStatusTemplate {
+  id       String      @id @default(cuid())
+  status   OrderStatus
+  titleUk  String
+  titleRu  String
+  textUk   String
+  textRu   String
+  autoSend Boolean     @default(false)
+}
+
+model Outbox {
+  id        String      @id @default(cuid())
+  chatId    String
+  orderId   String?
+  order     Order?      @relation(fields: [orderId], references: [id])
+  text      String
+  state     OutboxState @default(PENDING)
+  attempts  Int         @default(0)
+  error     String?
+  createdAt DateTime    @default(now())
+
+  @@index([state])
+  @@index([orderId])
+}
+
+// Статус заказа сменился со стороны KeyCRM, но под него нет авто-шаблона —
+// ждёт, чтобы менеджер вручную выбрал, что написать клиенту.
+model PendingNotif {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  createdAt DateTime    @default(now())
+  resolved  Boolean     @default(false)
+}
+
+// Идемпотентность вебхука mono: один invoiceId нельзя зачесть дважды.
+model Payment {
+  invoiceId String   @id
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  amount    Decimal  @db.Decimal(10, 2)
+  createdAt DateTime @default(now())
+}
+
+model Recommendation {
+  productId     String
+  product       Product @relation("SourceProduct", fields: [productId], references: [id], onDelete: Cascade)
+  recommendedId String
+  recommended   Product @relation("RecommendedProduct", fields: [recommendedId], references: [id], onDelete: Cascade)
+  sort          Int     @default(0)
+
+  @@id([productId, recommendedId])
+}
+
+model SyncQueueJob {
+  id       String      @id @default(cuid())
+  kind     SyncJobKind
+  payload  Json
+  attempts Int         @default(0)
+  nextAt   DateTime    @default(now())
+  done     Int         @default(0) // 0=ожидает, 1=готово, 2=не удалось (превышены попытки)
+  error    String?
+}
+
+model WebhookLog {
+  id     String        @id @default(cuid())
+  source WebhookSource
+  ts     DateTime      @default(now())
+  body   Json
+}
+
+// ---------- персонал и права ----------
+
+model Staff {
+  id               String    @id @default(cuid())
+  username         String    @unique
+  name             String
+  roleKey          String
+  role             Role      @relation(fields: [roleKey], references: [key])
+  passwordHash     String
+  passwordSalt     String
+  active           Boolean   @default(true)
+  twoFactorSecret  String? // задел под 2FA, логика — позже
+  createdAt        DateTime  @default(now())
+  lastLoginAt      DateTime?
+
+  sessions StaffSession[]
+}
+
+model Role {
+  key     String  @id
+  title   String
+  builtin Boolean @default(false)
+
+  staff       Staff[]
+  permissions RolePermission[]
+}
+
+model RolePermission {
+  roleKey    String
+  role       Role   @relation(fields: [roleKey], references: [key], onDelete: Cascade)
+  permission String
+
+  @@id([roleKey, permission])
+}
+
+model StaffSession {
+  token     String   @id @default(cuid())
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  @@index([staffId])
+}
+
+model Invite {
+  code      String   @id @default(cuid())
+  role      String
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model AuditLog {
+  id      String   @id @default(cuid())
+  ts      DateTime @default(now())
+  who     String
+  action  String
+  target  String?
+  details Json?
+
+  @@index([ts])
+}
+
+// ---------- контент ----------
+
+model Page {
+  slug    String  @id
+  titleUk String
+  titleRu String
+  bodyUk  String
+  bodyRu  String
+  inMenu  Boolean @default(true)
+  sort    Int     @default(0)
+  visible Boolean @default(true)
+}
+
+// Переопределения текстов интерфейса (базовые значения — в коде, пакет core).
+model TextOverride {
+  key   String
+  lang  Locale
+  value String
+
+  @@id([key, lang])
+}
+
+// Гибкие настройки (скидки, способы оплаты/доставки, внешний вид и т.п.) —
+// намеренно JSON-блоб, а не нормализованные таблицы: часто меняющиеся, некритичные для выборок.
+model Setting {
+  key   String @id
+  value Json
+}
+
+model PriceLog {
+  id        String         @id @default(cuid())
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  oldPrice  Decimal        @db.Decimal(10, 2)
+  newPrice  Decimal        @db.Decimal(10, 2)
+  source    PriceLogSource
+  who       String?
+  ts        DateTime       @default(now())
+  tagDone   Boolean        @default(false)
+  tagBy     String?
+  tagAt     DateTime?
+
+  @@index([productId])
+  @@index([tagDone])
+}
