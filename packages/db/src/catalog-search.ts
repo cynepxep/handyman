@@ -392,7 +392,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   };
 }
 
-export type Suggestion = { id: string; nameUk: string; nameRu: string; price: number; image: string | null; available: boolean };
+export type Suggestion = { id: string; sku: string; nameUk: string; nameRu: string; price: number; image: string | null; available: boolean };
 
 /** Подсказки для строки поиска в шапке: название, фото, цена. */
 export async function suggestProducts(q: string, limit = 6): Promise<{ items: Suggestion[]; correctedQuery: string | null }> {
@@ -401,7 +401,7 @@ export async function suggestProducts(q: string, limit = 6): Promise<{ items: Su
   const uid = indexUid();
   const ask = async (text: string) => {
     const { status, data } = await meili<{ hits: Suggestion[]; message?: string }>("POST", `/indexes/${uid}/search`, {
-      q: text, limit, attributesToRetrieve: ["id", "nameUk", "nameRu", "price", "image", "available"],
+      q: text, limit, attributesToRetrieve: ["id", "sku", "nameUk", "nameRu", "price", "image", "available"],
     });
     if (status === 404) throw new SearchUnavailableError("Поисковый индекс ещё не создан.");
     if (status >= 400) throw new Error(`Поиск: ${data?.message ?? status}`);

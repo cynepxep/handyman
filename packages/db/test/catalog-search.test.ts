@@ -66,6 +66,7 @@ test("раскладка клавиатуры: gbkf → пила, подсказ
   const s = await search.suggestProducts("gbkf");
   assert.equal(s.correctedQuery, "пила");
   assert.ok(s.items.length > 0 && s.items.length <= 6);
+  assert.ok(s.items.every((i) => typeof i.sku === "string" && i.sku.length > 0), "в подсказке есть артикул (по нему витрина открывает товар)");
   assert.deepEqual((await search.suggestProducts("п")).items, []); // слишком короткий запрос
 });
 

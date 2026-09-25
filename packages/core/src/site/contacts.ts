@@ -87,10 +87,16 @@ export function validateContactsForm(input: Record<string, string>): ContactsRes
   };
 }
 
-/** «+380 (48) 123-45-67» → «tel:+380481234567». */
+/**
+ * Номер для ссылки «позвонить»: «+380 (48) 123-45-67» → «tel:+380481234567».
+ * Украинские номера без кода страны тоже работают: «093 366 24 07» → «tel:+380933662407», «380…» → «tel:+380…».
+ */
 export function telHref(phone: string): string {
-  const digits = phone.replace(/[^\d+]/g, "");
-  return `tel:${digits.startsWith("+") ? digits : `+${digits}`}`;
+  const plus = phone.trim().startsWith("+");
+  const digits = phone.replace(/\D/g, "");
+  if (plus) return `tel:+${digits}`;
+  if (/^0\d{9}$/.test(digits)) return `tel:+38${digits}`;
+  return `tel:+${digits}`;
 }
 
 export const isContactsEmpty = (c: Contacts) =>
