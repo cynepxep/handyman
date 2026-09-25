@@ -38,7 +38,7 @@ export const cardLabels = (t: T): CardLabels => ({
 });
 
 /** Размеры фото для браузера: сколько пикселей реально нужно на каждой ширине экрана (грузится ровно столько). */
-const GRID_SIZES = "(max-width: 479px) 112px, (max-width: 699px) 50vw, (max-width: 999px) 33vw, 300px";
+const GRID_SIZES = "(max-width: 479px) 136px, (max-width: 699px) 50vw, (max-width: 999px) 33vw, 300px";
 const RAIL_SIZES = "240px";
 
 export function ProductCard({ card, labels, rail, priority }: { card: CardData; labels: CardLabels; rail?: boolean; priority?: boolean }) {

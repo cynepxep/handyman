@@ -203,7 +203,8 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 
 /* ---------- карточка товара ---------- */
 .hm-grid { display: grid; grid-template-columns: 1fr; gap: 10px; }
-.hm-card { background: var(--c-surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; height: 100%; position: relative; }
+/* карточка заметнее на фоне страницы (просьба владельца, +20 %): тонкая рамка и мягкая, чуть более глубокая тень */
+.hm-card { background: var(--c-surface); border-radius: var(--radius); border: 1px solid rgba(30, 33, 38, .07); box-shadow: 0 1px 2px rgba(30, 33, 38, .06), 0 8px 22px rgba(30, 33, 38, .09); overflow: hidden; display: flex; flex-direction: column; height: 100%; position: relative; }
 .hm-card-media { position: relative; aspect-ratio: 1; background: #fff; display: block; }
 .hm-card-media img { object-fit: contain; }
 .hm-card-media .hm-badge { position: absolute; top: 8px; left: 8px; z-index: 1; }
@@ -216,10 +217,15 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-card-title a:hover { text-decoration: underline; }
 .hm-card .hm-price-row { margin-top: auto; }
 .hm-card-actions { display: grid; gap: 6px; position: relative; z-index: 1; }
-/* узкий телефон: строка «фото слева — текст справа» (длинные названия не обрезаются) */
+/* узкий телефон (раскладка «B», выбор владельца): фото крупнее в тонкой рамке слева, справа название, характеристики, наличие и цена;
+   кнопки — одной строкой на всю ширину под фото (под фото нет пустого места, карточка ниже). Разметка та же: .hm-card-body «растворяется» в сетке. */
 @media (max-width: 479px) {
-  .hm-grid .hm-card { flex-direction: row; }
-  .hm-grid .hm-card-media { width: 112px; flex: none; align-self: flex-start; }
+  .hm-grid .hm-card { display: grid; grid-template-columns: 136px minmax(0, 1fr); column-gap: 12px; row-gap: 6px; padding: 12px; align-items: start; }
+  .hm-grid .hm-card-media { width: auto; grid-row: 1 / span 4; border: 1px solid #e6e4dc; border-radius: 12px; overflow: hidden; }
+  .hm-grid .hm-card-body { display: contents; }
+  .hm-grid .hm-card-body > * { grid-column: 2; }
+  .hm-grid .hm-card .hm-price-row { margin-top: 0; }
+  .hm-grid .hm-card-actions { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
 }
 .hm-rail { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 2px var(--gutter) 10px; margin: 0 calc(var(--gutter) * -1); scrollbar-width: thin; }
 .hm-rail > li { flex: 0 0 min(72%, 240px); scroll-snap-align: start; }
