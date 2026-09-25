@@ -1,5 +1,5 @@
 // Страница товара: /product/<артикул>/<название>. Если название в адресе устарело или его нет — перенаправляем на правильный адрес (308).
-// Галерея, цена, наличие, кнопки (корзина — шаг 2.6), доверие, характеристики, описание, похожие товары, разметка для поисковиков.
+// Галерея, цена, наличие и срок отправки, кнопки «У кошик» и «Купити в 1 клік», доверие, характеристики, описание, похожие товары, разметка для поисковиков.
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { htmlToText, slugOf } from "@handyman/core/catalog";
@@ -9,7 +9,8 @@ import { loadProduct, productDescription, productPlace, similarProducts } from "
 import { formatPrice } from "@/components/shop/format";
 import { Gallery } from "@/components/shop/gallery";
 import { Icon } from "@/components/shop/icons";
-import { ProductCard, cardLabels } from "@/components/shop/product-card";
+import { ProductCard, cardLabels, stockLabels } from "@/components/shop/product-card";
+import { AddToCartButton, OneClickButton } from "@/components/shop/cart/cart-buttons";
 import { contactLinks } from "@/components/shop/site-chrome";
 import { Breadcrumbs, Price, StockBadge, btn } from "@/components/shop/ui";
 
@@ -78,7 +79,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
         "@type": "Offer",
         price: p.price.toFixed(2),
         priceCurrency: "UAH",
-        availability: p.available ? "https://schema.org/InStock" : "https://schema.org/PreOrder",
+        availability: p.stock === "order" ? "https://schema.org/PreOrder" : "https://schema.org/InStock",
         url: new URL(shopHref(lang, canonical), base).toString(),
       },
     },
@@ -115,20 +116,18 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
           <div className="hm-buy">
             <div className="hm-buy-price">
               <Price price={p.price} oldPrice={p.oldPrice} oldLabel={(v) => t("card.oldPrice", { price: v })} />
-              <StockBadge available={p.available} inStock={t("card.inStock")} onOrder={t("card.onOrder")} />
+              <StockBadge level={p.stock} labels={stockLabels(t)} note={t(`stock.${p.stock}.note`)} />
             </div>
-            {/* Кнопки заработают вместе с корзиной (шаг 2.6). */}
             <div className="hm-buy-actions">
-              <button type="button" className={`${btn("primary")} hm-buy-main`} data-action="add-to-cart" data-sku={p.sku}>{t("card.buy")}</button>
-              <button type="button" className={btn("ghost")} data-action="buy-one-click" data-sku={p.sku}>{t("card.buy1click")}</button>
+              <AddToCartButton sku={p.sku} label={t("card.buy")} className="hm-buy-main" />
+              <OneClickButton sku={p.sku} name={name} label={t("card.buy1click")} />
             </div>
           </div>
           {/* Телефон: цена и «У кошик» всегда видны внизу экрана (над нижней панелью). На планшете и компьютере скрыто. */}
           <div className="hm-buybar">
             <span className="hm-price">{formatPrice(p.price)}</span>
-            <button type="button" className={btn("primary")} data-action="add-to-cart" data-sku={p.sku}>{t("card.buy")}</button>
+            <AddToCartButton sku={p.sku} label={t("card.buy")} />
           </div>
-          {!p.available && <p className="hm-alert">{t("product.onOrder")}</p>}
 
           <ul className="hm-product-trust">
             <li><Icon name="shield" size={22} /><span><b>{t("trust.warranty.title")}</b> {t("trust.warranty.text")}</span></li>

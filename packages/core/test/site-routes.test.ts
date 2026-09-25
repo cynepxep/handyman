@@ -16,7 +16,10 @@ test("фильтры из адреса: разбор, мусор отбрасы�
   assert.equal(listingQuery(s), "?f.diameter=125&f.diameter=180&avail=1&min=100&max=500&sort=price_asc&page=3");
   assert.equal(listingQuery(s, "круг").startsWith("?q=%D0%BA"), true);
   const bad = parseListing({ sort: "drop table", page: "-5", min: "abc" }, KEYS);
-  assert.deepEqual(bad, { facets: {}, available: false, sale: false, page: 1 });
+  assert.deepEqual(bad, { facets: {}, available: false, local: false, sale: false, page: 1 });
+  const fast = parseListing({ fast: "1" }, KEYS);
+  assert.equal(fast.local, true);
+  assert.equal(listingQuery(fast), "?fast=1");
   assert.equal(parseListing({ page: "99999" }, KEYS).page, 200, "не больше 200 страниц");
   assert.equal(listingQuery(parseListing({}, KEYS)), "");
 });

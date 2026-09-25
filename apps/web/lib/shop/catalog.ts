@@ -9,6 +9,7 @@ import {
   type MenuConfig, type MenuGroup, type Spec, type Task,
 } from "@handyman/core/catalog";
 import { paths, shopHref, type ShopLang } from "@handyman/core/site";
+import { stockLevel } from "@handyman/core/shop";
 import type { CardData } from "@/components/shop/product-card";
 
 /** Карточка товара для списка (с готовой ссылкой на страницу товара на языке сайта). */
@@ -58,6 +59,7 @@ export async function toCards(items: SearchItem[], lang: ShopLang, specOrder?: s
     oldPrice: i.oldPrice,
     discountPct: i.discountPct,
     available: i.available,
+    stock: i.stock,
     image: i.image,
     specs: pickSpecs(extractFacets(params.get(i.id) ?? [], chainOf(i.categoryId)), specOrder),
   }));
@@ -108,7 +110,7 @@ export async function getBatteries(): Promise<Array<{ value: string; count: numb
 export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[]> {
   const rows = await prisma.product.findMany({
     where: { visible: true, oldPrice: { not: null }, supplierAvailable: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} } },
-    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } } },
+    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } }, stockItems: { select: { onHand: true } } },
   });
   const items: SearchItem[] = rows
     .map((r) => {
@@ -121,6 +123,7 @@ export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[
     .slice(0, limit)
     .map(({ r, price, old, pct }) => ({
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old, discountPct: pct, available: true,
+      stock: stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), true),
       image: r.images[0]?.url ?? null, categoryId: r.categoryId,
     }));
   return toCards(items, lang);

@@ -20,6 +20,8 @@ export type MenuSub = {
   hidden?: boolean;
   /** Адрес страницы (латиница): /catalog/<группа>/<подгруппа>. Нет — берётся из названия (см. ensureSlugs). */
   slug?: string;
+  /** Прежние адреса: старые ссылки перенаправляются на текущий (до 10). */
+  oldSlugs?: string[];
 };
 
 export type MenuGroup = {
@@ -37,6 +39,7 @@ export type MenuGroup = {
   hidden?: boolean;
   /** Адрес страницы: /catalog/<группа>. */
   slug?: string;
+  oldSlugs?: string[];
 };
 
 export type Task = {
@@ -52,6 +55,7 @@ export type Task = {
   hidden?: boolean;
   /** Адрес страницы: /task/<задача>. */
   slug?: string;
+  oldSlugs?: string[];
 };
 
 const sub = (id: string, nameUk: string, nameRu: string, categoryIds: string[], ownIds?: string[]): MenuSub => ({ id, nameUk, nameRu, categoryIds, ownIds });
@@ -371,9 +375,32 @@ export function ensureSlugs(cfg: MenuConfig): MenuConfig {
 /** Адрес элемента меню (после ensureSlugs всегда задан). */
 export const slugOf = (x: { slug?: string; nameUk: string }) => x.slug || slugFromName(x.nameUk);
 
-export const findGroupBySlug = (cfg: MenuConfig, slug: string) => cfg.groups.find((g) => slugOf(g) === slug);
-export const findSubBySlug = (group: MenuGroup, slug: string) => group.subs.find((s) => slugOf(s) === slug);
-export const findTaskBySlug = (cfg: MenuConfig, slug: string) => cfg.tasks.find((t) => slugOf(t) === slug);
+type Slugged = { slug?: string; nameUk: string; oldSlugs?: string[] };
+/** Найти по адресу: сначала по текущему, потом по прежним (тогда moved = true — нужно перенаправить на текущий адрес). */
+function findBySlug<T extends Slugged>(list: T[], slug: string): { item: T; moved: boolean } | undefined {
+  const cur = list.find((x) => slugOf(x) === slug);
+  if (cur) return { item: cur, moved: false };
+  const old = list.find((x) => x.oldSlugs?.includes(slug));
+  return old ? { item: old, moved: true } : undefined;
+}
+export const findGroup = (cfg: MenuConfig, slug: string) => findBySlug(cfg.groups, slug);
+export const findSub = (group: MenuGroup, slug: string) => findBySlug(group.subs, slug);
+export const findTask = (cfg: MenuConfig, slug: string) => findBySlug(cfg.tasks, slug);
+export const findGroupBySlug = (cfg: MenuConfig, slug: string) => findGroup(cfg, slug)?.item;
+export const findSubBySlug = (group: MenuGroup, slug: string) => findSub(group, slug)?.item;
+export const findTaskBySlug = (cfg: MenuConfig, slug: string) => findTask(cfg, slug)?.item;
+
+/**
+ * Сменить адрес с запоминанием прежнего: старые ссылки будут перенаправляться (хранится до 10 прежних адресов).
+ * Если новый адрес совпадает с одним из прежних — он просто становится текущим.
+ */
+export function changeSlug<T extends Slugged>(item: T, next: string): void {
+  const prev = slugOf(item);
+  if (prev === next) return;
+  const olds = (item.oldSlugs ?? []).filter((s) => s !== next && s !== prev);
+  item.oldSlugs = [prev, ...olds].slice(0, 10);
+  item.slug = next;
+}
 
 /**
  * Точный список категорий каждой подгруппы — ровно тех, что в меню считаются её товарами (как в счётчиках).
@@ -397,6 +424,11 @@ export function menuPlaceOf(nodes: CatNode[], groups: MenuGroup[], categoryId: s
 
 const isStr = (v: unknown): v is string => typeof v === "string";
 const strList = (v: unknown): string[] | null => (Array.isArray(v) && v.every(isStr) ? (v as string[]) : null);
+/** Прежние адреса из сохранённых настроек (только правильные, до 10). */
+const oldOf = (x: Record<string, unknown>) => {
+  const list = (strList(x.oldSlugs) ?? []).filter((s) => isValidSlug(s)).slice(0, 10);
+  return list.length ? { oldSlugs: list } : {};
+};
 
 /** Читает сохранённое меню; при любой поломке структуры возвращает null (тогда сайт берёт стандартное). */
 export function parseMenuConfig(raw: unknown): MenuConfig | null {
@@ -414,14 +446,14 @@ export function parseMenuConfig(raw: unknown): MenuConfig | null {
       if (own === null) return null;
       subs.push({
         id: s.id, nameUk: s.nameUk, nameRu: s.nameRu, categoryIds: cats, ...(own?.length ? { ownIds: own } : {}),
-        ...(s.hidden === true ? { hidden: true } : {}), ...(isStr(s.slug) ? { slug: s.slug } : {}),
+        ...(s.hidden === true ? { hidden: true } : {}), ...(isStr(s.slug) ? { slug: s.slug } : {}), ...oldOf(s),
       });
     }
     groups.push({
       id: g.id, nameUk: g.nameUk, nameRu: g.nameRu,
       hintUk: isStr(g.hintUk) ? g.hintUk : "", hintRu: isStr(g.hintRu) ? g.hintRu : "",
       quickPick: strList(g.quickPick) ?? [], ...(strList(g.specs) ? { specs: strList(g.specs)! } : {}),
-      subs, ...(g.hidden === true ? { hidden: true } : {}), ...(isStr(g.slug) ? { slug: g.slug } : {}),
+      subs, ...(g.hidden === true ? { hidden: true } : {}), ...(isStr(g.slug) ? { slug: g.slug } : {}), ...oldOf(g),
     });
   }
   const tasks: Task[] = [];
@@ -434,7 +466,7 @@ export function parseMenuConfig(raw: unknown): MenuConfig | null {
       id: t.id, nameUk: t.nameUk, nameRu: t.nameRu,
       hintUk: isStr(t.hintUk) ? t.hintUk : "", hintRu: isStr(t.hintRu) ? t.hintRu : "",
       icon: isStr(t.icon) ? t.icon : "cut", categoryIds: cats, ...(own?.length ? { ownIds: own } : {}), ...(t.hidden === true ? { hidden: true } : {}),
-      ...(isStr(t.slug) ? { slug: t.slug } : {}),
+      ...(isStr(t.slug) ? { slug: t.slug } : {}), ...oldOf(t),
     });
   }
   return ensureSlugs({ groups, tasks });

@@ -1,8 +1,8 @@
 // Задача с главной («Різати метал», «Свердлити»): товары из категорий, которые владелец отнёс к задаче в «Сайт → Меню и задачи».
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
-import { isShopLang, parseListing, paths, shopHref } from "@handyman/core/site";
+import { isShopLang, listingQuery, parseListing, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
 import { FACET_KEYS, resolveListing, runListing } from "@/lib/shop/listing";
 import { ProductListing } from "@/components/shop/listing";
@@ -23,6 +23,7 @@ export default async function TaskPage({ params, searchParams }: PageProps<"/[la
   const r = await resolveListing({ kind: "task", task: slug }, c.menu);
   if (!r?.task) notFound();
   const state = parseListing(await searchParams, FACET_KEYS);
+  if (r.redirectTo) permanentRedirect(`${shopHref(lang, r.redirectTo)}${listingQuery(state)}`); // адрес сменили в админке
   const data = await runListing(r, state, lang);
   const title = c.pick(r.task.nameUk, r.task.nameRu);
 

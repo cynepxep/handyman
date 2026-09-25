@@ -62,11 +62,11 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
   const { result, cards, quick } = data;
   const labels: FilterLabels = {
     title: t("filters"), show: t("filters.show"), reset: t("filters.reset"), price: t("filters.price"), from: t("filters.from"), to: t("filters.to"),
-    apply: t("filters.apply"), moreValues: t("filters.moreValues"), less: t("filters.less"), inStock: t("inStockOnly"), sale: t("onSale"), close: t("close"),
+    apply: t("filters.apply"), moreValues: t("filters.moreValues"), less: t("filters.less"), inStock: t("inStockOnly"), fast: t("filters.fast"), sale: t("onSale"), close: t("close"),
     goods: [t("unit.goods.one"), t("unit.goods.few"), t("unit.goods.many")],
   };
   const attrs = result.facets.attrs.filter((a) => a.key !== quick?.key);
-  const panel = { lang, listingKey: resolved.key, base, q, state, attrs, price: result.facets.price, total: result.total, labels };
+  const panel = { lang, listingKey: resolved.key, base, q, state, attrs, price: result.facets.price, total: result.total, hasLocal: result.localCount > 0, labels };
   const sortOptions = [
     { value: "" as const, label: q ? t("category.sort.relevance") : t("sortDef") },
     { value: "price_asc" as const, label: t("sortPa") },
@@ -80,6 +80,7 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
   const chips: Array<{ text: string; href: string }> = [];
   for (const [key, values] of Object.entries(state.facets)) for (const v of values) chips.push({ text: `${labelOf(key)}: ${v}`, href: href(toggleFacet(state, key, v)) });
   if (state.available) chips.push({ text: t("inStockOnly"), href: href({ ...state, available: false, page: 1 }) });
+  if (state.local) chips.push({ text: t("filters.fast"), href: href({ ...state, local: false, page: 1 }) });
   if (state.sale) chips.push({ text: t("onSale"), href: href({ ...state, sale: false, page: 1 }) });
   if (state.min != null || state.max != null) {
     const noPrice: ListingState = { ...state, page: 1 };

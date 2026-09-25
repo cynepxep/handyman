@@ -37,9 +37,11 @@
 - **Шаг 2.5**: разделы `/catalog/<группа>[/<подгруппа>]`, задачи `/task/<задача>`, товар `/product/<артикул>/<название>`; быстрый выбор размера, фильтры
   (сбоку / шторка), «Показати ще», галерея. Адреса — `slug` в меню (правятся в админке), фильтры в адресе — `packages/core/src/site/listing.ts`.
 Владелец сам заполнил телефон, адрес, график. Ждём (не блокирует): ответы В8–В10.
-Дальше: **2.6** (корзина: мини-корзина сбоку и страница, количество, итог; оформление на одной странице, телефон +380, доставка/оплата — тексты и выбор, заказ
-`HM-####` без оплаты с пересчётом цен на сервере по `createOrder` старого проекта; «Купити в 1 клік»; уведомление менеджеру — вопрос Т2) → 2.7 (главная: хиты/новинки,
-страницы) → 2.8 (тесты, кэширование, Lighthouse). Подробности — `docs/CHANGELOG.md`.
+- **Шаг 2.6**: наличие в трёх состояниях (свой склад в Одессе / у поставщика 3–4 дні / під замовлення; `packages/core/src/shop/stock.ts`), корзина (мини-корзина сбоку,
+  `/cart`; `components/shop/cart/`), оформление `/checkout` → заказ `HM-####` (`packages/db/src/orders.ts`, цены с сервера, свой склад списывается), «Дякуємо»
+  `/order/<номер>?k=`, «Купити в 1 клік», админка «Заказы» и «Сайт → Оформление заказа», остаток «на нашем складе» у товара, перенаправление старых адресов разделов,
+  правка текстов прямо на сайте (`components/shop/text-editor.tsx`). Уведомления менеджеру — Outbox; **в `.env` нет `BOT_TOKEN`/`ADMIN_CHAT_ID`** → пока «не отправлено».
+Дальше: **2.7** (главная: хиты/новинки, страницы) → **2.8** (тесты, кэширование, Lighthouse). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -86,7 +88,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test` | 113 проверок (core 80 + интеграционные db 33). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 132 проверки (core 91 + интеграционные db 41). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
@@ -142,7 +144,7 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
 - Не читай `.env`. Скрипты с доступом к базе запускай `pnpm exec dotenv -e ../../.env -- tsx <файл>` из папки пакета.
 - Проверка админки в браузере: панель может быть 0×0 (дерево доступности пустое) — работай через `javascript_tool` (`form.requestSubmit()`,
   чтение `innerText`). Пароль `owner` неизвестен и не нужен: создай **временную** учётную запись (скрипт с `hashPassword` из core, роль `owner`,
-  логин `claude-test`), а по окончании удали её (`staff` и `staffSession`) и файл скрипта.
+  логин `claude-test`), а по окончании удали её (`staff` и `staffSession`) и файл скрипта. Пароль в форму входа не вводим — см. ниже про тестовую сессию.
 - После проверок останови сервер на 3100 **целиком**: `next dev` — это несколько процессов node (pnpm, dotenv, next, рабочий процесс). Остановка одного слушателя порта
   оставляет остальные, и они держат `query_engine-windows.dll.node` — тогда `pnpm db:generate` / миграция падает с `EPERM ... rename`.
   Останови по командной строке (`Get-CimInstance Win32_Process -Filter "Name='node.exe'"` → `Stop-Process` только своих), потом проверь `Get-Process node`.
@@ -158,26 +160,33 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
   инструментом Edit/Write, а не скриптами PowerShell.
 - Браузерная панель Claude часто **скрыта** (`document.visibilityState === "hidden"`): тогда не срабатывают `requestAnimationFrame` и события фокуса, и React не показывает
   догружаемые блоки (`loading.tsx` остаётся на экране, настоящее содержимое лежит в `div[hidden]`). Это не ошибка сайта: проверяй содержимое скриптом.
+- Вход в админку для проверки в браузере — **без ввода пароля**: скрипт создаёт временного `claude-test` (роль `owner`) и строку `StaffSession`, а cookie ставит
+  временный адрес `app/api/tmp-claude-login/route.ts` (только не в production; `document.cookie` в браузерной панели не работает). После проверки удалить адрес,
+  скрипт, сессию и учётную запись, тестовые заказы/клиентов/Outbox и сбросить счётчик номеров: `SELECT setval(pg_get_serial_sequence('"Order"', 'seq'), 1, false)`.
+- Сборщик стилей (Turbopack/Lightning CSS) не понимает `::highlight()` — такое правило задаётся в компоненте (`<style>`), не в `shop.css`.
 - Витрина: `export const dynamic = "force-dynamic"` в `app/[lang]/layout.tsx` (свежие цены после импорта); кэширование — шаг 2.8.
 
 ## Карта репозитория
 
 - `apps/web` — сайт + Mini App + админка + API (Next.js, App Router).
   - `app/admin/login` — вход; `app/admin/(panel)/` — всё остальное под общим меню (`layout.tsx`, `admin.css`, `nav.tsx`):
-    `page.tsx` (главная), `import/` (экран импорта: `page`, `views`, `actions`, `client-bits`), `products/` (+`[id]`), `categories/`, `roles/`,
-    `site/` (контент сайта: `texts`, `contacts`, `pages` (+`[slug]`), `menu`; вкладки `tabs.tsx`), `search-actions.ts`.
+    `page.tsx` (главная), `orders/` (+`[id]`: заказы), `import/` (экран импорта: `page`, `views`, `actions`, `client-bits`), `products/` (+`[id]`, остаток склада),
+    `categories/`, `roles/`, `site/` (контент сайта: `texts`, `contacts`, `pages` (+`[slug]`), `menu`, `checkout`; вкладки `tabs.tsx`), `search-actions.ts`.
   - `app/[lang]/` — **витрина** (укр. без приставки, рус. `/ru`): `layout.tsx` (корень: шапка, подвал, нижняя панель), `page.tsx` (главная), `catalog/` (+`[group]/`,
-    `[group]/[sub]/`), `task/[slug]/`, `product/[sku]/[[...slug]]/`, `search/` (+`loading`), `info/[slug]/`, `listing-actions.ts` («Показати ще», счётчик шторки),
+    `[group]/[sub]/`), `task/[slug]/`, `product/[sku]/[[...slug]]/`, `search/` (+`loading`), `info/[slug]/`, `cart/`, `checkout/`, `order/[no]/` («Дякуємо»), `listing-actions.ts` («Показати ще», счётчик шторки),
+    `cart-actions.ts` (цены корзины, заказ, «1 клік»), `text-edit-actions.ts` (правка текстов на сайте),
     `not-found.tsx`, `error.tsx`, `[...rest]/` (→ 404). `proxy.ts` — языки и вход в админку.
   - `components/shop/` — дизайн-система витрины: `shop.css` (токены), `ui.tsx`, `product-card.tsx` (подписи — `cardLabels(t)`), `tiles.tsx`, `site-chrome.tsx`,
-    `listing.tsx` (список товаров) + `listing-client.tsx` (фильтры, шторка, сортировка, «Показати ще»), `gallery.tsx`, `search-box.tsx`, `client-bits.tsx`, `icons.tsx`, `format.ts`.
+    `listing.tsx` (список товаров) + `listing-client.tsx` (фильтры, шторка, сортировка, «Показати ще»), `cart/` (корзина: `store`, `cart-context`,
+    `cart-view`, `cart-buttons`, `checkout-form`, `phone-input`), `text-editor.tsx`, `gallery.tsx`, `search-box.tsx`, `client-bits.tsx`, `icons.tsx`, `format.ts`.
     `lib/shop/` — данные витрины (`content.ts`, `catalog.ts`, `listing.ts` — какие категории у раздела/задачи, `product.ts`).
   - `app/design/` — служебный стенд дизайн-системы `/design` (закрыт от поиска).
   - `app/api/catalog/search|suggest` — публичный поиск для витрины (Этап 2), Mini App, бота.
   - `lib/auth.ts`, `lib/catalog.ts` (дерево категорий, деньги), `proxy.ts`, `next.config.ts`.
 - `apps/bot` — Telegram-бот (заглушка).
 - `packages/core` — права, авторизация; `src/catalog/` — разбор фида, категории, планировщик импорта, фильтры, синонимы, меню витрины (`storefront-menu.ts`) (чистая логика);
-  `src/site/` — реестр текстов витрины, контакты, безопасный вывод страниц (`@handyman/core/site`); `test/`.
-- `packages/db` — Prisma-схема, сидирование, клиент; `src/catalog-import.ts`, `catalog-products.ts`, `catalog-search.ts`, `site-content.ts`; `test/` (интеграционные), `scripts/reindex.ts`.
+  `src/site/` — реестр текстов витрины, контакты, безопасный вывод страниц (`@handyman/core/site`); `src/shop/` — наличие, настройки оформления,
+  расчёт суммы и проверка заказа (`@handyman/core/shop`); `test/`.
+- `packages/db` — Prisma-схема, сидирование, клиент; `src/catalog-import.ts`, `catalog-products.ts`, `catalog-search.ts`, `site-content.ts`, `orders.ts` (корзина, заказы, склад), `notify.ts` (Telegram через Outbox); `test/` (интеграционные), `scripts/reindex.ts`.
 - `docker-compose.yml` — Postgres/Redis/Meilisearch/web/bot для локального запуска.
 - `docs/` — `CHANGELOG.md`, `CATALOG-IMPORT.md`, `MIGRATION-NOTES.md`, `SITE-CONTENT.md` (что владелец меняет в разделе «Сайт»), `stage2/` (пакет Этапа 2).

@@ -5,7 +5,7 @@ import { countWord } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
 import { getMenuView } from "@/lib/shop/catalog";
 import { Icon } from "@/components/shop/icons";
-import { ProductCard, cardLabels } from "@/components/shop/product-card";
+import { ProductCard, cardLabels, stockLabels } from "@/components/shop/product-card";
 import { GroupTile, TaskTile } from "@/components/shop/tiles";
 import { Breadcrumbs, CardSkeletons, Pager, Price, QtyStepper, StockBadge, btn } from "@/components/shop/ui";
 import { ContrastTable } from "./contrast";
@@ -94,8 +94,9 @@ export default async function DesignSystemPage() {
           <Price price={1599} oldPrice={1909} oldLabel={(p) => t("card.oldPrice", { price: p })} />
           <Price price={999999} oldLabel={(p) => p} />
           <span className="hm-badge hm-badge-sale">−16%</span>
-          <StockBadge available inStock={t("card.inStock")} onOrder={t("card.onOrder")} />
-          <StockBadge available={false} inStock={t("card.inStock")} onOrder={t("card.onOrder")} />
+          <StockBadge level="local" labels={stockLabels(t)} />
+          <StockBadge level="supplier" labels={stockLabels(t)} />
+          <StockBadge level="order" labels={stockLabels(t)} />
         </div>
         <ul className="hm-specs"><li>Діаметр 125 мм</li><li>Посадковий отвір 22,2 мм</li><li>Товщина 1,2 мм</li></ul>
         <ul className="hm-chips">

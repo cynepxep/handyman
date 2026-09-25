@@ -14,10 +14,10 @@ export const SEARCH_INPUT_ID = "site-search";
 const HISTORY_KEY = "hm.searchHistory";
 const HISTORY_MAX = 6;
 
-type Item = { id: string; sku: string; nameUk: string; nameRu: string; price: number; image: string | null; available: boolean };
+type Item = { id: string; sku: string; nameUk: string; nameRu: string; price: number; image: string | null; available: boolean; stock?: "local" | "supplier" | "order" };
 export type SearchLabels = {
   label: string; placeholder: string; submit: string; history: string; popular: string; clear: string; all: string; none: string;
-  inStock: string; onOrder: string;
+  stock: { local: string; supplier: string; order: string };
 };
 
 type Option = { kind: "product"; item: Item } | { kind: "query"; q: string } | { kind: "all"; q: string };
@@ -219,7 +219,10 @@ export function SearchBox({ lang, labels, popular }: { lang: ShopLang; labels: S
                   <span className="hm-suggest-img">{o.item.image && <Image src={o.item.image} alt="" width={48} height={48} sizes="48px" style={{ objectFit: "contain", width: "100%", height: "100%" }} />}</span>
                   <span>
                     <span className="hm-suggest-name">{name}</span>
-                    <span className={o.item.available ? "hm-stock hm-stock-in" : "hm-stock hm-stock-order"}>{o.item.available ? labels.inStock : labels.onOrder}</span>
+                    {(() => {
+                      const level = o.item.stock ?? (o.item.available ? "supplier" : "order");
+                      return <span className={`hm-stock hm-stock-${level}`}>{labels.stock[level]}</span>;
+                    })()}
                   </span>
                   <span className="hm-suggest-price">{formatPrice(o.item.price)}</span>
                 </div>

@@ -6,7 +6,9 @@ import type { ShopContent } from "@/lib/shop/content";
 import { FocusSearchButton, LangSwitch } from "./client-bits";
 import { Icon } from "./icons";
 import { SearchBox, type SearchLabels } from "./search-box";
+import { stockLabels } from "./product-card";
 import { btn } from "./ui";
+import { BottomCart, HeaderCart } from "./cart/cart-buttons";
 
 /** Ссылка на мессенджер или звонок: снаружи сайта — в новой вкладке. */
 function ContactPill({ href, icon, label }: { href: string; icon: string; label: string }) {
@@ -35,7 +37,7 @@ export function SiteHeader({ c }: { c: ShopContent }) {
   const links = contactLinks(c, t("header.help.call"));
   const labels: SearchLabels = {
     label: t("header.search.label"), placeholder: t("header.search.placeholder"), submit: t("search.submit"), history: t("search.history"),
-    popular: t("search.popular"), clear: t("search.clear"), all: t("search.all"), none: t("search.none"), inStock: t("card.inStock"), onOrder: t("card.onOrder"),
+    popular: t("search.popular"), clear: t("search.clear"), all: t("search.all"), none: t("search.none"), stock: stockLabels(t),
   };
   const popular = t("home.hints").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 6);
   return (
@@ -61,9 +63,7 @@ export function SiteHeader({ c }: { c: ShopContent }) {
           {t("header.catalog")}
         </Link>
         <SearchBox lang={lang} labels={labels} popular={popular} />
-        <Link className="hm-cart" href={shopHref(lang, paths.cart())} aria-label={t("nav.cart")}>
-          <Icon name="cart" size={26} />
-        </Link>
+        <HeaderCart />
       </div>
       {links.length > 0 && (
         <div className="hm-contacts">
@@ -126,7 +126,7 @@ export function BottomNav({ c }: { c: ShopContent }) {
     <nav className="hm-bottomnav" aria-label={t("nav.label")}>
       <Link href={shopHref(lang, paths.catalog())}><Icon name="menu" size={22} />{t("nav.catalog")}</Link>
       <FocusSearchButton label={t("nav.search")} />
-      <Link href={shopHref(lang, paths.cart())}><Icon name="cart" size={22} />{t("nav.cart")}</Link>
+      <BottomCart label={t("nav.cart")} />
       <Link href={shopHref(lang, paths.account())}><Icon name="user" size={22} />{t("nav.account")}</Link>
     </nav>
   );

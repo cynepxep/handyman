@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { loadMenuConfig, resetMenuConfig, saveMenuConfig } from "@handyman/db/site-content";
 import {
-  TASK_ICONS, addGroup, addSub, addTask, cleanName, claimOf, isValidSlug, moveClaim, removeGroup, removeSub, removeTask, slugOf,
+  TASK_ICONS, addGroup, addSub, addTask, changeSlug, cleanName, claimOf, isValidSlug, moveClaim, removeGroup, removeSub, removeTask, slugOf,
   type MenuConfig,
 } from "@handyman/core/catalog";
 import { requirePermission } from "@/lib/auth";
@@ -60,7 +60,7 @@ export async function saveGroupAction(formData: FormData): Promise<void> {
     if (gSlug !== null) {
       if (!isValidSlug(gSlug)) return { cfg, error: SLUG_ERROR, message: "", anchor: `g-${gid}` };
       if (next.groups.some((x) => x.id !== gid && slugOf(x) === gSlug)) return { cfg, error: `Адрес «${gSlug}» уже занят другой группой.`, message: "", anchor: `g-${gid}` };
-      g.slug = gSlug;
+      changeSlug(g, gSlug); // прежний адрес запоминается — старые ссылки перенаправят на новый
     }
 
     for (const s of g.subs) {
@@ -72,7 +72,7 @@ export async function saveGroupAction(formData: FormData): Promise<void> {
       const sSlug = slugInput(S(f, `sub:${s.id}:slug`));
       if (sSlug !== null) {
         if (!isValidSlug(sSlug)) return { cfg, error: `Подгруппа «${sUk}»: ${SLUG_ERROR}`, message: "", anchor: `g-${gid}` };
-        s.slug = sSlug;
+        changeSlug(s, sSlug);
       }
     }
     const subSlugs = g.subs.map((s) => slugOf(s));
@@ -154,7 +154,7 @@ export async function saveTaskAction(formData: FormData): Promise<void> {
     if (tSlug !== null) {
       if (!isValidSlug(tSlug)) return { cfg, error: `Задача «${uk}»: ${SLUG_ERROR}`, message: "", anchor: `t-${id}` };
       if (next.tasks.some((x) => x.id !== id && slugOf(x) === tSlug)) return { cfg, error: `Адрес «${tSlug}» уже занят другой задачей.`, message: "", anchor: `t-${id}` };
-      t.slug = tSlug;
+      changeSlug(t, tSlug);
     }
     const keepTree = f.getAll("cat").map(String);
     const keepOwn = f.getAll("ownCat").map(String);

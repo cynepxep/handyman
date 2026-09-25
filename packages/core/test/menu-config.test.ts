@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {
   MENU_GROUPS, TASKS, defaultMenuConfig, parseMenuConfig, claimOf, moveClaim, addGroup, addSub, removeSub, removeGroup, addTask, removeTask,
   lostCategories, assignCategories, freeId, ensureSlugs, isValidSlug, slugFromName, findGroupBySlug, findSubBySlug, findTaskBySlug,
-  subCategoryMap, menuPlaceOf, type CatNode, type MenuConfig,
+  subCategoryMap, menuPlaceOf, changeSlug, findGroup, findSub, findTask, type CatNode, type MenuConfig,
 } from "../src/catalog";
 
 const tree: CatNode[] = [
@@ -90,6 +90,26 @@ test("адреса страниц меню: из названия, уникал�
   assert.equal(own.groups[0].slug, "moia-hrupa", "адрес владельца сохраняется");
   assert.ok(isValidSlug("dysky-125") && !isValidSlug("a") && !isValidSlug("Dysky") && !isValidSlug("dy--sky") && !isValidSlug("-dy"));
   assert.equal(slugFromName("Диски та круги"), "dysky-ta-kruhy");
+});
+
+test("смена адреса: прежний запоминается и находится (для перенаправления), сохраняется в настройках", () => {
+  const d = defaultMenuConfig();
+  const discs = findGroupBySlug(d, "dysky-ta-kruhy")!;
+  const sub = findSubBySlug(discs, "vidrizni-po-metalu")!;
+  changeSlug(sub, "kruhy-po-metalu");
+  assert.deepEqual(findSub(discs, "kruhy-po-metalu"), { item: sub, moved: false });
+  assert.deepEqual(findSub(discs, "vidrizni-po-metalu"), { item: sub, moved: true }, "старый адрес ведёт на новый");
+  changeSlug(sub, "vidrizni-po-metalu");
+  assert.equal(sub.slug, "vidrizni-po-metalu", "вернули старый адрес — он снова текущий");
+  assert.deepEqual(sub.oldSlugs, ["kruhy-po-metalu"]);
+  for (let i = 0; i < 15; i++) changeSlug(sub, `adresa-${i}`);
+  assert.equal(sub.oldSlugs?.length, 10, "не больше 10 прежних адресов");
+  const back = parseMenuConfig(JSON.parse(JSON.stringify(d)))!;
+  assert.deepEqual(findSub(findGroupBySlug(back, "dysky-ta-kruhy")!, "adresa-5")?.moved, true, "прежний адрес сохраняется в настройках");
+  assert.equal(findSub(findGroupBySlug(back, "dysky-ta-kruhy")!, "adresa-3"), undefined, "самые старые (больше 10) забываются");
+  changeSlug(discs, "dysky");
+  assert.equal(findGroup(d, "dysky-ta-kruhy")?.moved, true);
+  assert.equal(findTask(d, "rizaty-metal")?.moved, false);
 });
 
 test("категории подгрупп для поиска совпадают с подсчётом меню; место товара в меню", () => {

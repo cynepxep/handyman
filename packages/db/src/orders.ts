@@ -5,7 +5,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma, type Prisma, type OrderStatus } from "./client";
 import {
-  CHECKOUT_SETTING_KEY, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
+  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
   type CartLineInput, type CheckoutErrors, type CheckoutSettings, type DeliveryChoice, type PayChoice, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
@@ -323,7 +323,7 @@ export async function setOrderStatus(orderId: string, status: OrderStatus, who: 
     if (!o) return null;
     if (o.status === status && !note) return [];
     await tx.order.update({ where: { id: orderId }, data: { status } });
-    await tx.orderHistory.create({ data: { orderId, text: `${o.status !== status ? `Статус: ${status}` : "Заметка"} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
+    await tx.orderHistory.create({ data: { orderId, text: `${o.status !== status ? `Статус: ${ORDER_STATUS_RU[status] ?? status}` : "Заметка"} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
     await tx.auditLog.create({ data: { who, action: "order.status", target: orderId, details: json({ from: o.status, to: status }) } });
     return status === "CANCELLED" || status === "RETURNED" ? returnOwnStock(tx, orderId) : [];
   });

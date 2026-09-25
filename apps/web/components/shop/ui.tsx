@@ -11,8 +11,16 @@ export function btn(variant: Variant = "primary", opts: { block?: boolean; small
   return ["hm-btn", `hm-btn-${variant}`, opts.block ? "hm-btn-block" : "", opts.small ? "hm-btn-sm" : ""].filter(Boolean).join(" ");
 }
 
-export function StockBadge({ available, inStock, onOrder }: { available: boolean; inStock: string; onOrder: string }) {
-  return <p className={available ? "hm-stock hm-stock-in" : "hm-stock hm-stock-order"}>{available ? inStock : onOrder}</p>;
+export type StockLabels = { local: string; supplier: string; order: string };
+
+/** Наличие: «В наявності в Одесі» (наш склад) · «Відправка за 3–4 дні» (у поставщика) · «Під замовлення». Подписи — из админки. */
+export function StockBadge({ level, labels, note }: { level: "local" | "supplier" | "order"; labels: StockLabels; note?: string }) {
+  return (
+    <p className={`hm-stock hm-stock-${level}`}>
+      {labels[level]}
+      {note && <span className="hm-stock-note">{note}</span>}
+    </p>
+  );
 }
 
 /** Цена: текущая крупно, старая зачёркнута (для незрячих — подпись «старая цена»). */

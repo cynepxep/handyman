@@ -24,6 +24,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
     searchStats(),
     isSearchStale(),
   ]);
+  const newOrders = can("orders.view") ? await prisma.order.count({ where: { status: "NEW" } }) : 0;
+  const ownStock = can("products.view") ? await prisma.product.count({ where: { stockItems: { some: { onHand: { gt: 0 } } } } }) : 0;
   const searchOk = stats.ok && !stale && stats.documents === visible;
 
   return (
@@ -35,6 +37,15 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       {error === "forbidden" && <p className="adm-flash err">У вашей роли нет прав на этот раздел.</p>}
       {error && error !== "forbidden" && <p className="adm-flash err" role="alert">{error}</p>}
       {ok && <p className="adm-flash ok">{ok}</p>}
+
+      {can("orders.view") && (
+        <div className="adm-grid">
+          <Link href="/admin/orders?status=NEW" className={newOrders ? "adm-stat warn link" : "adm-stat link"}>
+            <b>{newOrders}</b>
+            <small>новых заказов (статус «Новый»)</small>
+          </Link>
+        </div>
+      )}
 
       {can("products.view") ? (
         <>
@@ -50,6 +61,10 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
             <Link href="/admin/products?avail=no" className="adm-stat link">
               <b>{products - available}</b>
               <small>«Под заказ»</small>
+            </Link>
+            <Link href="/admin/products?avail=own" className="adm-stat ok link">
+              <b>{ownStock}</b>
+              <small>есть на нашем складе</small>
             </Link>
             <Link href="/admin/products?flag=conflict" className={conflicts ? "adm-stat warn link" : "adm-stat link"}>
               <b>{conflicts}</b>
@@ -88,6 +103,16 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
 
       <h2>Разделы</h2>
       <ul style={{ paddingLeft: 20 }}>
+        {can("orders.view") && (
+          <li>
+            <Link className="adm-link" href="/admin/orders">Заказы</Link> — заказы с сайта и «Купить в 1 клик»: статус, ТТН, заметки
+          </li>
+        )}
+        {can("texts.edit") && (
+          <li>
+            <Link className="adm-link" href="/admin/site">Сайт</Link> — тексты, контакты, страницы, меню, оформление заказа (сумма предоплаты, реквизиты)
+          </li>
+        )}
         {can("import.run") && (
           <li>
             <Link className="adm-link" href="/admin/import">Импорт каталога</Link> — загрузка товаров из XML-фида поставщика
@@ -95,7 +120,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         )}
         {can("products.view") && (
           <li>
-            <Link className="adm-link" href="/admin/products">Товары</Link> — поиск, фильтры, правка, расхождения цен
+            <Link className="adm-link" href="/admin/products">Товары</Link> — поиск, фильтры, правка, расхождения цен, остаток на нашем складе
           </li>
         )}
         {can("products.view") && (
@@ -109,7 +134,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           </li>
         )}
       </ul>
-      <p className="adm-muted">Заказы, клиенты и склад появятся на следующих этапах.</p>
+      <p className="adm-muted">Клиенты, онлайн-оплата и Новая почта по справочнику появятся на следующих этапах.</p>
+      {can("texts.edit") && <p className="adm-muted">Тексты можно менять и прямо на сайте: откройте сайт в этом же браузере и нажмите «✎ Редагувати тексти» внизу слева.</p>}
     </>
   );
 }

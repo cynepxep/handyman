@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { loadCategories, money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { Gallery } from "./gallery";
-import { acceptPriceAction, saveProductAction, unlockFieldAction } from "../actions";
+import { acceptPriceAction, saveProductAction, setOwnStockAction, unlockFieldAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +43,7 @@ export default async function ProductPage({
       brand: true,
       supplier: true,
       priceLogs: { orderBy: { ts: "desc" }, take: 15 },
+      stockItems: { select: { onHand: true } },
     },
   });
   if (!p) notFound();
@@ -57,6 +58,7 @@ export default async function ProductPage({
   const belowRrp = supplierPrice != null && price < supplierPrice - 0.005;
   const lockedFields = new Set(p.fieldLocks.map((l) => l.fieldName));
   const mark = (f: string) => (lockedFields.has(f) ? " 🔒" : "");
+  const own = p.stockItems.reduce((a, x) => a + x.onHand, 0);
 
   return (
     <>
@@ -68,6 +70,7 @@ export default async function ProductPage({
         {p.supplierUrl ? <> · <a className="adm-link" href={p.supplierUrl} target="_blank" rel="noreferrer">страница у поставщика</a></> : null}
       </p>
       <div className="adm-row" style={{ gap: 6, margin: "8px 0" }}>
+        {own > 0 && <span className="adm-chip ok">на нашем складе: {own} шт.</span>}
         <span className={p.supplierAvailable ? "adm-chip ok" : "adm-chip"}>{p.supplierAvailable ? "В наличии у поставщика" : "Под заказ"}</span>
         {!p.visible && <span className="adm-chip bad">скрыт с сайта</span>}
         {p.missingFromFeedSince && <span className="adm-chip warn">нет в фиде с {p.missingFromFeedSince.toLocaleDateString("ru-RU")}</span>}
@@ -87,6 +90,21 @@ export default async function ProductPage({
           ) : null}
         </div>
       )}
+
+      <form action={setOwnStockAction} className="adm-card">
+        <input type="hidden" name="id" value={p.id} />
+        <div className="adm-row" style={{ alignItems: "flex-end" }}>
+          <div className="adm-field" style={{ margin: 0 }}>
+            <label htmlFor="onHand">На нашем складе (Одесса), шт.</label>
+            <input id="onHand" name="onHand" className="adm-input" inputMode="numeric" defaultValue={String(own)} style={{ width: 120 }} disabled={!canEdit} />
+          </div>
+          {canEdit && <SubmitButton pendingText="Сохраняю…">Сохранить остаток</SubmitButton>}
+        </div>
+        <p className="adm-muted" style={{ marginTop: 6 }}>
+          Больше 0 — на сайте «В наявності в Одесі», товар выше в списках и попадает в фильтр «Швидка відправка з Одеси». 0 — берём у поставщика
+          («Відправка за 3–4 дні») или «Під замовлення». При заказе остаток уменьшается сам, при отмене заказа — возвращается.
+        </p>
+      </form>
 
       <form action={saveProductAction} className="adm-card">
         <input type="hidden" name="id" value={p.id} />

@@ -8,6 +8,7 @@ const TABS = [
   { href: "/admin/site/contacts", label: "Контакты и график" },
   { href: "/admin/site/pages", label: "Страницы" },
   { href: "/admin/site/menu", label: "Меню и задачи" },
+  { href: "/admin/site/checkout", label: "Оформление заказа" },
 ];
 
 /** Вкладки раздела «Сайт». */

@@ -1,8 +1,8 @@
 // Подраздел каталога: товары ровно тех категорий, что в меню лежат в этой подгруппе; соседние подразделы — чипами сверху.
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
-import { isShopLang, parseListing, paths, shopHref } from "@handyman/core/site";
+import { isShopLang, listingQuery, parseListing, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
 import { getMenuView } from "@/lib/shop/catalog";
 import { FACET_KEYS, resolveListing, runListing } from "@/lib/shop/listing";
@@ -26,6 +26,7 @@ export default async function SubPage({ params, searchParams }: PageProps<"/[lan
   const g = r.group;
   const current = r.sub;
   const state = parseListing(await searchParams, FACET_KEYS);
+  if (r.redirectTo) permanentRedirect(`${shopHref(lang, r.redirectTo)}${listingQuery(state)}`); // адрес сменили в админке
   const [data, view] = await Promise.all([runListing(r, state, lang), getMenuView(c.menu)]);
   const gv = view.groups.find((x) => x.group.id === g.id);
   const subs = (gv?.subs ?? [])

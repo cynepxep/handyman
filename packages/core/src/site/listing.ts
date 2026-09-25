@@ -1,4 +1,4 @@
-// Параметры списка товаров в адресе: ?f.diameter=125&f.diameter=180&avail=1&sale=1&min=100&max=500&sort=price_asc&page=2
+// Параметры списка товаров в адресе: ?f.diameter=125&f.diameter=180&avail=1&fast=1&sale=1&min=100&max=500&sort=price_asc&page=2
 // Одно место для страниц разделов, поиска, API и кнопок фильтров (разбор и сборка адреса). Без зависимостей: работает и в браузере.
 
 export const LISTING_SORTS = ["relevance", "price_asc", "price_desc", "new", "name"] as const;
@@ -8,6 +8,8 @@ export type ListingState = {
   /** код фильтра (FACET_DEFS) → выбранные значения */
   facets: Record<string, string[]>;
   available: boolean;
+  /** только наш склад в Одессе («Швидка відправка з Одеси») */
+  local: boolean;
   sale: boolean;
   min?: number;
   max?: number;
@@ -45,6 +47,7 @@ export function parseListing(raw: Raw, facetKeys: readonly string[]): ListingSta
   return {
     facets,
     available: first(raw, "avail") === "1",
+    local: first(raw, "fast") === "1",
     sale: first(raw, "sale") === "1",
     ...(min != null ? { min } : {}),
     ...(max != null ? { max } : {}),
@@ -59,6 +62,7 @@ export function listingQuery(state: ListingState, q?: string): string {
   if (q) qs.set("q", q);
   for (const [key, values] of Object.entries(state.facets)) for (const v of values) qs.append(`f.${key}`, v);
   if (state.available) qs.set("avail", "1");
+  if (state.local) qs.set("fast", "1");
   if (state.sale) qs.set("sale", "1");
   if (state.min != null) qs.set("min", String(state.min));
   if (state.max != null) qs.set("max", String(state.max));
@@ -80,11 +84,11 @@ export function toggleFacet(state: ListingState, key: string, value: string, sin
 }
 
 /** Есть ли выбранные фильтры (для кнопки «Скинути»). Сортировка фильтром не считается. */
-export const hasFilters = (s: ListingState) => Object.keys(s.facets).length > 0 || s.available || s.sale || s.min != null || s.max != null;
+export const hasFilters = (s: ListingState) => Object.keys(s.facets).length > 0 || s.available || s.local || s.sale || s.min != null || s.max != null;
 
 /** Сбросить все фильтры, оставив сортировку. */
-export const clearFilters = (s: ListingState): ListingState => ({ facets: {}, available: false, sale: false, page: 1, ...(s.sort ? { sort: s.sort } : {}) });
+export const clearFilters = (s: ListingState): ListingState => ({ facets: {}, available: false, local: false, sale: false, page: 1, ...(s.sort ? { sort: s.sort } : {}) });
 
 /** Сколько фильтров выбрано (число на кнопке «Фільтри»). */
 export const filterCount = (s: ListingState) =>
-  Object.values(s.facets).reduce((a, v) => a + v.length, 0) + Number(s.available) + Number(s.sale) + Number(s.min != null || s.max != null);
+  Object.values(s.facets).reduce((a, v) => a + v.length, 0) + Number(s.available) + Number(s.local) + Number(s.sale) + Number(s.min != null || s.max != null);

@@ -28,7 +28,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const batteryGroup = c.menu.groups.find((g) => !g.hidden && g.quickPick.includes("series"));
   const batteryHref = (series: string) =>
     batteryGroup
-      ? `${shopHref(lang, paths.group(slugOf(batteryGroup)))}${listingQuery({ facets: { series: [series] }, available: false, sale: false, page: 1 })}`
+      ? `${shopHref(lang, paths.group(slugOf(batteryGroup)))}${listingQuery({ facets: { series: [series] }, available: false, local: false, sale: false, page: 1 })}`
       : shopHref(lang, paths.search(series));
 
   return (

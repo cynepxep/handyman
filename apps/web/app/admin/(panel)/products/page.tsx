@@ -41,6 +41,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (p.cat) and.push({ categoryId: { in: cats.byId.has(p.cat) ? cats.subtreeIds(p.cat) : [p.cat] } });
   if (p.avail === "yes") and.push({ supplierAvailable: true });
   if (p.avail === "no") and.push({ supplierAvailable: false });
+  if (p.avail === "own") and.push({ stockItems: { some: { onHand: { gt: 0 } } } });
   if (p.flag === "conflict") and.push({ priceConflict: true });
   if (p.flag === "hidden") and.push({ visible: false });
   if (p.flag === "locked") and.push({ fieldLocks: { some: {} } });
@@ -54,7 +55,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       orderBy: [{ nameUk: "asc" }, { id: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { images: { orderBy: { sort: "asc" }, take: 1, select: { url: true } }, _count: { select: { fieldLocks: true } } },
+      include: { images: { orderBy: { sort: "asc" }, take: 1, select: { url: true } }, stockItems: { select: { onHand: true } }, _count: { select: { fieldLocks: true } } },
     }),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -77,6 +78,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <option value="">Любое наличие</option>
             <option value="yes">Есть у поставщика</option>
             <option value="no">Под заказ</option>
+            <option value="own">Есть на нашем складе (Одесса)</option>
           </select>
           <select name="flag" defaultValue={p.flag ?? ""} className="adm-select" aria-label="Особые отметки">
             <option value="">Все товары</option>
@@ -138,7 +140,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 </td>
                 <td>
                   <div className="adm-row" style={{ gap: 4 }}>
-                    <span className={r.supplierAvailable ? "adm-chip ok" : "adm-chip"}>{r.supplierAvailable ? "В наличии" : "Под заказ"}</span>
+                    {(() => {
+                      const own = r.stockItems.reduce((a, x) => a + x.onHand, 0);
+                      return own > 0 ? <span className="adm-chip ok">на складе: {own} шт.</span> : null;
+                    })()}
+                    <span className={r.supplierAvailable ? "adm-chip ok" : "adm-chip"}>{r.supplierAvailable ? "Есть у поставщика" : "Под заказ"}</span>
                     {r.priceConflict && <span className="adm-chip warn">расхождение цен</span>}
                     {r._count.fieldLocks > 0 && <span className="adm-chip">правки: {r._count.fieldLocks}</span>}
                     {!r.visible && <span className="adm-chip bad">скрыт</span>}

@@ -3,10 +3,14 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Roboto, Roboto_Condensed } from "next/font/google";
-import { isShopLang, pickTexts } from "@handyman/core/site";
+import { isShopLang, paths, pickTexts, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent, siteUrl } from "@/lib/shop/content";
 import { ShopTextsProvider } from "@/components/shop/client-bits";
 import { BottomNav, SiteFooter, SiteHeader } from "@/components/shop/site-chrome";
+import { ShopCartProvider } from "@/components/shop/cart/cart-context";
+import { cartUiLabels } from "@/lib/shop/cart-labels";
+import { TextEditor } from "@/components/shop/text-editor";
+import { getStaffSession } from "@/lib/auth";
 import "@/components/shop/shop.css";
 
 const robotoC = Roboto_Condensed({ variable: "--f-robotoc", subsets: ["latin", "cyrillic"], weight: ["400", "600", "700"] });
@@ -39,17 +43,22 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 export default async function ShopRootLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
-  const c = await getShopContent(lang);
+  const [c, staff] = await Promise.all([getShopContent(lang), getStaffSession().catch(() => null)]);
+  // сотрудник с правом «Тексты» видит кнопку «✎ Редагувати тексти» (покупатели — нет)
+  const canEditTexts = staff?.permissions.includes("texts.edit") ?? false;
   return (
     <html lang={lang} className={`${robotoC.variable} ${roboto.variable}`}>
       <body className="hm-body">
         <a className="hm-skip" href="#main">{c.t("header.skip")}</a>
-        <SiteHeader c={c} />
-        <ShopTextsProvider lang={lang} texts={pickTexts(c.texts, CLIENT_TEXT_KEYS)}>
-          <main id="main" className="hm-main" tabIndex={-1}>{children}</main>
-        </ShopTextsProvider>
-        <SiteFooter c={c} />
-        <BottomNav c={c} />
+        <ShopCartProvider lang={lang} labels={cartUiLabels(c.t)} cartHref={shopHref(lang, paths.cart())} checkoutHref={shopHref(lang, paths.checkout())}>
+          <SiteHeader c={c} />
+          <ShopTextsProvider lang={lang} texts={pickTexts(c.texts, CLIENT_TEXT_KEYS)}>
+            <main id="main" className="hm-main" tabIndex={-1}>{children}</main>
+          </ShopTextsProvider>
+          <SiteFooter c={c} />
+          <BottomNav c={c} />
+        </ShopCartProvider>
+        {canEditTexts && <TextEditor lang={lang} />}
       </body>
     </html>
   );

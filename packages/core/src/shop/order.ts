@@ -141,3 +141,21 @@ export function validateCheckout(raw: Record<string, unknown>, s: CheckoutSettin
   if (value.noCallback && !canSkipCall(levels)) value.noCallback = false; // «під замовлення» — звоним обязательно
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true, value };
 }
+
+// ---------- статусы заказа (подписи для админки и сообщений менеджеру) ----------
+
+export const ORDER_STATUS_RU: Record<string, string> = {
+  NEW: "Новый",
+  NO_ANSWER: "Не дозвонились",
+  AWAITING_SUPPLIER: "Ждём товар от поставщика",
+  PAID: "Оплачен",
+  PACKED: "Собран",
+  SHIPPED: "Отправлен",
+  DONE: "Выполнен",
+  CANCELLED: "Отменён",
+  RETURNED: "Возврат",
+};
+
+export const PAY_MODE_RU: Record<string, string> = { PREPAY: "Предоплата", FULL: "Полная оплата на сайте", CARD: "По реквизитам", LATER: "Уточнит менеджер" };
+export const DELIVERY_RU: Record<string, string> = { NOVA_POSHTA: "Нова Пошта", COURIER_ODESA: "Курьер по Одессе", PICKUP: "Самовывоз", TO_CONFIRM: "Уточнит менеджер" };
+export const NP_TYPE_RU: Record<string, string> = { warehouse: "отделение", postomat: "почтомат", address: "курьер НП на адрес" };

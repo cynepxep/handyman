@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { T } from "@/lib/shop/content";
-import { Price, StockBadge, btn } from "./ui";
+import { AddToCartButton, OneClickButton } from "./cart/cart-buttons";
+import { Price, StockBadge, type StockLabels } from "./ui";
 
 export type CardData = {
   id: string;
@@ -14,19 +15,22 @@ export type CardData = {
   oldPrice: number | null;
   discountPct: number;
   available: boolean;
+  stock: "local" | "supplier" | "order";
   image: string | null;
   specs: Array<{ key: string; text: string }>;
 };
 
 export type CardLabels = {
-  noPhoto: string; specs: string; inStock: string; onOrder: string; buy: string; buy1click: string;
+  noPhoto: string; specs: string; buy: string; buy1click: string; stock: StockLabels;
   /** «Стара ціна {price}» — {price} подставляет карточка */
   oldPrice: string;
 };
 
+export const stockLabels = (t: T): StockLabels => ({ local: t("stock.local"), supplier: t("stock.supplier"), order: t("stock.order") });
+
 export const cardLabels = (t: T): CardLabels => ({
-  noPhoto: t("card.noPhoto"), specs: t("card.specs.label"), inStock: t("card.inStock"), onOrder: t("card.onOrder"),
-  buy: t("card.buy"), buy1click: t("card.buy1click"), oldPrice: t("card.oldPrice"),
+  noPhoto: t("card.noPhoto"), specs: t("card.specs.label"), buy: t("card.buy"), buy1click: t("card.buy1click"), oldPrice: t("card.oldPrice"),
+  stock: stockLabels(t),
 });
 
 /** Размеры фото для браузера: сколько пикселей реально нужно на каждой ширине экрана (грузится ровно столько). */
@@ -51,12 +55,11 @@ export function ProductCard({ card, labels, rail, priority }: { card: CardData; 
             {card.specs.map((s) => <li key={s.key}>{s.text}</li>)}
           </ul>
         )}
-        <StockBadge available={card.available} inStock={labels.inStock} onOrder={labels.onOrder} />
+        <StockBadge level={card.stock} labels={labels.stock} />
         <Price price={card.price} oldPrice={card.oldPrice} oldLabel={(p) => labels.oldPrice.replace("{price}", p)} />
-        {/* Кнопки заработают вместе с корзиной (шаг 2.6). data-* — для аналитики (Этап 6). */}
         <div className="hm-card-actions">
-          <button type="button" className={btn("primary", { block: true })} data-action="add-to-cart" data-sku={card.sku}>{labels.buy}</button>
-          <button type="button" className={btn("ghost", { block: true })} data-action="buy-one-click" data-sku={card.sku}>{labels.buy1click}</button>
+          <AddToCartButton sku={card.sku} label={labels.buy} block />
+          <OneClickButton sku={card.sku} name={card.name} label={labels.buy1click} block />
         </div>
       </div>
     </article>

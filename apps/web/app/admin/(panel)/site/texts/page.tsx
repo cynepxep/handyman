@@ -13,12 +13,18 @@ export default async function TextsPage({ searchParams }: { searchParams: Promis
   const overrides = await loadTextOverrides();
   const custom = new Map(overrides.map((o) => [`${o.key}|${toLang(o.lang)}`, o.value]));
   const needle = q.trim().toLowerCase();
+  // поиск по словам: «без зайвих питань» найдёт «без зайвих запитань» (каждое слово — часть текста, порядок не важен)
+  const norm = (x: string) => x.toLowerCase().replace(/[’'ʼ`]/g, "'").replace(/ё/g, "е");
+  const words = norm(needle).split(/[\s,.!?;:«»"()]+/).filter(Boolean);
 
   const groups = groupedEntries()
     .map((g) => ({
       group: g.group,
       entries: needle
-        ? g.entries.filter((e) => [e.key, e.hint ?? "", e.uk, e.ru, custom.get(`${e.key}|uk`) ?? "", custom.get(`${e.key}|ru`) ?? ""].some((s) => s.toLowerCase().includes(needle)))
+        ? g.entries.filter((e) => {
+            const hay = norm([e.key, e.hint ?? "", e.uk, e.ru, custom.get(`${e.key}|uk`) ?? "", custom.get(`${e.key}|ru`) ?? ""].join(" "));
+            return words.every((w) => hay.includes(w));
+          })
         : g.entries,
     }))
     .filter((g) => g.entries.length > 0);

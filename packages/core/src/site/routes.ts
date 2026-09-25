@@ -57,7 +57,7 @@ export function productSlug(name: string): string {
 /**
  * Ссылки витрины в одном месте (адреса украинской версии; для русской — shopHref(lang, …)).
  * Адреса групп, подгрупп и задач — из «Сайт → Меню и задачи» (поле «Адрес страницы»).
- * Корзина и кабинет появятся в шагах 2.6 и 4–5.
+ * Кабинет появится на Этапах 4–5.
  */
 export const paths = {
   home: () => "/",
@@ -76,5 +76,8 @@ export const paths = {
   product: (sku: string, name: string) => `/product/${encodeURIComponent(sku)}/${productSlug(name)}`,
   info: (slug: string) => `/info/${encodeURIComponent(slug)}`,
   cart: () => "/cart",
+  checkout: () => "/checkout",
+  /** Страница «Дякуємо» после заказа: без ключа доступа не открывается. */
+  order: (no: string, key: string) => `/order/${encodeURIComponent(no)}?k=${encodeURIComponent(key)}`,
   account: () => "/account",
 };

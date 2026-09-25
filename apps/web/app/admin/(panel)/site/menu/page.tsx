@@ -64,7 +64,7 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
             <div className="adm-field">
               <label htmlFor={`g-${g.id}-slug`}>Адрес страницы: сайт/catalog/<b>{slugOf(g)}</b></label>
               <input id={`g-${g.id}-slug`} name="g.slug" defaultValue={slugOf(g)} className="adm-input" pattern="[a-zA-Z0-9\-]{2,60}" style={{ maxWidth: 360 }} />
-              <span className="adm-muted">Латиница, цифры и дефис. После смены старая ссылка перестанет работать.</span>
+              <span className="adm-muted">Латиница, цифры и дефис. После смены старые ссылки сами перенаправят покупателя на новый адрес.</span>
             </div>
 
             <h3>Подгруппы и какие категории в них лежат</h3>

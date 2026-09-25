@@ -15,7 +15,7 @@ import { btn } from "./ui";
 export type FacetGroup = { key: string; label: string; values: Array<{ value: string; count: number; selected: boolean }> };
 export type FilterLabels = {
   title: string; show: string; reset: string; price: string; from: string; to: string; apply: string; moreValues: string; less: string;
-  inStock: string; sale: string; close: string; goods: [string, string, string];
+  inStock: string; fast: string; sale: string; close: string; goods: [string, string, string];
 };
 
 /** 1 товар, 2 товари, 5 товарів (формы слова приходят из реестра текстов). */
@@ -61,6 +61,8 @@ type PanelProps = {
   attrs: FacetGroup[];
   price: { min: number; max: number } | null;
   total: number;
+  /** показывать «Швидка відправка з Одеси» (есть товары на нашем складе) */
+  hasLocal: boolean;
   labels: FilterLabels;
 };
 
@@ -110,6 +112,12 @@ function FilterForm({ p, live, onApplied }: { p: PanelProps; live: boolean; onAp
         <input type="checkbox" checked={draft.available} onChange={(e) => update({ ...draft, available: e.target.checked, page: 1 })} />
         <span>{p.labels.inStock}</span>
       </label>
+      {(p.hasLocal || draft.local) && (
+        <label className="hm-check hm-check-strong">
+          <input type="checkbox" checked={draft.local} onChange={(e) => update({ ...draft, local: e.target.checked, page: 1 })} />
+          <span>{p.labels.fast}</span>
+        </label>
+      )}
       <label className="hm-check hm-check-strong">
         <input type="checkbox" checked={draft.sale} onChange={(e) => update({ ...draft, sale: e.target.checked, page: 1 })} />
         <span>{p.labels.sale}</span>

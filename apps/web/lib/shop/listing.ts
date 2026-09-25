@@ -3,10 +3,10 @@
 import "server-only";
 import { searchProducts, SearchUnavailableError, type SearchResult } from "@handyman/db/catalog-search";
 import {
-  FACET_DEFS, findGroupBySlug, findSubBySlug, findTaskBySlug, pickQuickPick, sortFacetValues, subCategoryMap, taskCategoryIds,
+  FACET_DEFS, findGroup, findSub, findTask, pickQuickPick, slugOf, sortFacetValues, subCategoryMap, taskCategoryIds,
   type MenuConfig, type MenuGroup, type MenuSub, type Task,
 } from "@handyman/core/catalog";
-import type { ListingState, ShopLang } from "@handyman/core/site";
+import { paths, type ListingState, type ShopLang } from "@handyman/core/site";
 import { getCategoryStats, toCards, type ShopCard } from "./catalog";
 
 export const PER_PAGE = 24;
@@ -31,6 +31,8 @@ export type ResolvedListing = {
   group?: MenuGroup;
   sub?: MenuSub;
   task?: Task;
+  /** открыли по прежнему адресу (адрес сменили в админке) — перенаправить сюда (адрес украинской версии, без ?запроса) */
+  redirectTo?: string;
 };
 
 /** Найти раздел/подраздел/задачу по адресу и собрать точный список категорий. Нет такого или скрыт — null (страница 404). */
@@ -38,19 +40,31 @@ export async function resolveListing(key: ListingKey, menu: MenuConfig): Promise
   if (key.kind === "search") return { key, q: key.q.slice(0, 100), quickPick: [] };
   const { cats } = await getCategoryStats();
   if (key.kind === "task") {
-    const task = findTaskBySlug(menu, key.task);
-    if (!task || task.hidden) return null;
-    return { key, task, categories: taskCategoryIds(cats, task), quickPick: TASK_QUICK_PICK };
+    const found = findTask(menu, key.task);
+    if (!found || found.item.hidden) return null;
+    const task = found.item;
+    return {
+      key, task, categories: taskCategoryIds(cats, task), quickPick: TASK_QUICK_PICK,
+      ...(found.moved ? { redirectTo: paths.task(slugOf(task)) } : {}),
+    };
   }
-  const group = findGroupBySlug(menu, key.group);
-  if (!group || group.hidden) return null;
+  const g = findGroup(menu, key.group);
+  if (!g || g.item.hidden) return null;
+  const group = g.item;
   const map = subCategoryMap(cats, menu.groups);
   if (key.kind === "sub") {
-    const sub = findSubBySlug(group, key.sub);
-    if (!sub || sub.hidden) return null;
-    return { key, group, sub, categories: map.get(sub.id) ?? [], quickPick: group.quickPick, specs: group.specs };
+    const s = findSub(group, key.sub);
+    if (!s || s.item.hidden) return null;
+    const sub = s.item;
+    return {
+      key, group, sub, categories: map.get(sub.id) ?? [], quickPick: group.quickPick, specs: group.specs,
+      ...(g.moved || s.moved ? { redirectTo: paths.sub(slugOf(group), slugOf(sub)) } : {}),
+    };
   }
-  return { key, group, categories: group.subs.flatMap((s) => map.get(s.id) ?? []), quickPick: group.quickPick, specs: group.specs };
+  return {
+    key, group, categories: group.subs.flatMap((s) => map.get(s.id) ?? []), quickPick: group.quickPick, specs: group.specs,
+    ...(g.moved ? { redirectTo: paths.group(slugOf(group)) } : {}),
+  };
 }
 
 export type ListingData = {
@@ -70,6 +84,7 @@ export async function runListing(
       ...(r.categories ? { categories: r.categories } : {}),
       facets: state.facets,
       available: state.available,
+      local: state.local,
       sale: state.sale,
       min: state.min,
       max: state.max,
