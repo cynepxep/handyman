@@ -57,7 +57,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
       orderBy: [{ nameUk: "asc" }, { id: "asc" }],
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { images: { orderBy: { sort: "asc" }, take: 1, select: { url: true } }, stockItems: { select: { onHand: true } }, _count: { select: { fieldLocks: true } } },
+      include: { images: { orderBy: { sort: "asc" }, take: 1, select: { url: true, localUrl: true } }, stockItems: { select: { onHand: true } }, _count: { select: { fieldLocks: true } } },
     }),
   ]);
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -130,7 +130,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 <td style={{ width: 56 }}>
                   {r.images[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element -- фото по ссылкам поставщика, оптимизация — на этапе картинок
-                    <img src={r.images[0].url} alt="" loading="lazy" width={44} height={44} style={{ objectFit: "contain", borderRadius: 6 }} />
+                    <img src={r.images[0].localUrl ?? r.images[0].url} alt="" loading="lazy" width={44} height={44} style={{ objectFit: "contain", borderRadius: 6 }} />
                   ) : null}
                 </td>
                 <td>

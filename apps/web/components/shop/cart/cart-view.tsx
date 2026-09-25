@@ -4,6 +4,7 @@
 // Используется в мини-корзине и на странице /cart. Если товара больше нет в продаже — он убирается с пояснением.
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import { quoteCartAction, type CartQuote } from "@/app/[lang]/cart-actions";
 import { formatPrice } from "../format";
@@ -60,7 +61,7 @@ export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
           const v = byS.get(l.sku);
           return (
             <li key={l.sku} className="hm-cart-line">
-              <span className="hm-cart-img">{v?.image ? <Image src={v.image} alt="" fill sizes="72px" /> : null}</span>
+              <span className="hm-cart-img">{v?.image ? <Image src={v.image} alt="" fill sizes="72px" unoptimized={!optimizable(v.image)} /> : null}</span>
               <div className="hm-cart-info">
                 {v ? <Link href={v.href} onClick={onNavigate} className="hm-cart-name">{v.name}</Link> : <span className="hm-skel" style={{ height: 16, width: "80%" }} />}
                 {v && <StockBadge level={v.stock} labels={labels.stock} />}

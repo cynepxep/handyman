@@ -5,6 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { prisma, Prisma } from "./client";
+import { imageRows } from "./media";
 import {
   parseFeed, planImport, decideCategory, slugify, PATH_SEP, NO_CATEGORY_PATH, FeedFormatError,
   UNSORTED_ID, UNSORTED_NAME_UK, UNSORTED_NAME_RU,
@@ -448,7 +449,7 @@ async function executeApply(runId: string, approved: ReadonlySet<string>, who: s
         await prisma.product.create({
           data: {
             sku: p.sku, source: "FEED", visible: true, ...p.data,
-            images: { create: p.item.pictures.map((url, sort) => ({ url, sort })) },
+            images: { create: imageRows(p.item.pictures) }, // своя копия подставится сразу, если фото уже скачивали
             attributes: { create: p.item.params.map((a, sort) => ({ key: a.name, value: a.value, sort })) },
           },
         });
@@ -459,7 +460,7 @@ async function executeApply(runId: string, approved: ReadonlySet<string>, who: s
         if (p.priceLog) ops.push(prisma.priceLog.create({ data: { productId: p.productId, oldPrice: p.priceLog.oldPrice, newPrice: p.priceLog.newPrice, source: "IMPORT", who } }));
         if (p.replacePictures) {
           ops.push(prisma.productImage.deleteMany({ where: { productId: p.productId } }));
-          ops.push(prisma.productImage.createMany({ data: p.replacePictures.map((url, sort) => ({ productId: p.productId, url, sort })) }));
+          ops.push(prisma.productImage.createMany({ data: imageRows(p.replacePictures).map((r) => ({ ...r, productId: p.productId })) }));
         }
         if (p.replaceParams) {
           ops.push(prisma.productAttribute.deleteMany({ where: { productId: p.productId } }));

@@ -4,6 +4,7 @@
 // Фото отдаются через наш сервер уменьшенными (next/image); на весь экран — крупнее.
 import { useRef, useState } from "react";
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 
 export type GalleryLabels = { photo: string; zoom: string; prev: string; next: string; close: string; thumbs: string; noPhoto: string };
 
@@ -54,7 +55,7 @@ export function Gallery({ images, alt, labels, badge }: { images: string[]; alt:
               }}
               aria-label={`${labels.zoom}: ${caption(i)}`}
             >
-              <Image src={src} alt={i === 0 ? alt : `${alt} — ${caption(i)}`} fill sizes="(max-width: 999px) 100vw, 560px" priority={i === 0} />
+              <Image src={src} alt={i === 0 ? alt : `${alt} — ${caption(i)}`} fill sizes="(max-width: 999px) 100vw, 560px" priority={i === 0} unoptimized={!optimizable(src)} />
             </button>
           ))}
         </div>
@@ -66,7 +67,7 @@ export function Gallery({ images, alt, labels, badge }: { images: string[]; alt:
           {images.map((src, i) => (
             <li key={src}>
               <button type="button" className={i === index ? "is-on" : ""} onClick={() => scrollTo(i)} aria-label={caption(i)} aria-current={i === index ? "true" : undefined}>
-                <Image src={src} alt="" width={64} height={64} sizes="64px" />
+                <Image src={src} alt="" width={64} height={64} sizes="64px" unoptimized={!optimizable(src)} />
               </button>
             </li>
           ))}
@@ -84,7 +85,7 @@ export function Gallery({ images, alt, labels, badge }: { images: string[]; alt:
         onClose={() => scrollTo(index)}
       >
         <div className="hm-lightbox-img">
-          <Image src={images[index]} alt={`${alt} — ${caption(index)}`} fill sizes="100vw" />
+          <Image src={images[index]} alt={`${alt} — ${caption(index)}`} fill sizes="100vw" unoptimized={!optimizable(images[index])} />
         </div>
         <button type="button" className="hm-lb-btn hm-lb-close" onClick={() => dialog.current?.close()} aria-label={labels.close}>✕</button>
         {count > 1 && (

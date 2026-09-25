@@ -14,6 +14,7 @@
     "./search-stats": "./src/search-stats.ts",
     "./warehouses": "./src/warehouses.ts",
     "./novaposhta": "./src/novaposhta.ts",
+    "./media": "./src/media.ts",
     "./notify": "./src/notify.ts"
   },
   "scripts": {
@@ -27,14 +28,15 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@handyman/core": "workspace:*",
     "@prisma/client": "^6.3.0",
-    "@handyman/core": "workspace:*"
+    "sharp": "0.35.4"
   },
   "devDependencies": {
+    "@types/node": "^20",
     "dotenv-cli": "^7.4.0",
     "prisma": "^6.3.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0",
-    "@types/node": "^20"
+    "typescript": "^5.7.0"
   }
 }

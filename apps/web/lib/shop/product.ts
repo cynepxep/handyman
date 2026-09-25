@@ -13,7 +13,7 @@ export const loadProduct = cache(async (sku: string) => {
   const p = await prisma.product.findUnique({
     where: { sku },
     include: {
-      images: { orderBy: { sort: "asc" }, select: { url: true } },
+      images: { orderBy: { sort: "asc" }, select: { url: true, localUrl: true } },
       attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
       brand: { select: { name: true } },
       stockItems: { select: { onHand: true } },
@@ -37,7 +37,7 @@ export const loadProduct = cache(async (sku: string) => {
     stock: stockLevel(p.stockItems.reduce((a, x) => a + x.onHand, 0), p.supplierAvailable),
     brand: p.brand?.name ?? null,
     categoryId: p.categoryId,
-    images: p.images.map((i) => i.url),
+    images: p.images.map((i) => i.localUrl ?? i.url), // своя копия, если уже скачана
     attributes: p.attributes.map((a) => ({ name: a.key.trim(), value: a.value.trim() })).filter((a) => a.name && a.value),
   };
 });

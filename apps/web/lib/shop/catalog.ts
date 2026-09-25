@@ -41,7 +41,7 @@ const loadCategoryRows = cached(
 const loadCategoryTops = cached(
   () => prisma.$queryRaw<Array<{ categoryId: string; price: number; url: string }>>`
     SELECT DISTINCT ON (p."categoryId") p."categoryId", p.price::float8 AS price,
-      (SELECT i.url FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.sort LIMIT 1) AS url
+      (SELECT COALESCE(i."localUrl", i.url) FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.sort LIMIT 1) AS url
     FROM "Product" p
     WHERE p.visible AND p."supplierAvailable" AND EXISTS (SELECT 1 FROM "ProductImage" i WHERE i."productId" = p.id)
     ORDER BY p."categoryId", p.price DESC`,
@@ -128,7 +128,7 @@ export async function getBatteries(): Promise<Array<{ value: string; count: numb
 export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[]> {
   const rows = await prisma.product.findMany({
     where: { visible: true, oldPrice: { not: null }, supplierAvailable: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} } },
-    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } }, stockItems: { select: { onHand: true } } },
+    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true } }, stockItems: { select: { onHand: true } } },
   });
   const items: SearchItem[] = rows
     .map((r) => {
@@ -142,7 +142,7 @@ export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[
     .map(({ r, price, old, pct }) => ({
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old, discountPct: pct, available: true,
       stock: stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), true), hit: r.isHit, isNew: r.isNew,
-      image: r.images[0]?.url ?? null, categoryId: r.categoryId,
+      image: r.images[0] ? (r.images[0].localUrl ?? r.images[0].url) : null, categoryId: r.categoryId,
     }));
   return toCards(items, lang);
 }
@@ -166,7 +166,7 @@ export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<Sh
     where: { sku: { in: list }, visible: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS } },
     select: {
       id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, supplierAvailable: true, isHit: true, isNew: true,
-      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } }, stockItems: { select: { onHand: true } },
+      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true } }, stockItems: { select: { onHand: true } },
     },
   });
   const bySku = new Map(rows.map((r) => [r.sku, r]));
@@ -178,7 +178,7 @@ export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<Sh
     const stock = stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), r.supplierAvailable);
     return [{
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old && old > price ? old : null,
-      discountPct: discountPct(price, old), available: stock !== "order", stock, hit: r.isHit, isNew: r.isNew, image: r.images[0]?.url ?? null, categoryId: r.categoryId,
+      discountPct: discountPct(price, old), available: stock !== "order", stock, hit: r.isHit, isNew: r.isNew, image: r.images[0] ? (r.images[0].localUrl ?? r.images[0].url) : null, categoryId: r.categoryId,
     }];
   });
   return toCards(items, lang);

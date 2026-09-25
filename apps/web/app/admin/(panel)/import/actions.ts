@@ -7,6 +7,7 @@ import {
   type MappingChoice,
 } from "@handyman/db/catalog-import";
 import { reindexAll, reindexSafely } from "@handyman/db/catalog-search";
+import { startMediaSync } from "@handyman/db/media";
 import { requirePermission } from "@/lib/auth";
 import { catalogChanged } from "@/lib/shop/cache";
 
@@ -82,7 +83,14 @@ export async function applyAction(formData: FormData): Promise<void> {
     await saveMapping(supplier.id, readChoices(formData));
     const approved = formData.getAll("approve").map(String);
     // Когда импорт закончится, поисковый индекс пересобирается сам; при сбое поиск помечается устаревшим.
-    await startApply({ runId, approvedSkus: approved, who: session.username, afterDone: () => reindexSafely(() => reindexAll()) });
+    // После импорта: пересобрать поиск и докачать к себе фото новых товаров (в фоне).
+    await startApply({
+      runId, approvedSkus: approved, who: session.username,
+      afterDone: async () => {
+        await reindexSafely(() => reindexAll());
+        await startMediaSync({ supplierId: supplier.id }, session.username, { onlyNew: true }).catch((e) => console.error("[media] после импорта", e));
+      },
+    });
     catalogChanged(); // счётчики разделов на сайте обновятся и сами за 5 минут после окончания импорта
     return `${BASE}?run=${runId}`;
   });

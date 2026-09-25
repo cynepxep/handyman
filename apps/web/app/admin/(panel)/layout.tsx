@@ -13,6 +13,7 @@ const SECTIONS: Array<{ href: string; label: string; permission?: Permission }> 
   { href: "/admin/categories", label: "Категории", permission: "products.view" },
   { href: "/admin/site", label: "Сайт", permission: "texts.edit" },
   { href: "/admin/warehouses", label: "Магазины", permission: "settings.edit" },
+  { href: "/admin/media", label: "Фото товаров", permission: "import.run" },
   { href: "/admin/roles", label: "Роли и права", permission: "staff.manage" },
 ];
 

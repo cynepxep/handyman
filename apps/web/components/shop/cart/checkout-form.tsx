@@ -5,6 +5,7 @@
 // Имя, телефон и адрес доставки запоминаются в этом браузере — в следующий раз заполнять заново не нужно.
 import { useEffect, useRef, useState, useTransition } from "react";
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ShopLang } from "@handyman/core/site/routes";
@@ -333,7 +334,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
             const v = byS.get(l.sku);
             return (
               <li key={l.sku}>
-                <span className="hm-cart-img">{v?.image ? <Image src={v.image} alt="" fill sizes="48px" /> : null}</span>
+                <span className="hm-cart-img">{v?.image ? <Image src={v.image} alt="" fill sizes="48px" unoptimized={!optimizable(v.image)} /> : null}</span>
                 <span>
                   {v?.name ?? "…"} {l.qty > 1 && <b>× {l.qty}</b>}
                   {v && <StockBadge level={v.stock} labels={labels.stock} />}

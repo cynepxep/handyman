@@ -1,5 +1,6 @@
 // Плитки главной: задача («Різати метал») и группа каталога («Диски та круги»).
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import { Icon } from "./icons";
 
@@ -18,7 +19,7 @@ export function GroupTile({ href, image, name, count }: { href: string; image: s
   return (
     <Link className="hm-group" href={href}>
       <span className="hm-group-img">
-        {image && <Image src={image} alt="" fill sizes="(max-width: 699px) 45vw, (max-width: 999px) 22vw, 200px" />}
+        {image && <Image src={image} alt="" fill sizes="(max-width: 699px) 45vw, (max-width: 999px) 22vw, 200px" unoptimized={!optimizable(image)} />}
       </span>
       <span className="hm-group-name">{name}</span>
       <span className="hm-group-count">{count}</span>

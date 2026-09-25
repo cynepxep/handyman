@@ -127,7 +127,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       include: {
         brand: { select: { name: true } },
-        images: { orderBy: { sort: "asc" }, take: 1, select: { url: true } },
+        images: { orderBy: { sort: "asc" }, take: 1, select: { url: true, localUrl: true } },
         attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
         stockItems: { select: { onHand: true } },
       },
@@ -157,7 +157,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         hit: r.isHit,
         isNew: r.isNew,
         menuRank: ranks.get(r.categoryId) ?? NO_RANK,
-        image: r.images[0]?.url ?? null,
+        image: r.images[0] ? (r.images[0].localUrl ?? r.images[0].url) : null, // своя копия, если уже скачана
         descText: htmlToText(r.descUk).slice(0, 400),
         createdTs: r.createdAt.getTime(),
       };

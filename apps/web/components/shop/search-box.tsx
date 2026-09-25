@@ -5,6 +5,7 @@
 // Подсказки берутся из /api/catalog/suggest — там же исправление раскладки («rheu» → «круг») и опечаток.
 import { useId, useRef, useState } from "react";
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 import { useRouter } from "next/navigation";
 import { paths, shopHref, type ShopLang } from "@handyman/core/site/routes";
 import { formatPrice } from "./format";
@@ -216,7 +217,7 @@ export function SearchBox({ lang, labels, popular }: { lang: ShopLang; labels: S
               const name = lang === "ru" && o.item.nameRu ? o.item.nameRu : o.item.nameUk;
               return (
                 <div key={o.item.id} className="hm-suggest-item" {...common}>
-                  <span className="hm-suggest-img">{o.item.image && <Image src={o.item.image} alt="" width={48} height={48} sizes="48px" style={{ objectFit: "contain", width: "100%", height: "100%" }} />}</span>
+                  <span className="hm-suggest-img">{o.item.image && <Image src={o.item.image} alt="" width={48} height={48} sizes="48px" unoptimized={!optimizable(o.item.image)} style={{ objectFit: "contain", width: "100%", height: "100%" }} />}</span>
                   <span>
                     <span className="hm-suggest-name">{name}</span>
                     {(() => {

@@ -1,6 +1,7 @@
 // Карточка товара в списке (разделы, поиск, полки на главной). На узком телефоне — строкой: фото слева, текст справа.
 // Подписи приходят готовыми строками (cardLabels), поэтому карточку можно рисовать и на сервере, и в браузере («Показати ще»).
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import type { T } from "@/lib/shop/content";
 import { AddToCartButton, OneClickButton } from "./cart/cart-buttons";
@@ -45,7 +46,7 @@ export function ProductCard({ card, labels, rail, priority }: { card: CardData; 
     <article className="hm-card" data-product-id={card.id}>
       <div className="hm-card-media">
         {card.image ? (
-          <Image src={card.image} alt={card.name} fill sizes={rail ? RAIL_SIZES : GRID_SIZES} priority={priority} />
+          <Image src={card.image} alt={card.name} fill sizes={rail ? RAIL_SIZES : GRID_SIZES} priority={priority} unoptimized={!optimizable(card.image)} />
         ) : (
           <div className="hm-noimg">{labels.noPhoto}</div>
         )}

@@ -214,10 +214,34 @@ model ProductImage {
   id        String  @id @default(cuid())
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  url       String
+  url       String // где фото лежит у поставщика (источник)
   sort      Int     @default(0)
+  // своя копия фото (после 2.8): «/media/ab/<sha1>.webp» — сайт показывает её, пока есть; иначе url поставщика
+  localUrl   String?
+  localBytes Int?
+  localAt    DateTime?
+  localError String? // почему не удалось скачать (для повторной попытки)
 
   @@index([productId])
+  @@index([localUrl])
+}
+
+// Скачивание фото поставщика к себе: один запуск по одному поставщику (кнопка в «Фото товаров» и сам после импорта).
+model MediaSyncRun {
+  id            String    @id @default(cuid())
+  supplierId    String? // null — товары без поставщика
+  status        String    @default("running") // running | done | stopped | failed
+  total         Int       @default(0)
+  done          Int       @default(0)
+  failed        Int       @default(0)
+  savedKb       Int       @default(0)
+  stopRequested Boolean   @default(false)
+  who           String
+  error         String?
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+
+  @@index([supplierId, startedAt])
 }
 
 // Какие поля товара редактировали руками — импорт их больше не перезаписывает.

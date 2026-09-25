@@ -1,6 +1,7 @@
 // Меню каталога на языке покупателя: группы и подгруппы из админки «Сайт → Меню и задачи».
 import type { Metadata } from "next";
 import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
@@ -35,7 +36,7 @@ export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog
             <details>
               <summary>
                 <span className="hm-group-img hm-menu-img">
-                  {g.image && <Image src={g.image} alt="" fill sizes="56px" />}
+                  {g.image && <Image src={g.image} alt="" fill sizes="56px" unoptimized={!optimizable(g.image)} />}
                 </span>
                 <span className="hm-menu-title">
                   <b>{pick(g.group.nameUk, g.group.nameRu)}</b>

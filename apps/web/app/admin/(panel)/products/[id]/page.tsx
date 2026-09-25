@@ -258,7 +258,14 @@ export default async function ProductPage({
         <>
           <h2>Фото ({p.images.length})</h2>
           <p className="adm-muted" style={{ marginTop: 0 }}>Нажмите на фото, чтобы открыть его на весь экран. Стрелки клавиатуры листают, Esc закрывает.</p>
-          <Gallery images={p.images.map((im) => im.url)} name={p.nameUk} />
+          <p className="adm-muted">
+            Своих копий: {p.images.filter((im) => im.localUrl).length} из {p.images.length}
+            {p.images.some((im) => !im.localUrl && im.localError) && (
+              <> · не удалось скачать: {[...new Set(p.images.filter((im) => !im.localUrl && im.localError).map((im) => im.localError))].join("; ")}
+                {" "}(повторить — <Link className="adm-link" href="/admin/media">Фото товаров</Link>)</>
+            )}
+          </p>
+          <Gallery images={p.images.map((im) => im.localUrl ?? im.url)} name={p.nameUk} />
         </>
       )}
 

@@ -1,11 +1,15 @@
 import type { NextConfig } from "next";
+import { IMAGE_HOSTS } from "./lib/image-hosts";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@handyman/db", "@handyman/core"],
-  // Фото товаров: берём с сайта поставщика и отдаём покупателю уменьшенными (WebP/AVIF) через наш сервер с кэшем.
-  // Своё хранилище фото — позже (вопрос Т1/В5 в docs/stage2/06-OPEN-QUESTIONS.md).
+  // Фото товаров: свои копии (/media/…, скачиваются в админке «Фото товаров»), пока копии нет — с сайта поставщика.
+  // В обоих случаях покупателю отдаются уменьшенные (WebP/AVIF) через наш сервер с кэшем.
   images: {
-    remotePatterns: [{ protocol: "https", hostname: "vitals.ua", pathname: "/image/**" }],
+    // новый поставщик: добавьте его сайт в lib/image-hosts.ts (или просто скачайте его фото в «Фото товаров»)
+    remotePatterns: IMAGE_HOSTS.map((hostname) => ({ protocol: "https" as const, hostname })),
+    // свои копии фото (/media/… — маршрут app/media, файлы в MEDIA_DIR)
+    localPatterns: [{ pathname: "/media/**" }],
     formats: ["image/avif", "image/webp"],
     qualities: [75],
     minimumCacheTTL: 60 * 60 * 24 * 7, // неделя: фото товаров меняются редко
