@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Permission } from "@handyman/core";
 import { requireStaff } from "@/lib/auth";
 import { logoutAction } from "../actions";
@@ -23,9 +24,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     <div className="adm">
       <header className="adm-bar">
         <div className="adm-bar-in">
-          <a className="adm-brand" href="/admin">
+          <Link className="adm-brand" href="/admin">
             Handyman
-          </a>
+          </Link>
           <AdminNav items={items} />
           <form action={logoutAction} className="adm-user">
             <span>

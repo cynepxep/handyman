@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { Inter, Manrope, Onest } from "next/font/google";
-import "./design.css";
+import { Roboto, Roboto_Condensed } from "next/font/google";
+import "@/components/shop/shop.css";
 
-// Три кандидата шрифта, все с кириллицей (ґ, є, і, ї). Подключаются с нашего сервера, без запросов к Google в браузере.
-const onest = Onest({ variable: "--font-onest", subsets: ["latin", "cyrillic"] });
-const inter = Inter({ variable: "--font-inter", subsets: ["latin", "cyrillic"] });
-const manrope = Manrope({ variable: "--font-manrope", subsets: ["latin", "cyrillic"] });
+// Корневой layout служебных стендов дизайна: закрыты от поисковиков, в меню сайта не входят.
+const robotoC = Roboto_Condensed({ variable: "--f-robotoc", subsets: ["latin", "cyrillic"], weight: ["400", "600", "700"] });
+const roboto = Roboto({ variable: "--f-roboto", subsets: ["latin", "cyrillic"], weight: ["400", "500", "700"] });
 
-// Служебная страница для выбора стиля: закрыта от поисковиков, в готовый сайт не входит.
 export const metadata: Metadata = {
   title: "Стенд дизайна (служебная)",
   robots: { index: false, follow: false },
 };
 
-export default function DesignLayout({ children }: { children: React.ReactNode }) {
-  return <div className={`${onest.variable} ${inter.variable} ${manrope.variable}`}>{children}</div>;
+export default function DesignRootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="uk" className={`${robotoC.variable} ${roboto.variable}`}>
+      <body className="hm-body">{children}</body>
+    </html>
+  );
 }

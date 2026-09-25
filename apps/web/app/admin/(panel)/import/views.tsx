@@ -302,7 +302,7 @@ export function DoneView({ run }: { run: RunRow }) {
         <Stat value={s.errors} label="ошибок" tone={s.errors ? "bad" : ""} />
       </div>
       <p>
-        Завершён {when(run.finishedAt)}. <Link className="adm-link" href="/admin/products">Открыть товары</Link> · <a className="adm-link" href="/admin/import">Новая проверка</a>
+        Завершён {when(run.finishedAt)}. <Link className="adm-link" href="/admin/products">Открыть товары</Link> · <Link className="adm-link" href="/admin/import">Новая проверка</Link>
       </p>
       <Details title={`Ошибки при записи (${s.errors})`} show={r.errors.length > 0}>
         <ul>{r.errors.map((e, n) => <li key={n}>{e.sku}: {e.message}</li>)}</ul>
@@ -319,7 +319,7 @@ export function FailedView({ run }: { run: RunRow }) {
     <>
       <h2>Импорт не выполнен</h2>
       <p className="adm-flash err">{run.error ?? "Неизвестная ошибка."}</p>
-      <p><a className="adm-link" href="/admin/import">Запустить проверку заново</a></p>
+      <p><Link className="adm-link" href="/admin/import">Запустить проверку заново</Link></p>
     </>
   );
 }

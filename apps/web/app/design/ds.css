@@ -1,0 +1,18 @@
+/* Оформление только самого стенда (обёртки разделов, образцы цветов). Компоненты берут стили из shop.css. */
+.ds { max-width: 1320px; width: 100%; margin: 0 auto; padding: 16px var(--gutter) 48px; display: grid; gap: 22px; }
+.ds-head { display: grid; gap: 14px; }
+.ds-block { background: var(--c-surface); border-radius: var(--radius); padding: 18px; display: grid; gap: 14px; scroll-margin-top: 12px; }
+.ds-block h3 { font-family: var(--font-head); font-size: 1.1rem; margin-top: 6px; }
+.ds-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; }
+.ds-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+.ds-swatches li { display: grid; gap: 2px; font-size: .9rem; }
+.ds-swatches code { color: var(--c-muted); font-size: .78rem; }
+.ds-swatch { display: block; height: 52px; border-radius: var(--radius-sm); border: 1px solid var(--c-line); }
+.ds-table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+.ds-table th, .ds-table td { text-align: left; padding: 8px; border-bottom: 1px solid var(--c-line); vertical-align: middle; }
+.ds-table code { color: var(--c-muted); font-size: .75rem; }
+.ds-sample { display: inline-block; padding: 6px 10px; border-radius: 8px; font-weight: 600; border: 1px solid var(--c-line); white-space: nowrap; }
+.ds-fields { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.ds-labeled { display: grid; gap: 4px; align-content: start; }
+.ds-label { font-size: .8rem; font-weight: 700; color: var(--c-muted); }
+@media (max-width: 640px) { .ds-table th:nth-child(2), .ds-table td:nth-child(2) { display: none; } }

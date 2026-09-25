@@ -29,11 +29,15 @@
   `pnpm --filter web dev --port 3100` → `http://localhost:3100/design/v2`.
 - **Шаг 2.3**: **всё на сайте редактируется из админки** — раздел «Сайт» (`/admin/site`: Тексты, Контакты и график, Страницы, Меню и задачи). Шрифт выбран:
   **Roboto Condensed + Roboto**. Как это устроено и что говорить владельцу — `docs/SITE-CONTENT.md`.
+- **Шаг 2.4**: **настоящий сайт** — укр. `/`, рус. `/ru/…` (`app/[lang]`, `proxy.ts`), главная, `/catalog`, `/search`, `/info/<адрес>`, 404; дизайн-система
+  `apps/web/components/shop/` (токены в `shop.css`) и её стенд `/design`; фото через `next/image`; сайт закрыт от поисковиков.
 **Правило для витрины**: ни одной строки текста в коде — только ключ из реестра `packages/core/src/site/texts.ts` (новый ключ → `NEW_TEXTS`), контакты и меню — из
-`loadSiteContent(lang)` (`packages/db/src/site-content.ts`).
-Ждём от владельца (не блокирует): контакты/график (он заполнит сам в админке), ответы В8–В10.
-Дальше: 2.4 (дизайн-система на Roboto + боевой каркас: `/` и `/ru/`, шапка с подсказками поиска, подвал из контактов, `noindex`) → 2.5 (каталог, карточка, slug; поиск по списку
-категорий, нормализация значений фильтров) → 2.6 (корзина, заказ) → 2.7 (главная, страницы) → 2.8 (тесты, Lighthouse). Подробности — `docs/CHANGELOG.md`.
+`getShopContent(lang)` (`apps/web/lib/shop/content.ts`, внутри `loadSiteContent`). Ссылки — только `shopHref(lang, paths.xxx())` (`packages/core/src/site/routes.ts`).
+Новые компоненты витрины — в `components/shop/` на токенах `shop.css`, клиентским — тексты через `pickTexts`.
+Владелец сам заполнил телефон, адрес, график. Ждём (не блокирует): ответы В8–В10.
+Дальше: **2.5** (разделы каталога и задачи `/catalog/<группа>/<подгруппа>`, `/task/<id>`: поиск по списку категорий, быстрый выбор размера, фильтры, «Показати ще»;
+карточка товара; понятные адреса slug — тогда поменять `paths.group/sub/task/product`; нормализация значений фильтров; удалить `/design/v2`) → 2.6 (корзина, заказ) →
+2.7 (главная, страницы) → 2.8 (тесты, кэширование, Lighthouse). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -80,7 +84,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test` | 100 проверок (core 68 + интеграционные db 32). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 106 проверок (core 74 + интеграционные db 32). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
@@ -145,6 +149,14 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
   (`getComputedStyle`, `getBoundingClientRect`, `innerText`).
 - Системная категория `unsorted` («Нераспределённые») не показывается покупателям: при работе над витриной (Этап 2) исключай её из каталога и из главной.
 - Файлы фидов лежат в `apps/web/.data/feeds` (в `.gitignore`), хранятся последние 3.
+- **Несколько корневых layout** (с шага 2.4): `app/layout.tsx` нет; корни — `app/[lang]/layout.tsx` (витрина), `app/admin/layout.tsx`, `app/design/layout.tsx`.
+  Переход между ними — полная перезагрузка страницы (так и задумано). Незнакомые служебные адреса — `app/global-not-found.tsx`.
+- Из-за `app/[lang]/[...rest]` линтер (`no-html-link-for-pages`) считает любой внутренний адрес страницей: внутренние ссылки — только `Link`, не `<a href="/…">`.
+- Папки со скобками (`app/[lang]`, `[slug]`, `[...rest]`) PowerShell понимает как шаблон: `Resolve-Path`/`Set-Location` без `-LiteralPath` ломаются. Такие файлы правь
+  инструментом Edit/Write, а не скриптами PowerShell.
+- Браузерная панель Claude часто **скрыта** (`document.visibilityState === "hidden"`): тогда не срабатывают `requestAnimationFrame` и события фокуса, и React не показывает
+  догружаемые блоки (`loading.tsx` остаётся на экране, настоящее содержимое лежит в `div[hidden]`). Это не ошибка сайта: проверяй содержимое скриптом.
+- Витрина: `export const dynamic = "force-dynamic"` в `app/[lang]/layout.tsx` (свежие цены после импорта); кэширование — шаг 2.8.
 
 ## Карта репозитория
 
@@ -152,7 +164,11 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
   - `app/admin/login` — вход; `app/admin/(panel)/` — всё остальное под общим меню (`layout.tsx`, `admin.css`, `nav.tsx`):
     `page.tsx` (главная), `import/` (экран импорта: `page`, `views`, `actions`, `client-bits`), `products/` (+`[id]`), `categories/`, `roles/`,
     `site/` (контент сайта: `texts`, `contacts`, `pages` (+`[slug]`), `menu`; вкладки `tabs.tsx`), `search-actions.ts`.
-  - `app/design/` — служебные стенды дизайна (закрыты от поиска): `/design` (направления), `/design/fonts`, `/design/v2` («Мастерская», живые данные и контент из админки).
+  - `app/[lang]/` — **витрина** (укр. без приставки, рус. `/ru`): `layout.tsx` (корень: шапка, подвал, нижняя панель), `page.tsx` (главная), `catalog/`, `search/`
+    (+`loading`), `info/[slug]/`, `not-found.tsx`, `error.tsx`, `[...rest]/` (→ 404). `proxy.ts` — языки и вход в админку.
+  - `components/shop/` — дизайн-система витрины: `shop.css` (токены), `ui.tsx`, `product-card.tsx`, `tiles.tsx`, `site-chrome.tsx` (шапка/подвал/нижняя панель),
+    `search-box.tsx` и `client-bits.tsx` (клиентские), `icons.tsx`, `format.ts`. `lib/shop/` — данные витрины (`content.ts`, `catalog.ts`).
+  - `app/design/` — служебные стенды (закрыты от поиска): `/design` — дизайн-система, `/design/v2` — прототип «Мастерской» (удалить в 2.5).
   - `app/api/catalog/search|suggest` — публичный поиск для витрины (Этап 2), Mini App, бота.
   - `lib/auth.ts`, `lib/catalog.ts` (дерево категорий, деньги), `proxy.ts`, `next.config.ts`.
 - `apps/bot` — Telegram-бот (заглушка).

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@handyman/db";
 import { ensureDefaultSupplier, getRun, listRuns } from "@handyman/db/catalog-import";
 import { requirePermission } from "@/lib/auth";
@@ -25,7 +26,7 @@ export default async function ImportPage({ searchParams }: { searchParams: Promi
 
       {run ? (
         <>
-          <p><a className="adm-link" href="/admin/import">← К запуску и журналу</a></p>
+          <p><Link className="adm-link" href="/admin/import">← К запуску и журналу</Link></p>
           {run.status === "PREVIEW" && run.summary && run.report ? <PreviewView run={run} cats={cats} canApply /> : null}
           {run.status === "RUNNING" && <RunningView run={run} />}
           {run.status === "DONE" && <DoneView run={run} />}

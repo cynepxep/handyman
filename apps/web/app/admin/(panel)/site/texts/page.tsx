@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { loadTextOverrides } from "@handyman/db/site-content";
 import { groupedEntries, textVars, toLang, type Lang } from "@handyman/core/site";
 import { SubmitButton } from "../../import/client-bits";
@@ -40,7 +41,7 @@ export default async function TextsPage({ searchParams }: { searchParams: Promis
       <form method="get" className="adm-row" role="search">
         <input name="q" defaultValue={q} className="adm-input" style={{ flex: "1 1 260px" }} placeholder="Найти текст: например, «кошик» или «доставка»" aria-label="Поиск по текстам" />
         <button type="submit" className="adm-btn">Найти</button>
-        {(q || group) && <a className="adm-btn" href="/admin/site/texts">Показать все</a>}
+        {(q || group) && <Link className="adm-btn" href="/admin/site/texts">Показать все</Link>}
       </form>
       {needle && <p className="adm-muted">Найдено в группах: {groups.length}.</p>}
 

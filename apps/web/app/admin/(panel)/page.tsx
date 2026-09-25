@@ -90,7 +90,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
       <ul style={{ paddingLeft: 20 }}>
         {can("import.run") && (
           <li>
-            <a className="adm-link" href="/admin/import">Импорт каталога</a> — загрузка товаров из XML-фида поставщика
+            <Link className="adm-link" href="/admin/import">Импорт каталога</Link> — загрузка товаров из XML-фида поставщика
           </li>
         )}
         {can("products.view") && (
@@ -100,12 +100,12 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
         )}
         {can("products.view") && (
           <li>
-            <a className="adm-link" href="/admin/categories">Категории</a> — дерево каталога
+            <Link className="adm-link" href="/admin/categories">Категории</Link> — дерево каталога
           </li>
         )}
         {can("staff.manage") && (
           <li>
-            <a className="adm-link" href="/admin/roles">Роли и права</a>
+            <Link className="adm-link" href="/admin/roles">Роли и права</Link>
           </li>
         )}
       </ul>
