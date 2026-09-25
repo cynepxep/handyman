@@ -1,4 +1,4 @@
-/* «Мастерская v2»: направление выбрано владельцем. Цвета и шрифты — переменные по смыслу.
+/* «Мастерская v2»: направление и шрифт (Roboto Condensed + Roboto) выбраны владельцем. Цвета и шрифты — переменные по смыслу.
    Ширина считается по самому магазину (container queries), поэтому рамка «телефон 360» ведёт себя как настоящий телефон. */
 
 /* ---------- панель стенда (не часть дизайна магазина) ---------- */
@@ -21,15 +21,9 @@
   --c-dark: #1e2126; --c-on-dark: #f2f2ee;
   --c-accent: #c43b33; --c-on-accent: #fff; --c-success: #17703d; --c-warn: #8a5a00; --c-focus: #1e2126;
   --radius: 14px; --radius-sm: 10px; --shadow: 0 1px 2px rgba(30, 33, 38, .08), 0 4px 14px rgba(30, 33, 38, .06);
-  --font-body: var(--f-onest); --font-head: var(--f-onest); --hs: 1; --head-weight: 700;
+  --font-body: var(--f-roboto); --font-head: var(--f-robotoc); --hs: 1.1; --head-weight: 700;
   background: var(--c-bg); color: var(--c-text); font-family: var(--font-body), system-ui, sans-serif; font-size: 16px; line-height: 1.45;
 }
-.v2[data-font="oswald-golos"] { --font-head: var(--f-oswald); --font-body: var(--f-golos); --hs: 1.12; --head-weight: 600; }
-.v2[data-font="unbounded-golos"] { --font-head: var(--f-unbounded); --font-body: var(--f-golos); --hs: .8; --head-weight: 700; }
-.v2[data-font="rubik"] { --font-head: var(--f-rubik); --font-body: var(--f-rubik); --head-weight: 600; }
-.v2[data-font="exo-inter"] { --font-head: var(--f-exo); --font-body: var(--f-inter); --head-weight: 700; }
-.v2[data-font="robotoc-roboto"] { --font-head: var(--f-robotoc); --font-body: var(--f-roboto); --hs: 1.1; --head-weight: 700; }
-.v2[data-font="montserrat"] { --font-head: var(--f-montserrat); --font-body: var(--f-montserrat); --hs: .92; --head-weight: 700; }
 
 .v2 *, .v2 *::before, .v2 *::after { box-sizing: border-box; }
 .v2 a { color: inherit; text-decoration: none; }
@@ -148,6 +142,15 @@
 .v2-help-inline p, .v2-help-inline span { color: var(--c-muted); }
 
 .v2-footer { display: grid; gap: 6px; padding: 20px 0 8px; color: var(--c-muted); font-size: .88rem; border-top: 1px solid var(--c-line); }
+.v2-pill-off { opacity: .55; border-style: dashed; cursor: not-allowed; }
+.v2-btn.v2-pill-off { background: transparent; color: var(--c-muted); border: 1px dashed var(--c-line); }
+.v2-footer-list { display: grid; gap: 8px; margin: 0; }
+.v2-footer-list > div { display: grid; grid-template-columns: 90px 1fr; gap: 8px; }
+.v2-footer-list dt { color: var(--c-muted); }
+.v2-footer-list dd { margin: 0; color: var(--c-text); }
+.v2-footer-links { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0; }
+.v2-footer-links a { text-decoration: underline; }
+.v2-block { display: block; }
 .v2-footer-title { font-family: var(--font-head), system-ui, sans-serif; font-weight: var(--head-weight); color: var(--c-text); font-size: 1.05rem; }
 
 /* меню каталога */

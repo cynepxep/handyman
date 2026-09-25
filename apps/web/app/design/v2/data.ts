@@ -2,8 +2,9 @@
 import "server-only";
 import { prisma } from "@handyman/db";
 import { searchProducts, SearchUnavailableError, type SearchResult } from "@handyman/db/catalog-search";
+import type { SiteContent } from "@handyman/db/site-content";
 import {
-  HIDDEN_CATEGORY_IDS, MENU_GROUPS, TASKS, assignCategories, extractFacets, pickQuickPick, pickSpecs, taskCategoryIds,
+  HIDDEN_CATEGORY_IDS, assignCategories, extractFacets, pickQuickPick, pickSpecs, taskCategoryIds,
   type MenuGroup, type Spec, type Task,
 } from "@handyman/core/catalog";
 
@@ -108,13 +109,15 @@ async function saleCards(chainOf: ChainOf): Promise<V2Card[]> {
   }));
 }
 
-export async function loadV2(opts: { screen: string; demoKey?: string; pick?: string }): Promise<V2Data> {
+/** Данные экрана. Меню и задачи берутся из настроек владельца (админка «Сайт → Меню и задачи»), а не из кода. */
+export async function loadV2(opts: { screen: string; demoKey?: string; pick?: string; content: SiteContent }): Promise<V2Data> {
+  const { menu } = opts.content;
   const [cats, counts] = await Promise.all([
     prisma.category.findMany({ select: { id: true, nameUk: true, parentId: true } }),
     prisma.product.groupBy({ by: ["categoryId"], where: { visible: true }, _count: { _all: true } }),
   ]);
   const direct = new Map(counts.map((c) => [c.categoryId, c._count._all]));
-  const { subOf, conflicts, missing } = assignCategories(cats);
+  const { subOf, conflicts, missing } = assignCategories(cats, menu.groups);
   const catById = new Map(cats.map((c) => [c.id, c]));
   const chainOf: ChainOf = (id) => {
     const out: string[] = [];
@@ -138,7 +141,7 @@ export async function loadV2(opts: { screen: string; demoKey?: string; pick?: st
 
   // Фото группы: самый «богатый» товар в наличии из её категорий.
   const groups: GroupView[] = await Promise.all(
-    MENU_GROUPS.map(async (group) => {
+    menu.groups.map(async (group) => {
       const catIds = group.subs.flatMap((s) => catsOfSub.get(s.id) ?? []);
       const p = catIds.length
         ? await prisma.product.findFirst({
@@ -152,7 +155,7 @@ export async function loadV2(opts: { screen: string; demoKey?: string; pick?: st
     }),
   );
 
-  const tasks: TaskView[] = TASKS.map((task) => ({
+  const tasks: TaskView[] = menu.tasks.map((task) => ({
     task,
     total: taskCategoryIds(cats, task).reduce((a, id) => a + (direct.get(id) ?? 0), 0),
   }));
@@ -172,7 +175,7 @@ export async function loadV2(opts: { screen: string; demoKey?: string; pick?: st
 
   if (opts.screen === "category") {
     const demo = DEMOS.find((d) => d.key === opts.demoKey) ?? DEMOS[0];
-    const group = MENU_GROUPS.find((g) => g.id === demo.groupId)!;
+    const group: MenuGroup = menu.groups.find((g) => g.id === demo.groupId) ?? { id: demo.groupId, nameUk: demo.label, nameRu: demo.label, hintUk: "", hintRu: "", quickPick: [], subs: [] };
     try {
       const base = await searchProducts({ cat: demo.catId, perPage: 1 });
       const quick = pickQuickPick(group.quickPick, base.facets.attrs);

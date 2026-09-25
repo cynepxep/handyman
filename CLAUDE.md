@@ -27,9 +27,13 @@
 - **Шаг 2.2**: **«Мастерская v2»** `/design/v2` (главная, меню «Каталог», категория; `apps/web/app/design/v2/`) и логика меню на языке покупателя
   `packages/core/src/catalog/storefront-menu.ts` (12 групп, 62 подгруппы, 8 задач, быстрый выбор размера, ключевые характеристики; тесты рядом). Смотреть:
   `pnpm --filter web dev --port 3100` → `http://localhost:3100/design/v2`.
-Ждём от владельца: **выбор шрифта** (в v2 переключатель, по умолчанию Oswald + Golos Text), правки состава групп и задач, ответы В3/В8–В10/В14.
-Дальше: 2.3 (дизайн-система и 4 экрана на телефоне: корзина/оформление, карточка) → 2.4 (каркас, два языка) → 2.5 (каталог, карточка, slug; поиск по списку категорий, нормализация значений фильтров) →
-2.6 (корзина, заказ) → 2.7 (главная, страницы) → 2.8 (тесты, Lighthouse) → 2.9 (редактор меню и задач в админке). Подробности — `docs/CHANGELOG.md`.
+- **Шаг 2.3**: **всё на сайте редактируется из админки** — раздел «Сайт» (`/admin/site`: Тексты, Контакты и график, Страницы, Меню и задачи). Шрифт выбран:
+  **Roboto Condensed + Roboto**. Как это устроено и что говорить владельцу — `docs/SITE-CONTENT.md`.
+**Правило для витрины**: ни одной строки текста в коде — только ключ из реестра `packages/core/src/site/texts.ts` (новый ключ → `NEW_TEXTS`), контакты и меню — из
+`loadSiteContent(lang)` (`packages/db/src/site-content.ts`).
+Ждём от владельца (не блокирует): контакты/график (он заполнит сам в админке), ответы В8–В10.
+Дальше: 2.4 (дизайн-система на Roboto + боевой каркас: `/` и `/ru/`, шапка с подсказками поиска, подвал из контактов, `noindex`) → 2.5 (каталог, карточка, slug; поиск по списку
+категорий, нормализация значений фильтров) → 2.6 (корзина, заказ) → 2.7 (главная, страницы) → 2.8 (тесты, Lighthouse). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -76,7 +80,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test` | 65 проверок (core + интеграционные db). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 100 проверок (core 68 + интеграционные db 32). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
@@ -147,11 +151,13 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
 - `apps/web` — сайт + Mini App + админка + API (Next.js, App Router).
   - `app/admin/login` — вход; `app/admin/(panel)/` — всё остальное под общим меню (`layout.tsx`, `admin.css`, `nav.tsx`):
     `page.tsx` (главная), `import/` (экран импорта: `page`, `views`, `actions`, `client-bits`), `products/` (+`[id]`), `categories/`, `roles/`,
-    `search-actions.ts`.
+    `site/` (контент сайта: `texts`, `contacts`, `pages` (+`[slug]`), `menu`; вкладки `tabs.tsx`), `search-actions.ts`.
+  - `app/design/` — служебные стенды дизайна (закрыты от поиска): `/design` (направления), `/design/fonts`, `/design/v2` («Мастерская», живые данные и контент из админки).
   - `app/api/catalog/search|suggest` — публичный поиск для витрины (Этап 2), Mini App, бота.
   - `lib/auth.ts`, `lib/catalog.ts` (дерево категорий, деньги), `proxy.ts`, `next.config.ts`.
 - `apps/bot` — Telegram-бот (заглушка).
-- `packages/core` — права, авторизация; `src/catalog/` — разбор фида, категории, планировщик импорта, фильтры, синонимы (чистая логика); `test/`.
-- `packages/db` — Prisma-схема, сидирование, клиент; `src/catalog-import.ts`, `catalog-products.ts`, `catalog-search.ts`; `test/` (интеграционные), `scripts/reindex.ts`.
+- `packages/core` — права, авторизация; `src/catalog/` — разбор фида, категории, планировщик импорта, фильтры, синонимы, меню витрины (`storefront-menu.ts`) (чистая логика);
+  `src/site/` — реестр текстов витрины, контакты, безопасный вывод страниц (`@handyman/core/site`); `test/`.
+- `packages/db` — Prisma-схема, сидирование, клиент; `src/catalog-import.ts`, `catalog-products.ts`, `catalog-search.ts`, `site-content.ts`; `test/` (интеграционные), `scripts/reindex.ts`.
 - `docker-compose.yml` — Postgres/Redis/Meilisearch/web/bot для локального запуска.
-- `docs/` — `CHANGELOG.md`, `CATALOG-IMPORT.md`, `MIGRATION-NOTES.md`.
+- `docs/` — `CHANGELOG.md`, `CATALOG-IMPORT.md`, `MIGRATION-NOTES.md`, `SITE-CONTENT.md` (что владелец меняет в разделе «Сайт»), `stage2/` (пакет Этапа 2).
