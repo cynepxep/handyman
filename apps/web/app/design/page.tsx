@@ -5,7 +5,7 @@ import { countWord } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
 import { getMenuView } from "@/lib/shop/catalog";
 import { Icon } from "@/components/shop/icons";
-import { ProductCard } from "@/components/shop/product-card";
+import { ProductCard, cardLabels } from "@/components/shop/product-card";
 import { GroupTile, TaskTile } from "@/components/shop/tiles";
 import { Breadcrumbs, CardSkeletons, Pager, Price, QtyStepper, StockBadge, btn } from "@/components/shop/ui";
 import { ContrastTable } from "./contrast";
@@ -133,13 +133,13 @@ export default async function DesignSystemPage() {
           {samples.map(({ label, card }) => (
             <li key={card.id} className="ds-labeled">
               <span className="ds-label">{label}</span>
-              <ProductCard card={card} href={noop} t={t} />
+              <ProductCard card={card} labels={cardLabels(t)} />
             </li>
           ))}
         </ul>
         <h3>Полка на главной (прокрутка вбок)</h3>
         <ul className="hm-rail">
-          {samples.map(({ card }) => <li key={card.id}><ProductCard card={card} href={noop} t={t} rail /></li>)}
+          {samples.map(({ card }) => <li key={card.id}><ProductCard card={card} labels={cardLabels(t)} rail /></li>)}
         </ul>
       </Block>
 

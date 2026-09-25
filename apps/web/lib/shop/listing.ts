@@ -1,0 +1,90 @@
+// Списки товаров витрины: раздел, подраздел, задача, поиск. Какие категории входят — решает сервер по меню владельца
+// (клиенту не доверяем), фильтры — из адреса страницы (parseListing).
+import "server-only";
+import { searchProducts, SearchUnavailableError, type SearchResult } from "@handyman/db/catalog-search";
+import {
+  FACET_DEFS, findGroupBySlug, findSubBySlug, findTaskBySlug, pickQuickPick, sortFacetValues, subCategoryMap, taskCategoryIds,
+  type MenuConfig, type MenuGroup, type MenuSub, type Task,
+} from "@handyman/core/catalog";
+import type { ListingState, ShopLang } from "@handyman/core/site";
+import { getCategoryStats, toCards, type ShopCard } from "./catalog";
+
+export const PER_PAGE = 24;
+export const FACET_KEYS = FACET_DEFS.map((d) => d.key);
+
+/** Что за список: передаётся и в браузер (для «Показати ще» и счётчика в шторке), поэтому только адреса, без категорий. */
+export type ListingKey =
+  | { kind: "group"; group: string }
+  | { kind: "sub"; group: string; sub: string }
+  | { kind: "task"; task: string }
+  | { kind: "search"; q: string };
+
+/** Для задач: какой «быстрый выбор» искать (у задачи нет своей группы). */
+const TASK_QUICK_PICK = ["drillDiameter", "diameter", "slot", "shank", "power", "length"];
+
+export type ResolvedListing = {
+  key: ListingKey;
+  categories?: string[];
+  q?: string;
+  quickPick: string[];
+  specs?: string[];
+  group?: MenuGroup;
+  sub?: MenuSub;
+  task?: Task;
+};
+
+/** Найти раздел/подраздел/задачу по адресу и собрать точный список категорий. Нет такого или скрыт — null (страница 404). */
+export async function resolveListing(key: ListingKey, menu: MenuConfig): Promise<ResolvedListing | null> {
+  if (key.kind === "search") return { key, q: key.q.slice(0, 100), quickPick: [] };
+  const { cats } = await getCategoryStats();
+  if (key.kind === "task") {
+    const task = findTaskBySlug(menu, key.task);
+    if (!task || task.hidden) return null;
+    return { key, task, categories: taskCategoryIds(cats, task), quickPick: TASK_QUICK_PICK };
+  }
+  const group = findGroupBySlug(menu, key.group);
+  if (!group || group.hidden) return null;
+  const map = subCategoryMap(cats, menu.groups);
+  if (key.kind === "sub") {
+    const sub = findSubBySlug(group, key.sub);
+    if (!sub || sub.hidden) return null;
+    return { key, group, sub, categories: map.get(sub.id) ?? [], quickPick: group.quickPick, specs: group.specs };
+  }
+  return { key, group, categories: group.subs.flatMap((s) => map.get(s.id) ?? []), quickPick: group.quickPick, specs: group.specs };
+}
+
+export type ListingData = {
+  result: SearchResult;
+  cards: ShopCard[];
+  /** Быстрый выбор размера: фильтр и его значения по порядку (6, 8, 10…). */
+  quick: { key: string; label: string; values: Array<{ value: string; count: number }> } | null;
+};
+
+/** Страница списка. Поиск недоступен — null (страница покажет «спробуйте за хвилину»). */
+export async function runListing(
+  r: ResolvedListing, state: ListingState, lang: ShopLang, page = state.page, opts: { countOnly?: boolean } = {},
+): Promise<ListingData | null> {
+  try {
+    const params = {
+      q: r.q ?? "",
+      ...(r.categories ? { categories: r.categories } : {}),
+      facets: state.facets,
+      available: state.available,
+      sale: state.sale,
+      min: state.min,
+      max: state.max,
+      sort: state.sort,
+      page,
+      perPage: opts.countOnly ? 1 : PER_PAGE,
+    };
+    const result = await searchProducts(params);
+    if (opts.countOnly) return { result, cards: [], quick: null };
+    const cards = await toCards(result.items, lang, r.specs);
+    const q = pickQuickPick(r.quickPick, result.facets.attrs);
+    const quick = q ? { key: q.key, label: q.label, values: sortFacetValues(q.key, q.values.map((v) => ({ value: v.value, count: v.count }))) } : null;
+    return { result, cards, quick };
+  } catch (e) {
+    if (e instanceof SearchUnavailableError) return null;
+    throw e;
+  }
+}

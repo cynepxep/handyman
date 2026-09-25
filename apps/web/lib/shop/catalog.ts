@@ -5,24 +5,16 @@ import { cache } from "react";
 import { prisma } from "@handyman/db";
 import { searchProducts, SearchUnavailableError, type SearchItem } from "@handyman/db/catalog-search";
 import {
-  HIDDEN_CATEGORY_IDS, assignCategories, extractFacets, pickSpecs, taskCategoryIds,
+  HIDDEN_CATEGORY_IDS, assignCategories, extractFacets, pickSpecs, slugOf, taskCategoryIds,
   type MenuConfig, type MenuGroup, type Spec, type Task,
 } from "@handyman/core/catalog";
-import type { ShopLang } from "@handyman/core/site";
+import { paths, shopHref, type ShopLang } from "@handyman/core/site";
+import type { CardData } from "@/components/shop/product-card";
 
-export type ShopCard = {
-  id: string;
-  sku: string;
-  name: string;
-  price: number;
-  oldPrice: number | null;
-  discountPct: number;
-  available: boolean;
-  image: string | null;
-  specs: Spec[];
-};
+/** Карточка товара для списка (с готовой ссылкой на страницу товара на языке сайта). */
+export type ShopCard = CardData & { specs: Spec[] };
 
-export type GroupView = { group: MenuGroup; total: number; image: string | null; subs: Array<{ id: string; nameUk: string; nameRu: string; total: number; hidden: boolean }> };
+export type GroupView = { group: MenuGroup; total: number; image: string | null; subs: Array<{ id: string; slug: string; nameUk: string; nameRu: string; total: number; hidden: boolean }> };
 export type TaskView = { task: Task; total: number };
 
 /** Категория с этим кодом содержит аккумуляторный инструмент: из неё берётся блок «Яка у вас батарея?». */
@@ -60,6 +52,8 @@ export async function toCards(items: SearchItem[], lang: ShopLang, specOrder?: s
     id: i.id,
     sku: i.sku,
     name: lang === "ru" && i.nameRu ? i.nameRu : i.nameUk,
+    // адрес товара строится из украинского названия — одинаковый для обоих языков (кроме приставки /ru)
+    href: shopHref(lang, paths.product(i.sku, i.nameUk)),
     price: i.price,
     oldPrice: i.oldPrice,
     discountPct: i.discountPct,
@@ -91,7 +85,7 @@ export async function getMenuView(menu: MenuConfig) {
   const groups: GroupView[] = menu.groups.map((group) => {
     const catIds = group.subs.flatMap((s) => catsOfSub.get(s.id) ?? []);
     const best = catIds.map((id) => topOf.get(id)).filter((x) => x != null).sort((a, b) => b.price - a.price)[0];
-    const subs = group.subs.map((s) => ({ id: s.id, nameUk: s.nameUk, nameRu: s.nameRu, total: subTotal.get(s.id) ?? 0, hidden: s.hidden === true }));
+    const subs = group.subs.map((s) => ({ id: s.id, slug: slugOf(s), nameUk: s.nameUk, nameRu: s.nameRu, total: subTotal.get(s.id) ?? 0, hidden: s.hidden === true }));
     return { group, total: subs.reduce((a, s) => a + s.total, 0), image: best?.url ?? null, subs };
   });
   const tasks: TaskView[] = menu.tasks.map((task) => ({ task, total: taskCategoryIds(cats, task).reduce((a, id) => a + (direct.get(id) ?? 0), 0) }));

@@ -34,10 +34,12 @@
 **Правило для витрины**: ни одной строки текста в коде — только ключ из реестра `packages/core/src/site/texts.ts` (новый ключ → `NEW_TEXTS`), контакты и меню — из
 `getShopContent(lang)` (`apps/web/lib/shop/content.ts`, внутри `loadSiteContent`). Ссылки — только `shopHref(lang, paths.xxx())` (`packages/core/src/site/routes.ts`).
 Новые компоненты витрины — в `components/shop/` на токенах `shop.css`, клиентским — тексты через `pickTexts`.
+- **Шаг 2.5**: разделы `/catalog/<группа>[/<подгруппа>]`, задачи `/task/<задача>`, товар `/product/<артикул>/<название>`; быстрый выбор размера, фильтры
+  (сбоку / шторка), «Показати ще», галерея. Адреса — `slug` в меню (правятся в админке), фильтры в адресе — `packages/core/src/site/listing.ts`.
 Владелец сам заполнил телефон, адрес, график. Ждём (не блокирует): ответы В8–В10.
-Дальше: **2.5** (разделы каталога и задачи `/catalog/<группа>/<подгруппа>`, `/task/<id>`: поиск по списку категорий, быстрый выбор размера, фильтры, «Показати ще»;
-карточка товара; понятные адреса slug — тогда поменять `paths.group/sub/task/product`; нормализация значений фильтров; удалить `/design/v2`) → 2.6 (корзина, заказ) →
-2.7 (главная, страницы) → 2.8 (тесты, кэширование, Lighthouse). Подробности — `docs/CHANGELOG.md`.
+Дальше: **2.6** (корзина: мини-корзина сбоку и страница, количество, итог; оформление на одной странице, телефон +380, доставка/оплата — тексты и выбор, заказ
+`HM-####` без оплаты с пересчётом цен на сервере по `createOrder` старого проекта; «Купити в 1 клік»; уведомление менеджеру — вопрос Т2) → 2.7 (главная: хиты/новинки,
+страницы) → 2.8 (тесты, кэширование, Lighthouse). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -84,7 +86,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test` | 106 проверок (core 74 + интеграционные db 32). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 113 проверок (core 80 + интеграционные db 33). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
@@ -164,11 +166,13 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
   - `app/admin/login` — вход; `app/admin/(panel)/` — всё остальное под общим меню (`layout.tsx`, `admin.css`, `nav.tsx`):
     `page.tsx` (главная), `import/` (экран импорта: `page`, `views`, `actions`, `client-bits`), `products/` (+`[id]`), `categories/`, `roles/`,
     `site/` (контент сайта: `texts`, `contacts`, `pages` (+`[slug]`), `menu`; вкладки `tabs.tsx`), `search-actions.ts`.
-  - `app/[lang]/` — **витрина** (укр. без приставки, рус. `/ru`): `layout.tsx` (корень: шапка, подвал, нижняя панель), `page.tsx` (главная), `catalog/`, `search/`
-    (+`loading`), `info/[slug]/`, `not-found.tsx`, `error.tsx`, `[...rest]/` (→ 404). `proxy.ts` — языки и вход в админку.
-  - `components/shop/` — дизайн-система витрины: `shop.css` (токены), `ui.tsx`, `product-card.tsx`, `tiles.tsx`, `site-chrome.tsx` (шапка/подвал/нижняя панель),
-    `search-box.tsx` и `client-bits.tsx` (клиентские), `icons.tsx`, `format.ts`. `lib/shop/` — данные витрины (`content.ts`, `catalog.ts`).
-  - `app/design/` — служебные стенды (закрыты от поиска): `/design` — дизайн-система, `/design/v2` — прототип «Мастерской» (удалить в 2.5).
+  - `app/[lang]/` — **витрина** (укр. без приставки, рус. `/ru`): `layout.tsx` (корень: шапка, подвал, нижняя панель), `page.tsx` (главная), `catalog/` (+`[group]/`,
+    `[group]/[sub]/`), `task/[slug]/`, `product/[sku]/[[...slug]]/`, `search/` (+`loading`), `info/[slug]/`, `listing-actions.ts` («Показати ще», счётчик шторки),
+    `not-found.tsx`, `error.tsx`, `[...rest]/` (→ 404). `proxy.ts` — языки и вход в админку.
+  - `components/shop/` — дизайн-система витрины: `shop.css` (токены), `ui.tsx`, `product-card.tsx` (подписи — `cardLabels(t)`), `tiles.tsx`, `site-chrome.tsx`,
+    `listing.tsx` (список товаров) + `listing-client.tsx` (фильтры, шторка, сортировка, «Показати ще»), `gallery.tsx`, `search-box.tsx`, `client-bits.tsx`, `icons.tsx`, `format.ts`.
+    `lib/shop/` — данные витрины (`content.ts`, `catalog.ts`, `listing.ts` — какие категории у раздела/задачи, `product.ts`).
+  - `app/design/` — служебный стенд дизайн-системы `/design` (закрыт от поиска).
   - `app/api/catalog/search|suggest` — публичный поиск для витрины (Этап 2), Mini App, бота.
   - `lib/auth.ts`, `lib/catalog.ts` (дерево категорий, деньги), `proxy.ts`, `next.config.ts`.
 - `apps/bot` — Telegram-бот (заглушка).

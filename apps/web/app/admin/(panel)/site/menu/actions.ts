@@ -4,12 +4,19 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { loadMenuConfig, resetMenuConfig, saveMenuConfig } from "@handyman/db/site-content";
 import {
-  TASK_ICONS, addGroup, addSub, addTask, cleanName, claimOf, moveClaim, removeGroup, removeSub, removeTask,
+  TASK_ICONS, addGroup, addSub, addTask, cleanName, claimOf, isValidSlug, moveClaim, removeGroup, removeSub, removeTask, slugOf,
   type MenuConfig,
 } from "@handyman/core/catalog";
 import { requirePermission } from "@/lib/auth";
 
 const S = (f: FormData, k: string) => String(f.get(k) ?? "");
+
+const SLUG_ERROR = "адрес страницы — латинские буквы, цифры и дефис, от 2 до 60 знаков (например, dysky-ta-kruhy).";
+/** Поле «Адрес страницы»: не прислали — не трогаем (null); пустое — вернуть адрес из названия. */
+const slugInput = (raw: string): string | null => {
+  const v = raw.trim().toLowerCase();
+  return v === "" ? null : v;
+};
 const back = (kind: "ok" | "error", text: string, anchor = "") => `/admin/site/menu?${kind}=${encodeURIComponent(text)}${anchor ? `#${anchor}` : ""}`;
 
 /** Поставить элемент на позицию pos (с единицы); остальные сдвигаются. */
@@ -49,6 +56,12 @@ export async function saveGroupAction(formData: FormData): Promise<void> {
     g.nameUk = nameUk; g.nameRu = nameRu;
     g.hintUk = cleanName(S(f, "g.hintUk"), 120); g.hintRu = cleanName(S(f, "g.hintRu"), 120);
     if (f.get("g.hidden") === "on") g.hidden = true; else delete g.hidden;
+    const gSlug = slugInput(S(f, "g.slug"));
+    if (gSlug !== null) {
+      if (!isValidSlug(gSlug)) return { cfg, error: SLUG_ERROR, message: "", anchor: `g-${gid}` };
+      if (next.groups.some((x) => x.id !== gid && slugOf(x) === gSlug)) return { cfg, error: `Адрес «${gSlug}» уже занят другой группой.`, message: "", anchor: `g-${gid}` };
+      g.slug = gSlug;
+    }
 
     for (const s of g.subs) {
       const sUk = cleanName(S(f, `sub:${s.id}:nameUk`));
@@ -56,7 +69,15 @@ export async function saveGroupAction(formData: FormData): Promise<void> {
       if (sUk.length < 2 || sRu.length < 2) return { cfg, error: `У подгруппы «${s.nameUk}» должно быть название на обоих языках.`, message: "", anchor: `g-${gid}` };
       s.nameUk = sUk; s.nameRu = sRu;
       if (f.get(`sub:${s.id}:hidden`) === "on") s.hidden = true; else delete s.hidden;
+      const sSlug = slugInput(S(f, `sub:${s.id}:slug`));
+      if (sSlug !== null) {
+        if (!isValidSlug(sSlug)) return { cfg, error: `Подгруппа «${sUk}»: ${SLUG_ERROR}`, message: "", anchor: `g-${gid}` };
+        s.slug = sSlug;
+      }
     }
+    const subSlugs = g.subs.map((s) => slugOf(s));
+    const dup = subSlugs.find((x, i) => subSlugs.indexOf(x) !== i);
+    if (dup) return { cfg, error: `Адрес «${dup}» встречается у двух подгрупп этой группы — сделайте их разными.`, message: "", anchor: `g-${gid}` };
     const order: Array<[string, number]> = g.subs.map((s) => [s.id, Number(S(f, `sub:${s.id}:order`))]);
     for (const [id, pos] of order) if (Number.isFinite(pos) && pos > 0) g.subs = placeAt(g.subs, id, pos);
 
@@ -129,6 +150,12 @@ export async function saveTaskAction(formData: FormData): Promise<void> {
     const icon = S(f, "icon");
     if (TASK_ICONS.some((i) => i.key === icon)) t.icon = icon;
     if (f.get("hidden") === "on") t.hidden = true; else delete t.hidden;
+    const tSlug = slugInput(S(f, "slug"));
+    if (tSlug !== null) {
+      if (!isValidSlug(tSlug)) return { cfg, error: `Задача «${uk}»: ${SLUG_ERROR}`, message: "", anchor: `t-${id}` };
+      if (next.tasks.some((x) => x.id !== id && slugOf(x) === tSlug)) return { cfg, error: `Адрес «${tSlug}» уже занят другой задачей.`, message: "", anchor: `t-${id}` };
+      t.slug = tSlug;
+    }
     const keepTree = f.getAll("cat").map(String);
     const keepOwn = f.getAll("ownCat").map(String);
     const add = S(f, "addCat");

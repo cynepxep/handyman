@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { slugOf } from "@handyman/core/catalog";
 import { isShopLang, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
 import { getMenuView } from "@/lib/shop/catalog";
@@ -43,9 +44,15 @@ export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog
                 <span className="hm-group-count">{g.total}</span>
               </summary>
               <ul className="hm-menu-subs">
+                <li>
+                  <Link href={shopHref(lang, paths.group(slugOf(g.group)))}>
+                    <b>{t("category.quick.all")}</b>
+                    <em>{g.total}</em>
+                  </Link>
+                </li>
                 {g.subs.filter((s) => !s.hidden && s.total > 0).map((s) => (
                   <li key={s.id}>
-                    <Link href={shopHref(lang, paths.sub(g.group.id, s.id))}>
+                    <Link href={shopHref(lang, paths.sub(slugOf(g.group), s.slug))}>
                       <span>{pick(s.nameUk, s.nameRu)}</span>
                       <em>{s.total}</em>
                     </Link>

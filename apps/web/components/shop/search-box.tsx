@@ -111,13 +111,13 @@ export function SearchBox({ lang, labels, popular }: { lang: ShopLang; labels: S
     router.push(shopHref(lang, paths.search(s)));
   };
 
-  // Товар до шага 2.5 открывается поиском по артикулу; в историю запросов артикул не кладём.
-  const openProduct = (sku: string) => {
+  // Подсказка-товар открывает страницу товара (адрес строится из украинского названия, как и везде).
+  const openProduct = (item: Item) => {
     close();
-    router.push(shopHref(lang, paths.product(sku)));
+    router.push(shopHref(lang, paths.product(item.sku, item.nameUk)));
   };
 
-  const choose = (o: Option) => (o.kind === "product" ? openProduct(o.item.sku) : goSearch(o.q));
+  const choose = (o: Option) => (o.kind === "product" ? openProduct(o.item) : goSearch(o.q));
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {

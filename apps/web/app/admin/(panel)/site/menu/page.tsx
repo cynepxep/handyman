@@ -1,6 +1,6 @@
 import { prisma } from "@handyman/db";
 import { hasCustomMenu, loadMenuConfig } from "@handyman/db/site-content";
-import { TASK_ICONS, lostCategories, type CatNode, type MenuGroup, type MenuSub } from "@handyman/core/catalog";
+import { TASK_ICONS, lostCategories, slugOf, type CatNode, type MenuGroup, type MenuSub } from "@handyman/core/catalog";
 import { loadCategories } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import {
@@ -61,6 +61,11 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
               <label className="adm-row">Место в списке <input name="g.order" defaultValue={index + 1} inputMode="numeric" className="adm-input" style={{ width: 70 }} aria-label="Место группы в списке" /></label>
               <label className="adm-row"><input type="checkbox" name="g.hidden" defaultChecked={g.hidden === true} /> Не показывать группу на сайте</label>
             </div>
+            <div className="adm-field">
+              <label htmlFor={`g-${g.id}-slug`}>Адрес страницы: сайт/catalog/<b>{slugOf(g)}</b></label>
+              <input id={`g-${g.id}-slug`} name="g.slug" defaultValue={slugOf(g)} className="adm-input" pattern="[a-zA-Z0-9\-]{2,60}" style={{ maxWidth: 360 }} />
+              <span className="adm-muted">Латиница, цифры и дефис. После смены старая ссылка перестанет работать.</span>
+            </div>
 
             <h3>Подгруппы и какие категории в них лежат</h3>
             {g.subs.length === 0 && <p className="adm-muted">Подгрупп пока нет — добавьте ниже.</p>}
@@ -72,6 +77,10 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
                   <input name={`sub:${s.id}:order`} defaultValue={si + 1} inputMode="numeric" className="adm-input" aria-label={`Место подгруппы: ${s.nameUk}`} title="Место в списке" />
                   <label className="adm-row"><input type="checkbox" name={`sub:${s.id}:hidden`} defaultChecked={s.hidden === true} /> скрыть</label>
                 </div>
+                <label className="adm-row adm-muted" style={{ fontSize: 13, margin: "2px 0 4px" }}>
+                  Адрес: …/{slugOf(g)}/
+                  <input name={`sub:${s.id}:slug`} defaultValue={slugOf(s)} className="adm-input" pattern="[a-zA-Z0-9\-]{2,60}" aria-label={`Адрес страницы подгруппы: ${s.nameUk}`} style={{ minHeight: 32, padding: "4px 8px", maxWidth: 320 }} />
+                </label>
                 {claimsOf(s).length === 0 && <p className="adm-muted" style={{ paddingLeft: 18 }}>В подгруппе нет категорий. Перенесите сюда категории из других подгрупп или удалите её (кнопка ниже).</p>}
                 {claimsOf(s).map((c) => (
                   <div key={c.id} className="adm-menu-cats">
@@ -177,6 +186,10 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
                 <label className="adm-row">Значок <select name="icon" defaultValue={t.icon} className="adm-select">{TASK_ICONS.map((ic) => <option key={ic.key} value={ic.key}>{ic.label}</option>)}</select></label>
                 <label className="adm-row">Место <input name="order" defaultValue={i + 1} inputMode="numeric" className="adm-input" style={{ width: 70 }} aria-label="Место задачи в списке" /></label>
                 <label className="adm-row"><input type="checkbox" name="hidden" defaultChecked={t.hidden === true} /> Не показывать на сайте</label>
+              </div>
+              <div className="adm-field">
+                <label htmlFor={`t-${t.id}-slug`}>Адрес страницы: сайт/task/<b>{slugOf(t)}</b></label>
+                <input id={`t-${t.id}-slug`} name="slug" defaultValue={slugOf(t)} className="adm-input" pattern="[a-zA-Z0-9\-]{2,60}" style={{ maxWidth: 360 }} />
               </div>
               <b>Какие категории входят (уберите галочку — категория выйдет из задачи)</b>
               <div className="adm-chips">
