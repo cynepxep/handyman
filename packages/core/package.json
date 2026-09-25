@@ -6,7 +6,8 @@
   "types": "src/index.ts",
   "exports": {
     ".": "./src/index.ts",
-    "./catalog": "./src/catalog/index.ts"
+    "./catalog": "./src/catalog/index.ts",
+    "./site": "./src/site/index.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

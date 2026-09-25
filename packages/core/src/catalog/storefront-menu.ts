@@ -15,6 +15,8 @@ export type MenuSub = {
   categoryIds: string[];
   /** Категории только сами по себе (без вложенных): товары, лежащие прямо в корне («Аксесуари»). */
   ownIds?: string[];
+  /** Скрыто из меню на сайте (товары при этом «не потеряны»: они просто не показываются в этой подгруппе). */
+  hidden?: boolean;
 };
 
 export type MenuGroup = {
@@ -29,6 +31,7 @@ export type MenuGroup = {
   quickPick: string[];
   /** Какие характеристики показывать в карточке списка (по приоритету); по умолчанию — DEFAULT_SPEC_ORDER. */
   specs?: string[];
+  hidden?: boolean;
 };
 
 export type Task = {
@@ -41,6 +44,7 @@ export type Task = {
   ownIds?: string[];
   /** Значок (имя в интерфейсе). */
   icon: string;
+  hidden?: boolean;
 };
 
 const sub = (id: string, nameUk: string, nameRu: string, categoryIds: string[], ownIds?: string[]): MenuSub => ({ id, nameUk, nameRu, categoryIds, ownIds });
@@ -312,3 +316,161 @@ export function pickSpecs(facets: Record<string, string[]>, order: string[] = DE
 
 /** Удобная обёртка: характеристики из сырых пар «название — значение» товара. */
 export const specsFromParams = (params: FeedParam[], order?: string[], max?: number) => pickSpecs(extractFacets(params), order, max);
+
+// ---------- настройки меню (хранятся в базе, правятся в админке) ----------
+
+export const MENU_SETTING_KEY = "storefront.menu";
+
+export type MenuConfig = { groups: MenuGroup[]; tasks: Task[] };
+
+/** Стандартное меню из кода (запасной вариант и «Вернуть стандартное»). Возвращает независимую копию. */
+export function defaultMenuConfig(): MenuConfig {
+  return JSON.parse(JSON.stringify({ groups: MENU_GROUPS, tasks: TASKS })) as MenuConfig;
+}
+
+const isStr = (v: unknown): v is string => typeof v === "string";
+const strList = (v: unknown): string[] | null => (Array.isArray(v) && v.every(isStr) ? (v as string[]) : null);
+
+/** Читает сохранённое меню; при любой поломке структуры возвращает null (тогда сайт берёт стандартное). */
+export function parseMenuConfig(raw: unknown): MenuConfig | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as { groups?: unknown; tasks?: unknown };
+  if (!Array.isArray(r.groups) || !Array.isArray(r.tasks)) return null;
+  const groups: MenuGroup[] = [];
+  for (const g of r.groups as Record<string, unknown>[]) {
+    if (!g || !isStr(g.id) || !isStr(g.nameUk) || !isStr(g.nameRu) || !Array.isArray(g.subs)) return null;
+    const subs: MenuSub[] = [];
+    for (const s of g.subs as Record<string, unknown>[]) {
+      const cats = strList(s?.categoryIds);
+      if (!s || !isStr(s.id) || !isStr(s.nameUk) || !isStr(s.nameRu) || !cats) return null;
+      const own = s.ownIds === undefined ? undefined : strList(s.ownIds);
+      if (own === null) return null;
+      subs.push({ id: s.id, nameUk: s.nameUk, nameRu: s.nameRu, categoryIds: cats, ...(own?.length ? { ownIds: own } : {}), ...(s.hidden === true ? { hidden: true } : {}) });
+    }
+    groups.push({
+      id: g.id, nameUk: g.nameUk, nameRu: g.nameRu,
+      hintUk: isStr(g.hintUk) ? g.hintUk : "", hintRu: isStr(g.hintRu) ? g.hintRu : "",
+      quickPick: strList(g.quickPick) ?? [], ...(strList(g.specs) ? { specs: strList(g.specs)! } : {}),
+      subs, ...(g.hidden === true ? { hidden: true } : {}),
+    });
+  }
+  const tasks: Task[] = [];
+  for (const t of r.tasks as Record<string, unknown>[]) {
+    const cats = strList(t?.categoryIds);
+    if (!t || !isStr(t.id) || !isStr(t.nameUk) || !isStr(t.nameRu) || !cats) return null;
+    const own = t.ownIds === undefined ? undefined : strList(t.ownIds);
+    if (own === null) return null;
+    tasks.push({
+      id: t.id, nameUk: t.nameUk, nameRu: t.nameRu,
+      hintUk: isStr(t.hintUk) ? t.hintUk : "", hintRu: isStr(t.hintRu) ? t.hintRu : "",
+      icon: isStr(t.icon) ? t.icon : "cut", categoryIds: cats, ...(own?.length ? { ownIds: own } : {}), ...(t.hidden === true ? { hidden: true } : {}),
+    });
+  }
+  return { groups, tasks };
+}
+
+/** Значки задач, из которых владелец выбирает в админке (имена совпадают с набором значков витрины). */
+export const TASK_ICONS: Array<{ key: string; label: string }> = [
+  { key: "cut", label: "Резать" }, { key: "grind", label: "Шлифовать" }, { key: "drill", label: "Сверлить" }, { key: "screw", label: "Закручивать" },
+  { key: "saw", label: "Пилить" }, { key: "measure", label: "Измерять" }, { key: "garden", label: "Сад" }, { key: "weld", label: "Сварка" },
+  { key: "battery", label: "Аккумулятор" }, { key: "bolt", label: "Электричество" }, { key: "truck", label: "Доставка" }, { key: "shield", label: "Гарантия" },
+];
+
+const clone = (c: MenuConfig): MenuConfig => JSON.parse(JSON.stringify(c)) as MenuConfig;
+
+/** Где в настройках прямо указана категория (не унаследована от родителя). */
+export function claimOf(cfg: MenuConfig, catId: string): { subId: string; own: boolean } | null {
+  for (const g of cfg.groups) {
+    for (const s of g.subs) {
+      if (s.categoryIds.includes(catId)) return { subId: s.id, own: false };
+      if (s.ownIds?.includes(catId)) return { subId: s.id, own: true };
+    }
+  }
+  return null;
+}
+
+/**
+ * Перенести категорию в другую подгруппу (или убрать из меню, если toSubId = null).
+ * Вид привязки сохраняется: «с вложенными» остаётся «с вложенными», «только сама» — «только сама».
+ */
+export function moveClaim(cfg: MenuConfig, catId: string, toSubId: string | null): MenuConfig {
+  const next = clone(cfg);
+  const was = claimOf(next, catId);
+  for (const g of next.groups) {
+    for (const s of g.subs) {
+      s.categoryIds = s.categoryIds.filter((id) => id !== catId);
+      if (s.ownIds) s.ownIds = s.ownIds.filter((id) => id !== catId);
+    }
+  }
+  if (toSubId) {
+    const target = next.groups.flatMap((g) => g.subs).find((s) => s.id === toSubId);
+    if (target) {
+      if (was?.own) (target.ownIds ??= []).push(catId);
+      else target.categoryIds.push(catId);
+    }
+  }
+  return next;
+}
+
+/** Свободный код для новой группы/подгруппы/задачи: custom-1, custom-2… */
+export function freeId(prefix: string, taken: Iterable<string>): string {
+  const used = new Set(taken);
+  for (let i = 1; ; i++) if (!used.has(`${prefix}-${i}`)) return `${prefix}-${i}`;
+}
+
+const allIds = (cfg: MenuConfig) => [...cfg.groups.map((g) => g.id), ...cfg.groups.flatMap((g) => g.subs.map((s) => s.id)), ...cfg.tasks.map((t) => t.id)];
+
+export function addGroup(cfg: MenuConfig, nameUk: string, nameRu: string): MenuConfig {
+  const next = clone(cfg);
+  next.groups.push({ id: freeId("custom-group", allIds(next)), nameUk, nameRu, hintUk: "", hintRu: "", quickPick: [], subs: [] });
+  return next;
+}
+
+export function addSub(cfg: MenuConfig, groupId: string, nameUk: string, nameRu: string): MenuConfig {
+  const next = clone(cfg);
+  const g = next.groups.find((x) => x.id === groupId);
+  if (g) g.subs.push({ id: freeId("custom-sub", allIds(next)), nameUk, nameRu, categoryIds: [] });
+  return next;
+}
+
+/** Удалить подгруппу можно, только если в ней не осталось категорий (иначе товары «потеряются»). */
+export function removeSub(cfg: MenuConfig, subId: string): { cfg: MenuConfig; error?: string } {
+  const sub = cfg.groups.flatMap((g) => g.subs).find((s) => s.id === subId);
+  if (!sub) return { cfg, error: "Подгруппа не найдена." };
+  if (sub.categoryIds.length + (sub.ownIds?.length ?? 0) > 0) return { cfg, error: "В подгруппе ещё есть категории. Сначала перенесите их в другую подгруппу." };
+  const next = clone(cfg);
+  for (const g of next.groups) g.subs = g.subs.filter((s) => s.id !== subId);
+  return { cfg: next };
+}
+
+export function removeGroup(cfg: MenuConfig, groupId: string): { cfg: MenuConfig; error?: string } {
+  const g = cfg.groups.find((x) => x.id === groupId);
+  if (!g) return { cfg, error: "Группа не найдена." };
+  if (g.subs.length > 0) return { cfg, error: "В группе ещё есть подгруппы. Сначала удалите или перенесите их." };
+  const next = clone(cfg);
+  next.groups = next.groups.filter((x) => x.id !== groupId);
+  return { cfg: next };
+}
+
+export function addTask(cfg: MenuConfig, nameUk: string, nameRu: string): MenuConfig {
+  const next = clone(cfg);
+  next.tasks.push({ id: freeId("custom-task", allIds(next)), nameUk, nameRu, hintUk: "", hintRu: "", icon: "cut", categoryIds: [] });
+  return next;
+}
+
+export function removeTask(cfg: MenuConfig, taskId: string): MenuConfig {
+  const next = clone(cfg);
+  next.tasks = next.tasks.filter((t) => t.id !== taskId);
+  return next;
+}
+
+/** Категории с товарами, которые не попали ни в одну подгруппу (не видны в меню). `direct` — товары прямо в категории. */
+export function lostCategories(nodes: CatNode[], direct: ReadonlyMap<string, number>, cfg: MenuConfig): Array<{ id: string; count: number }> {
+  const { subOf } = assignCategories(nodes, cfg.groups);
+  return nodes
+    .filter((n) => !HIDDEN_CATEGORY_IDS.includes(n.id) && (direct.get(n.id) ?? 0) > 0 && !subOf.has(n.id))
+    .map((n) => ({ id: n.id, count: direct.get(n.id) ?? 0 }));
+}
+
+/** Убрать пустые слова из названия и не дать оставить название пустым. */
+export const cleanName = (s: string, max = 80) => s.replace(/\s+/g, " ").trim().slice(0, max);

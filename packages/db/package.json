@@ -8,7 +8,8 @@
     ".": "./src/client.ts",
     "./catalog-import": "./src/catalog-import.ts",
     "./catalog-products": "./src/catalog-products.ts",
-    "./catalog-search": "./src/catalog-search.ts"
+    "./catalog-search": "./src/catalog-search.ts",
+    "./site-content": "./src/site-content.ts"
   },
   "scripts": {
     "generate": "prisma generate",
