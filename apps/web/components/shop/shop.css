@@ -237,7 +237,14 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-group-count { font-size: .82rem; color: var(--c-muted); }
 
 /* ---------- блоки главной ---------- */
-.hm-hero { display: grid; gap: 10px; padding-top: 20px; }
+.hm-hero { display: grid; gap: 6px; padding-top: 12px; }
+/* верх главной компактный (просьба владельца): небольшой заголовок, короткое пояснение, подсказки поиска — одной строкой с прокруткой */
+.hm-hero .hm-h1 { font-size: clamp(1.3rem, 1.1rem + 1.2vw, 1.9rem); }
+.hm-hero .hm-lead { font-size: .92rem; line-height: 1.35; }
+.hm-hero .hm-chips { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 2px calc(-1 * var(--gutter)) 0; padding: 2px var(--gutter); }
+.hm-hero .hm-chips::-webkit-scrollbar { display: none; }
+.hm-hero .hm-chip { min-height: 34px; padding: 0 12px; font-size: .85rem; }
+.hm-hero .hm-chips li { flex: none; }
 .hm-lead { color: var(--c-muted); font-size: 1.05rem; max-width: 60ch; }
 .hm-battery { background: var(--c-dark); color: var(--c-on-dark); border-radius: var(--radius); padding: 18px; }
 .hm-battery .hm-muted { color: #c9ccd1; }
