@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   MENU_GROUPS, TASKS, defaultMenuConfig, parseMenuConfig, claimOf, moveClaim, addGroup, addSub, removeSub, removeGroup, addTask, removeTask,
-  lostCategories, assignCategories, freeId, type CatNode, type MenuConfig,
+  lostCategories, assignCategories, freeId, ensureSlugs, isValidSlug, slugFromName, findGroupBySlug, findSubBySlug, findTaskBySlug,
+  subCategoryMap, menuPlaceOf, type CatNode, type MenuConfig,
 } from "../src/catalog";
 
 const tree: CatNode[] = [
@@ -69,6 +70,37 @@ test("добавление и удаление групп, подгрупп, з�
   assert.equal(t.tasks.length, 1);
   assert.equal(removeTask(t, t.tasks[0].id).tasks.length, 0);
   assert.equal(freeId("x", ["x-1", "x-2"]), "x-3");
+});
+
+test("адреса страниц меню: из названия, уникальные, свои сохраняются, кривые заменяются", () => {
+  const d = defaultMenuConfig();
+  assert.ok(d.groups.every((g) => g.slug && isValidSlug(g.slug)) && d.tasks.every((t) => t.slug && isValidSlug(t.slug)));
+  assert.equal(findGroupBySlug(d, "dysky-ta-kruhy")?.id, "discs");
+  assert.equal(findTaskBySlug(d, "rizaty-metal")?.id, "cut");
+  const discs = findGroupBySlug(d, "dysky-ta-kruhy")!;
+  assert.equal(findSubBySlug(discs, "vidrizni-po-metalu")?.id, "discs-cut");
+  assert.equal(new Set(d.groups.map((g) => g.slug)).size, d.groups.length);
+  for (const g of d.groups) assert.equal(new Set(g.subs.map((s) => s.slug)).size, g.subs.length, `подгруппы ${g.id}`);
+
+  const grp = (id: string, nameUk: string, extra: Record<string, unknown> = {}) => ({ id, nameUk, nameRu: nameUk, hintUk: "", hintRu: "", quickPick: [], subs: [], ...extra });
+  const twins = ensureSlugs({ groups: [grp("g1", "Диски"), grp("g2", "Диски"), grp("g3", "Інше", { slug: "Плохой адрес" })], tasks: [] });
+  assert.deepEqual(twins.groups.map((g) => g.slug), ["dysky", "dysky-2", "inshe"], "одинаковые названия и неверный адрес → уникальные адреса из названия");
+  assert.equal(slugFromName("№ 1"), "razdil", "слишком короткий адрес заменяется");
+  const own = parseMenuConfig({ groups: [grp("g1", "Група", { slug: "moia-hrupa" })], tasks: [] })!;
+  assert.equal(own.groups[0].slug, "moia-hrupa", "адрес владельца сохраняется");
+  assert.ok(isValidSlug("dysky-125") && !isValidSlug("a") && !isValidSlug("Dysky") && !isValidSlug("dy--sky") && !isValidSlug("-dy"));
+  assert.equal(slugFromName("Диски та круги"), "dysky-ta-kruhy");
+});
+
+test("категории подгрупп для поиска совпадают с подсчётом меню; место товара в меню", () => {
+  const nodes: CatNode[] = [{ id: "acc", parentId: null }, { id: "acc-a", parentId: "acc" }, { id: "acc-a-x", parentId: "acc-a" }, { id: "acc-b", parentId: "acc" }];
+  const sb = (id: string, categoryIds: string[], ownIds?: string[]) => ({ id, nameUk: id, nameRu: id, categoryIds, ownIds });
+  const groups = [{ id: "g", nameUk: "Г", nameRu: "Г", hintUk: "", hintRu: "", quickPick: [], subs: [sb("s1", ["acc-a"]), sb("s2", ["acc-b"], ["acc"])] }];
+  const map = subCategoryMap(nodes, groups);
+  assert.deepEqual(map.get("s1")?.sort(), ["acc-a", "acc-a-x"]);
+  assert.deepEqual(map.get("s2")?.sort(), ["acc", "acc-b"]);
+  assert.equal(menuPlaceOf(nodes, groups, "acc-a-x")?.sub.id, "s1");
+  assert.equal(menuPlaceOf(nodes, groups, "нет"), null);
 });
 
 test("стандартное меню не теряет товары: привязка не даёт конфликтов", () => {

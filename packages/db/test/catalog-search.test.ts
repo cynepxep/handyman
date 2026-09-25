@@ -99,6 +99,22 @@ test("фильтры: категория со всеми вложенными, �
   assert.ok(all.facets.price && all.facets.price.min <= all.facets.price.max);
 });
 
+test("раздел витрины: товары ровно из списка категорий (без вложенных), пустой список — ничего", async (t) => {
+  if (!ready) return t.skip(noMeili);
+  const rows = await prisma.product.groupBy({ by: ["categoryId"], _count: { _all: true }, orderBy: { _count: { categoryId: "desc" } } });
+  const [a, b] = rows;
+  const one = await search.searchProducts({ categories: [a.categoryId], perPage: 60 });
+  assert.equal(one.total, a._count._all);
+  assert.ok(one.items.every((i) => i.categoryId === a.categoryId));
+  const two = await search.searchProducts({ categories: [a.categoryId, b.categoryId], perPage: 60 });
+  assert.equal(two.total, a._count._all + b._count._all);
+  assert.equal((await search.searchProducts({ categories: [] })).total, 0);
+  assert.equal((await search.searchProducts({ categories: ["нет-такой"] })).total, 0);
+  // вместе с другими фильтрами и поиском по словам
+  const inStock = await search.searchProducts({ categories: [a.categoryId], available: true, perPage: 60 });
+  assert.ok(inStock.items.every((i) => i.available && i.categoryId === a.categoryId));
+});
+
 test("недоступные товары в списке идут после доступных", async (t) => {
   if (!ready) return t.skip(noMeili);
   const r = await search.searchProducts({ perPage: 30 });

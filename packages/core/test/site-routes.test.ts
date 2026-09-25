@@ -1,6 +1,39 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { routeStorefront, shopHref, stripLang, switchLang, paths, isShopLang } from "../src/site/routes";
+import { routeStorefront, shopHref, stripLang, switchLang, paths, isShopLang, productSlug } from "../src/site/routes";
+import { parseListing, listingQuery, toggleFacet, hasFilters, clearFilters, filterCount } from "../src/site/listing";
+
+const KEYS = ["diameter", "series"];
+
+test("фильтры из адреса: разбор, мусор отбрасывается, сборка обратно", () => {
+  const s = parseListing(new URLSearchParams("f.diameter=125&f.diameter=180&f.diameter=125&f.zzz=1&avail=1&sale=0&min=500&max=100&sort=price_asc&page=3"), KEYS);
+  assert.deepEqual(s.facets, { diameter: ["125", "180"] }, "повтор и неизвестный фильтр отброшены");
+  assert.equal(s.available, true);
+  assert.equal(s.sale, false);
+  assert.deepEqual([s.min, s.max], [100, 500], "«от» больше «до» — меняем местами");
+  assert.equal(s.sort, "price_asc");
+  assert.equal(s.page, 3);
+  assert.equal(listingQuery(s), "?f.diameter=125&f.diameter=180&avail=1&min=100&max=500&sort=price_asc&page=3");
+  assert.equal(listingQuery(s, "круг").startsWith("?q=%D0%BA"), true);
+  const bad = parseListing({ sort: "drop table", page: "-5", min: "abc" }, KEYS);
+  assert.deepEqual(bad, { facets: {}, available: false, sale: false, page: 1 });
+  assert.equal(parseListing({ page: "99999" }, KEYS).page, 200, "не больше 200 страниц");
+  assert.equal(listingQuery(parseListing({}, KEYS)), "");
+});
+
+test("фильтры: включить/выключить значение, быстрый выбор, сброс", () => {
+  let s = parseListing({ page: "4" }, KEYS);
+  s = toggleFacet(s, "diameter", "125");
+  assert.deepEqual(s.facets, { diameter: ["125"] });
+  assert.equal(s.page, 1, "после смены фильтра — первая страница");
+  s = toggleFacet(s, "diameter", "180");
+  assert.deepEqual(s.facets.diameter, ["125", "180"]);
+  assert.deepEqual(toggleFacet(s, "diameter", "230", true).facets.diameter, ["230"], "быстрый выбор оставляет одно значение");
+  assert.deepEqual(toggleFacet(toggleFacet(s, "diameter", "125"), "diameter", "180").facets, {}, "последнее значение снято — фильтра нет");
+  assert.equal(filterCount({ ...s, available: true, min: 5 }), 4);
+  assert.equal(hasFilters(clearFilters({ ...s, sort: "new" })), false);
+  assert.equal(clearFilters({ ...s, sort: "new" }).sort, "new", "сортировка при сбросе фильтров остаётся");
+});
 
 test("proxy: украинская версия без приставки показывается из /uk", () => {
   assert.deepEqual(routeStorefront("/"), { kind: "rewrite", path: "/uk" });
@@ -49,9 +82,16 @@ test("адреса страниц витрины", () => {
   assert.equal(paths.search("круг", 2), "/search?q=%D0%BA%D1%80%D1%83%D0%B3&page=2");
   assert.equal(paths.search(), "/search");
   assert.equal(paths.info("delivery"), "/info/delivery");
-  assert.equal(paths.sub("discs", "discs-cut"), "/catalog/discs/discs-cut");
-  assert.equal(paths.group("discs"), "/catalog#g-discs");
-  assert.equal(shopHref("ru", paths.group("discs")), "/ru/catalog#g-discs");
-  assert.equal(paths.product("000237651"), "/search?q=000237651", "до шага 2.5 товар открывается поиском по артикулу");
+  assert.equal(paths.group("dysky-ta-kruhy"), "/catalog/dysky-ta-kruhy");
+  assert.equal(paths.sub("dysky-ta-kruhy", "vidrizni-po-metalu"), "/catalog/dysky-ta-kruhy/vidrizni-po-metalu");
+  assert.equal(shopHref("ru", paths.task("rizaty-metal")), "/ru/task/rizaty-metal");
   assert.ok(isShopLang("uk") && isShopLang("ru") && !isShopLang("en") && !isShopLang(undefined));
+});
+
+test("адрес товара: артикул + название транслитом, длинные названия обрезаются по слову", () => {
+  assert.equal(paths.product("000237651", "Круг відрізний по металу Vitals 125×1,2×22,2 мм"), "/product/000237651/kruh-vidriznyy-po-metalu-vitals-125-1-2-22-2-mm");
+  assert.equal(productSlug("***"), "tovar");
+  const long = productSlug("Пила ".repeat(40));
+  assert.ok(long.length <= 80 && !long.endsWith("-"));
+  assert.equal(paths.product("AB/12", "Тест"), "/product/AB%2F12/test", "артикул с «/» не ломает адрес");
 });

@@ -2,8 +2,9 @@
 // Группа меню = набор «подгрупп»; подгруппа = набор категорий из базы (по коду). Чистая логика, без базы.
 //
 // Состав групп — гипотеза по данным Vitals (Этап 2, шаг 2.2), владелец правит её на экране.
-// Позже (шаг 2.9) те же данные переедут в базу и будут правиться в админке.
+// Настройки владельца хранятся в базе (Setting «storefront.menu») и правятся в админке «Сайт → Меню и задачи».
 
+import { slugify } from "./categories";
 import { extractFacets, FACET_DEFS } from "./facets";
 import type { FeedParam } from "./feed-parse";
 
@@ -17,6 +18,8 @@ export type MenuSub = {
   ownIds?: string[];
   /** Скрыто из меню на сайте (товары при этом «не потеряны»: они просто не показываются в этой подгруппе). */
   hidden?: boolean;
+  /** Адрес страницы (латиница): /catalog/<группа>/<подгруппа>. Нет — берётся из названия (см. ensureSlugs). */
+  slug?: string;
 };
 
 export type MenuGroup = {
@@ -32,6 +35,8 @@ export type MenuGroup = {
   /** Какие характеристики показывать в карточке списка (по приоритету); по умолчанию — DEFAULT_SPEC_ORDER. */
   specs?: string[];
   hidden?: boolean;
+  /** Адрес страницы: /catalog/<группа>. */
+  slug?: string;
 };
 
 export type Task = {
@@ -45,6 +50,8 @@ export type Task = {
   /** Значок (имя в интерфейсе). */
   icon: string;
   hidden?: boolean;
+  /** Адрес страницы: /task/<задача>. */
+  slug?: string;
 };
 
 const sub = (id: string, nameUk: string, nameRu: string, categoryIds: string[], ownIds?: string[]): MenuSub => ({ id, nameUk, nameRu, categoryIds, ownIds });
@@ -323,9 +330,69 @@ export const MENU_SETTING_KEY = "storefront.menu";
 
 export type MenuConfig = { groups: MenuGroup[]; tasks: Task[] };
 
-/** Стандартное меню из кода (запасной вариант и «Вернуть стандартное»). Возвращает независимую копию. */
+/** Стандартное меню из кода (запасной вариант и «Вернуть стандартное»). Возвращает независимую копию с адресами страниц. */
 export function defaultMenuConfig(): MenuConfig {
-  return JSON.parse(JSON.stringify({ groups: MENU_GROUPS, tasks: TASKS })) as MenuConfig;
+  return ensureSlugs(JSON.parse(JSON.stringify({ groups: MENU_GROUPS, tasks: TASKS })) as MenuConfig);
+}
+
+// ---------- адреса страниц (slug) ----------
+
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+/** Адрес страницы: латиница, цифры и дефис, от 2 до 60 знаков. */
+export const isValidSlug = (s: string) => s.length >= 2 && s.length <= 60 && SLUG_RE.test(s);
+
+/** Адрес из названия: «Диски та круги» → dysky-ta-kruhy (не длиннее 60 знаков, по границе слова). */
+export function slugFromName(name: string): string {
+  let s = slugify(name);
+  if (s.length > 60) s = s.slice(0, 60).replace(/-[^-]*$/, "");
+  return s.length >= 2 ? s : "razdil";
+}
+
+/** Сделать адреса уникальными в своём списке: второй «dysky» станет «dysky-2». */
+function uniqueSlugs<T extends { slug?: string; nameUk: string }>(items: T[]): void {
+  const used = new Set<string>();
+  for (const it of items) {
+    const base = it.slug && isValidSlug(it.slug) ? it.slug : slugFromName(it.nameUk);
+    let s = base;
+    for (let i = 2; used.has(s); i++) s = `${base}-${i}`;
+    it.slug = s;
+    used.add(s);
+  }
+}
+
+/** Проставить адреса всем группам, подгруппам (уникальны внутри группы) и задачам. Меняет и возвращает тот же объект. */
+export function ensureSlugs(cfg: MenuConfig): MenuConfig {
+  uniqueSlugs(cfg.groups);
+  for (const g of cfg.groups) uniqueSlugs(g.subs);
+  uniqueSlugs(cfg.tasks);
+  return cfg;
+}
+
+/** Адрес элемента меню (после ensureSlugs всегда задан). */
+export const slugOf = (x: { slug?: string; nameUk: string }) => x.slug || slugFromName(x.nameUk);
+
+export const findGroupBySlug = (cfg: MenuConfig, slug: string) => cfg.groups.find((g) => slugOf(g) === slug);
+export const findSubBySlug = (group: MenuGroup, slug: string) => group.subs.find((s) => slugOf(s) === slug);
+export const findTaskBySlug = (cfg: MenuConfig, slug: string) => cfg.tasks.find((t) => slugOf(t) === slug);
+
+/**
+ * Точный список категорий каждой подгруппы — ровно тех, что в меню считаются её товарами (как в счётчиках).
+ * По нему витрина ищет товары подгруппы и группы: товар не попадёт в две подгруппы сразу.
+ */
+export function subCategoryMap(nodes: CatNode[], groups: MenuGroup[]): Map<string, string[]> {
+  const { subOf } = assignCategories(nodes, groups);
+  const out = new Map<string, string[]>();
+  for (const [catId, subId] of subOf) (out.get(subId) ?? out.set(subId, []).get(subId)!).push(catId);
+  return out;
+}
+
+/** Где в меню лежит категория: группа и подгруппа (для хлебных крошек товара). */
+export function menuPlaceOf(nodes: CatNode[], groups: MenuGroup[], categoryId: string): { group: MenuGroup; sub: MenuSub } | null {
+  const subId = assignCategories(nodes, groups).subOf.get(categoryId);
+  if (!subId) return null;
+  const group = groups.find((g) => g.subs.some((s) => s.id === subId));
+  const sub = group?.subs.find((s) => s.id === subId);
+  return group && sub ? { group, sub } : null;
 }
 
 const isStr = (v: unknown): v is string => typeof v === "string";
@@ -345,13 +412,16 @@ export function parseMenuConfig(raw: unknown): MenuConfig | null {
       if (!s || !isStr(s.id) || !isStr(s.nameUk) || !isStr(s.nameRu) || !cats) return null;
       const own = s.ownIds === undefined ? undefined : strList(s.ownIds);
       if (own === null) return null;
-      subs.push({ id: s.id, nameUk: s.nameUk, nameRu: s.nameRu, categoryIds: cats, ...(own?.length ? { ownIds: own } : {}), ...(s.hidden === true ? { hidden: true } : {}) });
+      subs.push({
+        id: s.id, nameUk: s.nameUk, nameRu: s.nameRu, categoryIds: cats, ...(own?.length ? { ownIds: own } : {}),
+        ...(s.hidden === true ? { hidden: true } : {}), ...(isStr(s.slug) ? { slug: s.slug } : {}),
+      });
     }
     groups.push({
       id: g.id, nameUk: g.nameUk, nameRu: g.nameRu,
       hintUk: isStr(g.hintUk) ? g.hintUk : "", hintRu: isStr(g.hintRu) ? g.hintRu : "",
       quickPick: strList(g.quickPick) ?? [], ...(strList(g.specs) ? { specs: strList(g.specs)! } : {}),
-      subs, ...(g.hidden === true ? { hidden: true } : {}),
+      subs, ...(g.hidden === true ? { hidden: true } : {}), ...(isStr(g.slug) ? { slug: g.slug } : {}),
     });
   }
   const tasks: Task[] = [];
@@ -364,9 +434,10 @@ export function parseMenuConfig(raw: unknown): MenuConfig | null {
       id: t.id, nameUk: t.nameUk, nameRu: t.nameRu,
       hintUk: isStr(t.hintUk) ? t.hintUk : "", hintRu: isStr(t.hintRu) ? t.hintRu : "",
       icon: isStr(t.icon) ? t.icon : "cut", categoryIds: cats, ...(own?.length ? { ownIds: own } : {}), ...(t.hidden === true ? { hidden: true } : {}),
+      ...(isStr(t.slug) ? { slug: t.slug } : {}),
     });
   }
-  return { groups, tasks };
+  return ensureSlugs({ groups, tasks });
 }
 
 /** Значки задач, из которых владелец выбирает в админке (имена совпадают с набором значков витрины). */
@@ -423,14 +494,14 @@ const allIds = (cfg: MenuConfig) => [...cfg.groups.map((g) => g.id), ...cfg.grou
 export function addGroup(cfg: MenuConfig, nameUk: string, nameRu: string): MenuConfig {
   const next = clone(cfg);
   next.groups.push({ id: freeId("custom-group", allIds(next)), nameUk, nameRu, hintUk: "", hintRu: "", quickPick: [], subs: [] });
-  return next;
+  return ensureSlugs(next);
 }
 
 export function addSub(cfg: MenuConfig, groupId: string, nameUk: string, nameRu: string): MenuConfig {
   const next = clone(cfg);
   const g = next.groups.find((x) => x.id === groupId);
   if (g) g.subs.push({ id: freeId("custom-sub", allIds(next)), nameUk, nameRu, categoryIds: [] });
-  return next;
+  return ensureSlugs(next);
 }
 
 /** Удалить подгруппу можно, только если в ней не осталось категорий (иначе товары «потеряются»). */
@@ -455,7 +526,7 @@ export function removeGroup(cfg: MenuConfig, groupId: string): { cfg: MenuConfig
 export function addTask(cfg: MenuConfig, nameUk: string, nameRu: string): MenuConfig {
   const next = clone(cfg);
   next.tasks.push({ id: freeId("custom-task", allIds(next)), nameUk, nameRu, hintUk: "", hintRu: "", icon: "cut", categoryIds: [] });
-  return next;
+  return ensureSlugs(next);
 }
 
 export function removeTask(cfg: MenuConfig, taskId: string): MenuConfig {

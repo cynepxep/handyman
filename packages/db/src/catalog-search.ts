@@ -4,7 +4,7 @@
 
 import { prisma } from "./client";
 import {
-  FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, synonymMap,
+  FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, sortFacetValues, synonymMap,
 } from "@handyman/core/catalog";
 
 export class SearchUnavailableError extends Error {
@@ -151,7 +151,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
 
 const SETTINGS = () => ({
   searchableAttributes: ["nameUk", "nameRu", "sku", "articleCode", "brand", "categoryNames", "descText"],
-  filterableAttributes: ["categoryIds", "brand", "price", "available", "hasDiscount", ...FACET_FIELDS],
+  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "hasDiscount", ...FACET_FIELDS],
   sortableAttributes: ["price", "createdTs", "nameSort", "inStock"],
   rankingRules: ["words", "typo", "proximity", "attribute", "sort", "exactness", "inStock:desc"],
   synonyms: synonymMap(),
@@ -223,6 +223,8 @@ export type SearchSort = "relevance" | "price_asc" | "price_desc" | "new" | "nam
 export type SearchParams = {
   q?: string;
   cat?: string;
+  /** Точный список категорий (раздел или задача витрины): товары, лежащие прямо в этих категориях. Пустой список — ничего. */
+  categories?: string[];
   brand?: string[];
   min?: number;
   max?: number;
@@ -304,6 +306,12 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   // Фильтры по группам: у выбранной группы свои счётчики считаем без неё (чтобы показать другие значения).
   const groups: Record<string, string> = {};
   if (params.cat) groups.cat = `categoryIds = ${esc(params.cat)}`;
+  if (params.categories) {
+    if (params.categories.length === 0) {
+      return { total: 0, page, perPage, pages: 1, items: [], correctedQuery: null, facets: { brand: [], categories: [], price: null, attrs: [] }, processingMs: 0 };
+    }
+    groups.cats = inList("categoryId", params.categories.slice(0, 500));
+  }
   if (brands.length) groups.brand = inList("brand", brands);
   if (params.min != null && Number.isFinite(params.min)) groups.min = `price >= ${params.min}`;
   if (params.max != null && Number.isFinite(params.max)) groups.max = `price <= ${params.max}`;
@@ -363,7 +371,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
 
   const attrs = FACET_DEFS.map((d) => {
     const field = facetField(d.key);
-    const values = toValues(field, selectedFacets[d.key] ?? [], 20);
+    const values = sortFacetValues(d.key, toValues(field, selectedFacets[d.key] ?? [], 80));
     const coverage = Object.values(dist[field] ?? {}).reduce((s, n) => s + n, 0);
     return { key: d.key, label: d.label, values, coverage, distinct: Object.keys(dist[field] ?? {}).length };
   })

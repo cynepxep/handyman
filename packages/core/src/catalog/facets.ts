@@ -52,6 +52,29 @@ export function seriesFromCategories(chain: string[]): string[] {
   return out;
 }
 
+/** Фильтры-размеры: значения приводятся к числу, чтобы «3.0 мм», «3,0» и «3» были одним значением. */
+export const NUMERIC_FACETS: ReadonlySet<string> = new Set(["diameter", "landing", "drillDiameter", "length", "thickness", "voltage", "power"]);
+
+/**
+ * Число из значения размера: «13.0 мм» → «13», «4.5 мм» → «4,5», «2,0» → «2», «22,2» → «22,2».
+ * Убирается только единица из подписи фильтра (мм, В, Вт); диапазоны («2.5-4.5») и текст остаются как есть.
+ */
+export function normalizeNumber(value: string): string {
+  const m = /^(\d+(?:[.,]\d+)?)\s*(?:мм|mm|в|v|вт|w)?\.?$/iu.exec(value.trim());
+  if (!m) return value;
+  const n = Number(m[1].replace(",", "."));
+  return Number.isFinite(n) ? String(n).replace(".", ",") : value;
+}
+
+/** Числовое значение для сортировки («4,5» → 4.5); не число — NaN. */
+export const facetNumber = (value: string) => Number.parseFloat(value.replace(",", "."));
+
+/** Значения фильтра в удобном порядке: размеры — по возрастанию (6, 8, 10), остальное — как пришло. */
+export function sortFacetValues<V extends { value: string }>(key: string, values: V[]): V[] {
+  if (!NUMERIC_FACETS.has(key) || !values.every((v) => Number.isFinite(facetNumber(v.value)))) return values;
+  return [...values].sort((a, b) => facetNumber(a.value) - facetNumber(b.value) || a.value.localeCompare(b.value));
+}
+
 /** Значения фильтров товара: код фильтра → значения. Пустые и слишком длинные значения отбрасываются. */
 export function extractFacets(params: FeedParam[], categoryChain: string[] = []): Record<string, string[]> {
   const out: Record<string, string[]> = {};
@@ -64,7 +87,11 @@ export function extractFacets(params: FeedParam[], categoryChain: string[] = [])
   for (const p of params) {
     const name = cleanValue(p.name);
     const def = FACET_DEFS.find((d) => d.names.test(name));
-    if (def) add(def.key, p.value);
+    if (!def) continue;
+    if (NUMERIC_FACETS.has(def.key)) {
+      // «75; 100; 150» — несколько размеров в одном поле
+      for (const part of p.value.split(";")) add(def.key, normalizeNumber(cleanValue(part)));
+    } else add(def.key, p.value);
   }
   for (const s of seriesFromCategories(categoryChain)) add("series", s);
   return out;

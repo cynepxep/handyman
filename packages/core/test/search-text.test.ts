@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { fixKeyboardLayout, synonymMap, extractFacets, seriesFromCategories, FACET_DEFS, parseFeed } from "../src/catalog";
+import { fixKeyboardLayout, synonymMap, extractFacets, seriesFromCategories, FACET_DEFS, parseFeed, normalizeNumber, sortFacetValues } from "../src/catalog";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +41,27 @@ test("фильтры: разные названия характеристик �
     { name: "Тип", value: "x".repeat(80) }, // слишком длинное значение
   ]);
   assert.deepEqual(f, { diameter: ["125"], voltage: ["18"], power: ["400"], material: ["Метал нержавіюча сталь"] });
+});
+
+test("размеры в фильтрах приводятся к одному виду: «3.0 мм», «3,0» и «3» — одно значение", () => {
+  assert.equal(normalizeNumber("13.0 мм"), "13");
+  assert.equal(normalizeNumber("4.5 мм"), "4,5");
+  assert.equal(normalizeNumber("2,0"), "2");
+  assert.equal(normalizeNumber("22,2"), "22,2");
+  assert.equal(normalizeNumber("18 В"), "18");
+  assert.equal(normalizeNumber("2.5-4.5"), "2.5-4.5", "диапазон не трогаем");
+  assert.equal(normalizeNumber("6\" (15)"), "6\" (15)", "текст не трогаем");
+  assert.equal(normalizeNumber("1,5 м"), "1,5 м", "метры не превращаем в миллиметры");
+  const f = extractFacets([
+    { name: "Діаметр свердла", value: "3.0 мм" },
+    { name: "Діаметр свердла", value: "3" },
+    { name: "Довжина, мм", value: "75; 100; 150" },
+    { name: "Матеріал", value: "Сталь 3.0" },
+  ]);
+  assert.deepEqual(f, { drillDiameter: ["3"], length: ["75", "100", "150"], material: ["Сталь 3.0"] });
+  const sorted = sortFacetValues("drillDiameter", [{ value: "10" }, { value: "2,5" }, { value: "3" }]);
+  assert.deepEqual(sorted.map((v) => v.value), ["2,5", "3", "10"]);
+  assert.deepEqual(sortFacetValues("material", [{ value: "б" }, { value: "а" }]).map((v) => v.value), ["б", "а"], "не размеры — порядок как пришёл");
 });
 
 test("серия берётся из названий категорий", () => {

@@ -1,6 +1,7 @@
 // Адреса витрины на двух языках: украинский — без приставки (/catalog), русский — с /ru (/ru/catalog).
 // Внутри Next.js все страницы витрины лежат в app/[lang]; proxy.ts переписывает адрес без приставки на /uk/….
-// Файл намеренно маленький и без зависимостей: его подключают proxy.ts и клиентские компоненты.
+// Файл намеренно маленький: его подключают proxy.ts и клиентские компоненты (единственная зависимость — транслитерация slugify).
+import { slugify } from "../catalog/categories";
 
 export type ShopLang = "uk" | "ru";
 export const SHOP_LANGS: readonly ShopLang[] = ["uk", "ru"];
@@ -46,17 +47,24 @@ export function stripLang(path: string): string {
 /** Тот же адрес на другом языке (для переключателя УКР / РУС). */
 export const switchLang = (path: string, to: ShopLang): string => shopHref(to, stripLang(path));
 
+/** Часть адреса товара из названия: «Круг відрізний Vitals 125×1,2 мм» → kruh-vidriznyi-vitals-125-1-2-mm (до 80 знаков). */
+export function productSlug(name: string): string {
+  let s = slugify(name);
+  if (s.length > 80) s = s.slice(0, 80).replace(/-[^-]*$/, "");
+  return s || "tovar";
+}
+
 /**
- * Ссылки витрины в одном месте. Страницы разделов, товаров, корзины и кабинета появляются в шагах 2.5–2.6;
- * до этого ссылки ведут на «не найдено», а товар — на поиск по его артикулу.
+ * Ссылки витрины в одном месте (адреса украинской версии; для русской — shopHref(lang, …)).
+ * Адреса групп, подгрупп и задач — из «Сайт → Меню и задачи» (поле «Адрес страницы»).
+ * Корзина и кабинет появятся в шагах 2.6 и 4–5.
  */
 export const paths = {
   home: () => "/",
   catalog: () => "/catalog",
-  // до шага 2.5 группа открывается в меню каталога (якорь), потом — своей страницей
-  group: (groupId: string) => `/catalog#g-${encodeURIComponent(groupId)}`,
-  sub: (groupId: string, subId: string) => `/catalog/${encodeURIComponent(groupId)}/${encodeURIComponent(subId)}`,
-  task: (taskId: string) => `/task/${encodeURIComponent(taskId)}`,
+  group: (groupSlug: string) => `/catalog/${encodeURIComponent(groupSlug)}`,
+  sub: (groupSlug: string, subSlug: string) => `/catalog/${encodeURIComponent(groupSlug)}/${encodeURIComponent(subSlug)}`,
+  task: (taskSlug: string) => `/task/${encodeURIComponent(taskSlug)}`,
   search: (q?: string, page?: number) => {
     const qs = new URLSearchParams();
     if (q) qs.set("q", q);
@@ -64,7 +72,8 @@ export const paths = {
     const s = qs.toString();
     return s ? `/search?${s}` : "/search";
   },
-  product: (sku: string) => paths.search(sku),
+  /** Товар: /product/<артикул>/<название>. Артикул — главное (название в адресе может устареть, тогда перенаправим). */
+  product: (sku: string, name: string) => `/product/${encodeURIComponent(sku)}/${productSlug(name)}`,
   info: (slug: string) => `/info/${encodeURIComponent(slug)}`,
   cart: () => "/cart",
   account: () => "/account",
