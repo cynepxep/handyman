@@ -10,6 +10,9 @@ export const TEST_URL = process.env.DATABASE_URL_TEST ?? "postgresql://handyman:
 process.env.DATABASE_URL = TEST_URL; // до загрузки клиента базы
 process.env.FEEDS_DIR = fs.mkdtempSync(path.join(os.tmpdir(), "hm-feeds-"));
 process.env.MEILI_INDEX_PRODUCTS = "products_test"; // отдельный поисковый индекс, рабочий не трогаем
+// Тесты никогда не пишут в настоящий Telegram, даже если в .env есть токен бота.
+process.env.BOT_TOKEN = "";
+process.env.ADMIN_CHAT_ID = "";
 
 export const sampleText = fs.readFileSync(path.join(here, "../../core/test/fixtures/vitals-sample.xml"), "utf8");
 export const skipMsg = "нет подключения к тестовой базе handyman_test (запустите pnpm infra:up)";
@@ -25,7 +28,7 @@ export async function setupTestDb() {
     const imp = await import("../src/catalog-import");
     const prod = await import("../src/catalog-products");
     await prisma.$queryRaw`select 1`;
-    await prisma.$executeRawUnsafe('TRUNCATE "Supplier","Brand","Category","Product","ImportRun","AuditLog","FeedCategoryMap","TextOverride","Page","Setting" RESTART IDENTITY CASCADE');
+    await prisma.$executeRawUnsafe('TRUNCATE "Supplier","Brand","Category","Product","ImportRun","AuditLog","FeedCategoryMap","TextOverride","Page","Setting","Order","Client","Outbox","Warehouse","StockItem" RESTART IDENTITY CASCADE');
     await prisma.category.createMany({
       data: [["ak", "Акумуляторний"], ["el", "Електро"], ["gr", "Садова"], ["hand", "Ручний"], ["acc", "Аксесуари"], ["bld", "Будівельне"], ["pw", "Силова"]]
         .map(([id, n], sort) => ({ id, nameUk: n, nameRu: n, sort })),

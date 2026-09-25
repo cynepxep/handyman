@@ -30,11 +30,14 @@ enum PayMode {
   PREPAY
   FULL
   CARD
+  LATER // «Купити в 1 клік»: способ оплаты уточнит менеджер (шаг 2.6)
 }
 
 enum DeliveryMethod {
   NOVA_POSHTA
   COURIER_ODESA
+  PICKUP // самовывоз из магазина (шаг 2.6)
+  TO_CONFIRM // «Купити в 1 клік»: доставку уточнит менеджер (шаг 2.6)
 }
 
 enum ProductSource {
@@ -492,6 +495,13 @@ model Order {
   monoInvoiceId  String?
   isTest         Boolean        @default(false)
   noCallback     Boolean        @default(false)
+  // шаг 2.6: данные получателя и оформления на момент заказа
+  recipientName  String? // «Прізвище Ім'я» получателя
+  recipientPhone String? // +380XXXXXXXXX
+  deliveryType   String? // Нова Пошта: warehouse | postomat | address
+  source         String? // site | one_click
+  lang           Locale?
+  accessKey      String? // ключ страницы «Дякуємо» (без него страница заказа не открывается)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

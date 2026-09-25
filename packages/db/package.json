@@ -9,7 +9,9 @@
     "./catalog-import": "./src/catalog-import.ts",
     "./catalog-products": "./src/catalog-products.ts",
     "./catalog-search": "./src/catalog-search.ts",
-    "./site-content": "./src/site-content.ts"
+    "./site-content": "./src/site-content.ts",
+    "./orders": "./src/orders.ts",
+    "./notify": "./src/notify.ts"
   },
   "scripts": {
     "generate": "prisma generate",

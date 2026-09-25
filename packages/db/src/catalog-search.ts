@@ -6,6 +6,7 @@ import { prisma } from "./client";
 import {
   FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, sortFacetValues, synonymMap,
 } from "@handyman/core/catalog";
+import { STOCK_RANK, stockLevel, type StockLevel } from "@handyman/core/shop";
 
 export class SearchUnavailableError extends Error {
   constructor(message = "Поиск временно недоступен. Попробуйте позже.") {
@@ -76,7 +77,12 @@ export type SearchDoc = {
   hasDiscount: boolean;
   discountPct: number;
   available: boolean;
-  inStock: 0 | 1;
+  /** наличие для покупателя: local — наш склад в Одессе, supplier — у поставщика, order — под заказ */
+  stock: StockLevel;
+  /** есть на нашем складе (фильтр «Швидка відправка з Одеси») */
+  local: boolean;
+  /** для сортировки: 2 — наш склад, 1 — поставщик, 0 — под заказ */
+  inStock: 0 | 1 | 2;
   image: string | null;
   descText: string;
   createdTs: number;
@@ -110,6 +116,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         brand: { select: { name: true } },
         images: { orderBy: { sort: "asc" }, take: 1, select: { url: true } },
         attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
+        stockItems: { select: { onHand: true } },
       },
     });
     if (!rows.length) break;
@@ -133,8 +140,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         price, oldPrice,
         hasDiscount: oldPrice != null && oldPrice > price,
         discountPct: oldPrice != null && oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0,
-        available: r.supplierAvailable,
-        inStock: r.supplierAvailable ? 1 : 0,
+        ...stockFields(r.stockItems.reduce((a, s) => a + s.onHand, 0), r.supplierAvailable),
         image: r.images[0]?.url ?? null,
         descText: htmlToText(r.descUk).slice(0, 400),
         createdTs: r.createdAt.getTime(),
@@ -147,11 +153,17 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
   return { docs, hiddenIds };
 }
 
+/** Поля наличия для индекса: «в наличии» = наш склад или поставщик; выше в списке то, что отправим быстрее. */
+function stockFields(ownQty: number, supplierAvailable: boolean) {
+  const stock = stockLevel(ownQty, supplierAvailable);
+  return { stock, local: stock === "local", available: stock !== "order", inStock: STOCK_RANK[stock] };
+}
+
 // ---------- индекс ----------
 
 const SETTINGS = () => ({
   searchableAttributes: ["nameUk", "nameRu", "sku", "articleCode", "brand", "categoryNames", "descText"],
-  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "hasDiscount", ...FACET_FIELDS],
+  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "local", "hasDiscount", ...FACET_FIELDS],
   sortableAttributes: ["price", "createdTs", "nameSort", "inStock"],
   rankingRules: ["words", "typo", "proximity", "attribute", "sort", "exactness", "inStock:desc"],
   synonyms: synonymMap(),
@@ -229,6 +241,8 @@ export type SearchParams = {
   min?: number;
   max?: number;
   available?: boolean;
+  /** только наш склад в Одессе */
+  local?: boolean;
   sale?: boolean;
   /** код фильтра → выбранные значения (см. FACET_DEFS) */
   facets?: Record<string, string[]>;
@@ -247,6 +261,7 @@ export type SearchItem = {
   oldPrice: number | null;
   discountPct: number;
   available: boolean;
+  stock: StockLevel;
   image: string | null;
   categoryId: string;
 };
@@ -260,6 +275,8 @@ export type SearchResult = {
   items: SearchItem[];
   /** Запрос был исправлен по раскладке клавиатуры («rheu» → «круг»). */
   correctedQuery: string | null;
+  /** сколько товаров есть на нашем складе в Одессе */
+  localCount: number;
   facets: {
     brand: FacetValue[];
     categories: { id: string; name: string; count: number }[];
@@ -293,7 +310,7 @@ type MeiliResponse = {
   processingTimeMs: number;
 };
 
-const RETRIEVE = ["id", "sku", "nameUk", "nameRu", "brand", "price", "oldPrice", "discountPct", "available", "image", "categoryId"];
+const RETRIEVE = ["id", "sku", "nameUk", "nameRu", "brand", "price", "oldPrice", "discountPct", "available", "stock", "image", "categoryId"];
 
 export async function searchProducts(params: SearchParams): Promise<SearchResult> {
   const perPage = Math.min(60, Math.max(1, params.perPage ?? 24));
@@ -308,7 +325,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   if (params.cat) groups.cat = `categoryIds = ${esc(params.cat)}`;
   if (params.categories) {
     if (params.categories.length === 0) {
-      return { total: 0, page, perPage, pages: 1, items: [], correctedQuery: null, facets: { brand: [], categories: [], price: null, attrs: [] }, processingMs: 0 };
+      return { total: 0, page, perPage, pages: 1, items: [], correctedQuery: null, localCount: 0, facets: { brand: [], categories: [], price: null, attrs: [] }, processingMs: 0 };
     }
     groups.cats = inList("categoryId", params.categories.slice(0, 500));
   }
@@ -316,11 +333,12 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   if (params.min != null && Number.isFinite(params.min)) groups.min = `price >= ${params.min}`;
   if (params.max != null && Number.isFinite(params.max)) groups.max = `price <= ${params.max}`;
   if (params.available) groups.available = "available = true";
+  if (params.local) groups.local = "local = true";
   if (params.sale) groups.sale = "hasDiscount = true";
   for (const [k, v] of Object.entries(selectedFacets)) groups[`f:${k}`] = inList(facetField(k), v);
   const filterWithout = (skip?: string) => Object.entries(groups).filter(([g]) => g !== skip).map(([, f]) => f);
 
-  const facetFields = ["brand", "categoryIds", "price", ...FACET_FIELDS];
+  const facetFields = ["brand", "categoryIds", "price", "local", ...FACET_FIELDS];
   const run = async (q: string) => {
     const queries: Record<string, unknown>[] = [
       {
@@ -391,16 +409,20 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   const stats = res.main.facetStats?.price;
   return {
     total, page, perPage, pages: Math.max(1, Math.ceil(total / perPage)),
-    items: res.main.hits.map(({ id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available, image, categoryId }) => ({
-      id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available, image, categoryId,
+    items: res.main.hits.map(({ id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available, stock, image, categoryId }) => ({
+      id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available,
+      // индекс без поля stock (собран до шага 2.6) — считаем по «available»
+      stock: stock ?? (available ? "supplier" : "order"), image, categoryId,
     })),
+    /** сколько товаров выдачи есть на нашем складе (показывать ли фильтр «Швидка відправка з Одеси») */
+    localCount: res.main.facetDistribution?.local?.["true"] ?? 0,
     correctedQuery,
     facets: { brand: toValues("brand", brands, 30), categories, price: stats ? { min: Math.floor(stats.min), max: Math.ceil(stats.max) } : null, attrs },
     processingMs: res.main.processingTimeMs,
   };
 }
 
-export type Suggestion = { id: string; sku: string; nameUk: string; nameRu: string; price: number; image: string | null; available: boolean };
+export type Suggestion = { id: string; sku: string; nameUk: string; nameRu: string; price: number; image: string | null; available: boolean; stock?: StockLevel };
 
 /** Подсказки для строки поиска в шапке: название, фото, цена. */
 export async function suggestProducts(q: string, limit = 6): Promise<{ items: Suggestion[]; correctedQuery: string | null }> {
@@ -409,7 +431,7 @@ export async function suggestProducts(q: string, limit = 6): Promise<{ items: Su
   const uid = indexUid();
   const ask = async (text: string) => {
     const { status, data } = await meili<{ hits: Suggestion[]; message?: string }>("POST", `/indexes/${uid}/search`, {
-      q: text, limit, attributesToRetrieve: ["id", "sku", "nameUk", "nameRu", "price", "image", "available"],
+      q: text, limit, attributesToRetrieve: ["id", "sku", "nameUk", "nameRu", "price", "image", "available", "stock"],
     });
     if (status === 404) throw new SearchUnavailableError("Поисковый индекс ещё не создан.");
     if (status >= 400) throw new Error(`Поиск: ${data?.message ?? status}`);

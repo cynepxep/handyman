@@ -115,6 +115,21 @@ test("раздел витрины: товары ровно из списка к�
   assert.ok(inStock.items.every((i) => i.available && i.categoryId === a.categoryId));
 });
 
+test("свой склад: товар из Одессы первым в списке и находится фильтром «швидка відправка»", async (t) => {
+  if (!ready) return t.skip(noMeili);
+  const orders = await import("../src/orders");
+  const last = (await search.searchProducts({ sort: "name", perPage: 60 })).items.filter((i) => i.available).at(-1)!;
+  await orders.setOwnStock(last.id, 3, "test");
+  const r = await search.searchProducts({ sort: "name", perPage: 60 });
+  assert.equal(r.items[0].id, last.id, "наш склад — выше всех");
+  assert.equal(r.items[0].stock, "local");
+  assert.equal(r.localCount, 1);
+  const local = await search.searchProducts({ local: true });
+  assert.deepEqual(local.items.map((i) => i.id), [last.id]);
+  await orders.setOwnStock(last.id, 0, "test");
+  assert.equal((await search.searchProducts({ local: true })).total, 0);
+});
+
 test("недоступные товары в списке идут после доступных", async (t) => {
   if (!ready) return t.skip(noMeili);
   const r = await search.searchProducts({ perPage: 30 });
