@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DEFAULT_HOME, HOME_BLOCKS, bannerVisible, deliveryPageDraft, parseHomeSettings, renderPageBody, safeBannerHref, validateHomeForm, listingQuery, parseListing,
+  DEFAULT_HOME, HOME_BLOCKS, bannerVisible, mergeHints, normalizeQuery, parseHidden, deliveryPageDraft, parseHomeSettings, renderPageBody, safeBannerHref, validateHomeForm, listingQuery, parseListing,
 } from "../src/site";
 import { DEFAULT_CHECKOUT } from "../src/shop";
 
@@ -66,4 +66,37 @@ test("черновик «Доставка і оплата» — только в�
   const html = renderPageBody(d.uk);
   assert.match(html, /<h2>Доставка<\/h2>/);
   assert.match(html, /<li>/);
+});
+
+
+test("подсказки поиска: запрос без личных данных", () => {
+  assert.equal(normalizeQuery("  Круг   125 "), "круг 125");
+  assert.equal(normalizeQuery("«Болгарка»"), "болгарка");
+  assert.equal(normalizeQuery("000237651"), null); // артикул
+  assert.equal(normalizeQuery("+380 93 366 24 07"), null); // телефон
+  assert.equal(normalizeQuery("мій номер 0933662407"), null);
+  assert.equal(normalizeQuery("ivan@mail.com"), null);
+  assert.equal(normalizeQuery("https://site.ua"), null);
+  assert.equal(normalizeQuery("а"), null);
+  assert.equal(normalizeQuery("x".repeat(41)), null);
+});
+
+test("подсказки поиска: сначала владелец, потом популярные и заказы, без повторов и скрытых", () => {
+  const r = mergeHints({
+    pinned: ["круг 125", "Болгарка"],
+    popular: ["болгарка", "свердло 6", "лайно", "диск алмазний"],
+    fromOrders: [{ text: "Відрізні по металу", href: "/catalog/x/y" }],
+    hidden: parseHidden("лайно\n, "),
+    max: 5,
+  });
+  assert.deepEqual(r.map((h) => h.text), ["круг 125", "Болгарка", "свердло 6", "диск алмазний", "Відрізні по металу"]);
+  assert.equal(r[4].href, "/catalog/x/y");
+  assert.equal(mergeHints({ pinned: ["a1", "b2", "c3"], popular: ["d4"], max: 2 }).length, 2);
+});
+
+test("главная: настройки подсказок поиска", () => {
+  assert.deepEqual(parseHomeSettings({}).hints, { max: 8, hidden: [] });
+  assert.deepEqual(parseHomeSettings({ hints: { max: 99, hidden: ["Лайно", 5] } }).hints, { max: 20, hidden: ["лайно"] });
+  const r = validateHomeForm({ "hints.max": "5", "hints.hidden": "погане слово\nще одне", "hide.0": "Дурня", "hide.1": "" });
+  assert.ok(r.ok && r.value.hints.max === 5 && r.value.hints.hidden.join("|") === "погане слово|ще одне|дурня");
 });

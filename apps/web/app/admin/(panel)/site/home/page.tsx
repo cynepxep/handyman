@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@handyman/db";
 import { loadHomeSettings } from "@handyman/db/site-content";
+import { topQueries } from "@handyman/db/search-stats";
 import { HOME_BLOCK_RU } from "@handyman/core/site";
 import { SubmitButton } from "../../import/client-bits";
 import { saveHomeAction } from "./actions";
@@ -9,11 +10,14 @@ export const dynamic = "force-dynamic";
 
 export default async function HomeSettingsPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   const { ok, error } = await searchParams;
-  const [s, hits, news] = await Promise.all([
+  const [s, hits, news, found, missed] = await Promise.all([
     loadHomeSettings(),
     prisma.product.count({ where: { isHit: true, visible: true } }),
     prisma.product.count({ where: { isNew: true, visible: true } }),
+    topQueries({ found: true, limit: 20 }),
+    topQueries({ found: false, limit: 15 }),
   ]);
+  const hidden = new Set(s.hints.hidden);
   const b = s.banner;
   const note: Partial<Record<string, React.ReactNode>> = {
     hits: <>отмечено: <b>{hits}</b> — <Link className="adm-link" href="/admin/products?flag=hit">список</Link></>,
@@ -73,6 +77,44 @@ export default async function HomeSettingsPage({ searchParams }: { searchParams:
           // eslint-disable-next-line @next/next/no-img-element -- предпросмотр картинки по ссылке владельца
           <img src={b.image} alt="Картинка баннера" style={{ maxWidth: 360, maxHeight: 180, objectFit: "cover", borderRadius: 8 }} />
         )}
+
+        <h2>Подсказки поиска («круг 125», «болгарка»…)</h2>
+        <p className="adm-muted">
+          Показываются под заголовком главной и в строке поиска («Часто шукають»). Порядок: сначала ваши (текст «home.hints» во вкладке «Тексты», через запятую),
+          потом то, что чаще всего ищут покупатели за 30 дней (только запросы, которые находят товары), потом подразделы, из которых больше всего заказывают.
+          Телефоны, почту, ссылки и артикулы сайт не запоминает; ваши собственные поиски (когда вы вошли в админку) не считаются.
+        </p>
+        <div className="adm-field">
+          <label htmlFor="h-max">Сколько подсказок показывать (0 — не показывать)</label>
+          <input id="h-max" name="hints.max" defaultValue={String(s.hints.max)} inputMode="numeric" className="adm-input" style={{ width: 80 }} />
+        </div>
+        <h3>Что ищут покупатели (30 дней)</h3>
+        {found.length ? (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead><tr><th>Запрос</th><th className="num">Раз</th><th className="num">Нашлось товаров</th><th>Скрыть из подсказок</th></tr></thead>
+              <tbody>
+                {found.map((q, i) => (
+                  <tr key={q.query}>
+                    <td>{q.query}</td><td className="num">{q.count}</td><td className="num">{q.results}</td>
+                    <td><input type="checkbox" name={`hide.${i}`} value={q.query} defaultChecked={hidden.has(q.query)} aria-label={`Скрыть «${q.query}»`} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : <p className="adm-muted">Пока пусто — статистика появится, когда покупатели начнут искать на сайте.</p>}
+        {missed.length > 0 && (
+          <>
+            <h3>Искали, но не нашли</h3>
+            <p className="adm-muted">Подсказка, каких товаров или слов не хватает (можно добавить товар или синоним): {missed.map((q) => `«${q.query}» (${q.count})`).join(", ")}.</p>
+          </>
+        )}
+        <div className="adm-field">
+          <label htmlFor="h-hidden">Скрытые слова (по одному в строке)</label>
+          <textarea id="h-hidden" name="hints.hidden" rows={3} className="adm-textarea" defaultValue={s.hints.hidden.filter((h) => !found.some((q) => q.query === h)).join("\n")} />
+          <span className="adm-muted">Эти запросы никогда не попадут в подсказки. Галочки в таблице выше добавляются сюда же.</span>
+        </div>
 
         <div className="adm-sticky-save">
           <SubmitButton primary pendingText="Сохраняю…">Сохранить</SubmitButton>

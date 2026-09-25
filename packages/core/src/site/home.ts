@@ -1,6 +1,8 @@
 // Главная страница: какие блоки показывать и в каком порядке, баннер акции. Хранится в Setting["shop.home"],
 // правится владельцем в админке «Сайт → Главная». Шапка с поиском и подсказками всегда первая и сюда не входит.
 
+import { parseHidden } from "./search-hints";
+
 export const HOME_SETTING_KEY = "shop.home";
 
 export const HOME_BLOCKS = ["banner", "tasks", "battery", "groups", "hits", "sale", "new", "viewed", "trust", "help"] as const;
@@ -35,6 +37,8 @@ export type HomeSettings = {
   /** блоки по порядку показа, с флагом «показывать» */
   blocks: Array<{ id: HomeBlock; on: boolean }>;
   banner: HomeBanner;
+  /** подсказки поиска («часто шукають»): сколько показывать и какие слова скрыть */
+  hints: { max: number; hidden: string[] };
 };
 
 export const EMPTY_BANNER: HomeBanner = { on: false, titleUk: "", titleRu: "", textUk: "", textRu: "", buttonUk: "", buttonRu: "", href: "", image: "" };
@@ -42,6 +46,12 @@ export const EMPTY_BANNER: HomeBanner = { on: false, titleUk: "", titleRu: "", t
 export const DEFAULT_HOME: HomeSettings = {
   blocks: HOME_BLOCKS.map((id) => ({ id, on: true })),
   banner: EMPTY_BANNER,
+  hints: { max: 8, hidden: [] },
+};
+
+const hintsMax = (v: unknown) => {
+  const n = typeof v === "number" ? v : Number(String(v ?? "").trim());
+  return Number.isFinite(n) && String(v ?? "").trim() !== "" ? Math.min(20, Math.max(0, Math.round(n))) : DEFAULT_HOME.hints.max;
 };
 
 const MAX_TEXT = 300;
@@ -81,7 +91,9 @@ export function parseHomeSettings(raw: unknown): HomeSettings {
     href: safeBannerHref(str(b.href, 300)),
     image: safeImageUrl(str(b.image, 500)),
   };
-  return { blocks, banner };
+  const h = o.hints && typeof o.hints === "object" ? (o.hints as Record<string, unknown>) : {};
+  const hints = { max: hintsMax(h.max), hidden: Array.isArray(h.hidden) ? parseHidden(h.hidden.filter((x): x is string => typeof x === "string")) : [] };
+  return { blocks, banner, hints };
 }
 
 /** Баннер показывается, если включён и есть заголовок (на языке сайта или украинский). */
@@ -114,5 +126,7 @@ export function validateHomeForm(input: Record<string, string | undefined>): Hom
   };
   if (banner.on && !banner.titleUk) return { ok: false, error: "Чтобы включить баннер, впишите хотя бы заголовок по-украински." };
   if ((banner.buttonUk || banner.buttonRu) && !banner.href) return { ok: false, error: "У кнопки баннера нет ссылки — впишите, куда она ведёт." };
-  return { ok: true, value: { blocks: rows.map(({ id, on }) => ({ id, on })), banner } };
+  const hidden = parseHidden([input["hints.hidden"] ?? "", ...Object.entries(input).filter(([k, v]) => k.startsWith("hide.") && v).map(([, v]) => v as string)].join("\n"));
+  const hints = { max: hintsMax(input["hints.max"]), hidden };
+  return { ok: true, value: { blocks: rows.map(({ id, on }) => ({ id, on })), banner, hints } };
 }

@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
 import { countWord, isShopLang, listingQuery, paths, shopHref } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
+import { getSearchHints } from "@/lib/shop/search-hints";
 import { getBatteries, getFlaggedCards, getMenuView, getSaleCards, type ShopCard } from "@/lib/shop/catalog";
 import { loadHomeSettings } from "@handyman/db/site-content";
 import { DEFAULT_HOME, bannerVisible, type HomeBlock } from "@handyman/core/site";
@@ -43,7 +44,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const goods = (n: number) => countWord(c.texts, "goods", n);
   const tasks = menu.tasks.filter((x) => !x.task.hidden && x.total > 0);
   const groups = menu.groups.filter((g) => !g.group.hidden && g.total > 0);
-  const hints = t("home.hints").split(",").map((s) => s.trim()).filter(Boolean);
+  const hints = await getSearchHints(c);
   // Кнопки «Не знайшли?»: Telegram и звонок — только те, что владелец заполнил в «Сайт → Контакти».
   const phone = contactLinks(c, t("help.call")).find((l) => l.icon === "phone");
   // «Яка у вас батарея?» ведёт в раздел, где быстрый выбор — серия батареи (по умолчанию «Акумуляторний інструмент»), с уже выбранной серией.
@@ -138,7 +139,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
         <p className="hm-lead">{t("home.lead")}</p>
         {hints.length > 0 && (
           <ul className="hm-chips">
-            {hints.map((h) => <li key={h}><Link className="hm-chip" href={shopHref(lang, paths.search(h))}>{h}</Link></li>)}
+            {hints.map((h) => <li key={h.text}><Link className="hm-chip" href={h.href ?? shopHref(lang, paths.search(h.text))}>{h.text}</Link></li>)}
           </ul>
         )}
       </section>

@@ -725,3 +725,16 @@ model PriceLog {
   @@index([productId])
   @@index([tagDone])
 }
+
+// Что ищут покупатели (шаг 2.7): только текст запроса, без личных данных и без привязки к человеку. Счётчик по дням —
+// из него строятся подсказки поиска на главной («часто шукають») и список «искали, но не нашли» в админке. Старше 90 дней удаляется.
+model SearchQueryDay {
+  day     DateTime @db.Date
+  query   String // нормализованный запрос: строчные буквы, без лишних пробелов
+  count   Int      @default(0)
+  results Int      @default(0) // сколько товаров нашлось в последний раз
+  updatedAt DateTime @updatedAt
+
+  @@id([day, query])
+  @@index([query])
+}

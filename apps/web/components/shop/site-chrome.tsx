@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { paths, shopHref, telHref } from "@handyman/core/site";
 import type { ShopContent } from "@/lib/shop/content";
+import { getSearchHints } from "@/lib/shop/search-hints";
 import { FocusSearchButton, LangSwitch } from "./client-bits";
 import { Icon } from "./icons";
 import { SearchBox, type SearchLabels } from "./search-box";
@@ -31,7 +32,7 @@ export function contactLinks(c: ShopContent, callLabel: string) {
   ].filter((x): x is { href: string; icon: string; label: string } => x !== null);
 }
 
-export function SiteHeader({ c }: { c: ShopContent }) {
+export async function SiteHeader({ c }: { c: ShopContent }) {
   const { t, lang } = c;
   const phone = c.contacts.phones[0];
   const links = contactLinks(c, t("header.help.call"));
@@ -39,7 +40,8 @@ export function SiteHeader({ c }: { c: ShopContent }) {
     label: t("header.search.label"), placeholder: t("header.search.placeholder"), submit: t("search.submit"), history: t("search.history"),
     popular: t("search.popular"), clear: t("search.clear"), all: t("search.all"), none: t("search.none"), stock: stockLabels(t),
   };
-  const popular = t("home.hints").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 6);
+  // «Часто шукають» в строке поиска: те же подсказки, что на главной (ваши + частые запросы покупателей)
+  const popular = (await getSearchHints(c)).map((h) => h.text).slice(0, 6);
   return (
     <header className="hm-header">
       <div className="hm-topline">

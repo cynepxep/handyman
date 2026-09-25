@@ -42,7 +42,7 @@
   `/order/<номер>?k=`, «Купити в 1 клік», админка «Заказы» и «Сайт → Оформление заказа», остаток «на нашем складе» у товара, перенаправление старых адресов разделов,
   правка текстов прямо на сайте (`components/shop/text-editor.tsx`). Уведомления менеджеру — Outbox; **в `.env` нет `BOT_TOKEN`/`ADMIN_CHAT_ID`** → пока «не отправлено».
 - **Шаг 2.7**: главная из админки «Сайт → Главная» (порядок и включение блоков, баннер; `packages/core/src/site/home.ts`), отметки «Хит»/«Новинка» у товара
-  (`Product.isHit/isNew`, значки на карточках, полки и `/search?hit=1|new=1`), «Ви переглядали» (`components/shop/viewed.tsx`), черновик «Доставка і оплата».
+  (`Product.isHit/isNew`, значки на карточках, полки и `/search?hit=1|new=1`), «Ви переглядали» (`components/shop/viewed.tsx`), черновик «Доставка і оплата»; подсказки поиска по запросам и заказам покупателей (`lib/shop/search-hints.ts`, таблица `SearchQueryDay`).
 Дальше: **2.8** (тесты в браузере, кэширование, Lighthouse, проверка на телефоне). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
@@ -90,7 +90,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test` | 138 проверок (core 96 + интеграционные db 42). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 142 проверки (core 99 + интеграционные db 43). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

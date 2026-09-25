@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { hasFilters, isShopLang, parseListing, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
+import { getSearchHints } from "@/lib/shop/search-hints";
+import { logSearchSafely } from "@/lib/shop/search-log";
 import { FACET_KEYS, resolveListing, runListing } from "@/lib/shop/listing";
 import { ProductListing } from "@/components/shop/listing";
 import { Breadcrumbs } from "@/components/shop/ui";
@@ -33,7 +35,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   const flagTitle = state.hit ? t("home.hits.title") : state.isNew ? t("home.new.title") : state.sale ? t("home.sale.title") : hasFilters(state) ? t("search.title") : "";
 
   if (!q && !flagTitle) {
-    const hints = t("home.hints").split(",").map((s) => s.trim()).filter(Boolean);
+    const hints = await getSearchHints(c);
     return (
       <section className="hm-section">
         <Breadcrumbs label={t("crumbs.label")} items={[home, { label: t("search.title") }]} />
@@ -41,7 +43,7 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
         <p className="hm-lead">{t("search.prompt")}</p>
         {hints.length > 0 && (
           <ul className="hm-chips">
-            {hints.map((h) => <li key={h}><Link className="hm-chip" href={shopHref(lang, paths.search(h))}>{h}</Link></li>)}
+            {hints.map((h) => <li key={h.text}><Link className="hm-chip" href={h.href ?? shopHref(lang, paths.search(h.text))}>{h.text}</Link></li>)}
           </ul>
         )}
       </section>
@@ -50,6 +52,8 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
 
   const r = (await resolveListing({ kind: "search", q }, c.menu))!;
   const data = await runListing(r, state, lang);
+  // запоминаем, что ищут покупатели (только первая страница без фильтров; сотрудников не считаем)
+  if (q && data && state.page === 1 && !hasFilters(state) && !state.sort) await logSearchSafely(q, data.result.total);
 
   return (
     <ProductListing
