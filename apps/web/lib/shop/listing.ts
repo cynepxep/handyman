@@ -120,7 +120,7 @@ export async function runListing(
     };
     const result = await searchProducts(params);
     if (opts.countOnly) return { result, cards: [], quick: null, parts: [] };
-    const cards = await toCards(result.items, lang, r.specs);
+    const cards = await toCards(result.items, lang);
     const q = pickQuickPick(r.quickPick, result.facets.attrs);
     const quick = q ? { key: q.key, label: q.label, values: sortFacetValues(q.key, q.values.map((v) => ({ value: v.value, count: v.count }))) } : null;
     return { result, cards, quick, parts: await listParts(r, result.categoryCounts, lang) };

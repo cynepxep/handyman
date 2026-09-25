@@ -5,13 +5,14 @@ import { cache } from "react";
 import { prisma } from "@handyman/db";
 import { searchProducts, SearchUnavailableError, type SearchItem } from "@handyman/db/catalog-search";
 import {
-  HIDDEN_CATEGORY_IDS, assignCategories, extractFacets, pickSpecs, slugOf, taskCategoryIds,
+  HIDDEN_CATEGORY_IDS, assignCategories, cardSpecTexts, planCardSpecs, readCardSpecs, slugOf, taskCategoryIds,
   type MenuConfig, type MenuGroup, type Spec, type Task,
 } from "@handyman/core/catalog";
 import { paths, shopHref, type ShopLang } from "@handyman/core/site";
 import { stockLevel } from "@handyman/core/shop";
+import { loadMenuConfig } from "@handyman/db/site-content";
 import type { CardData } from "@/components/shop/product-card";
-import { TAG_CATALOG, cached } from "./cache";
+import { TAG_CATALOG, TAG_SHOP, cached } from "./cache";
 
 /** Карточка товара для списка (с готовой ссылкой на страницу товара на языке сайта). */
 export type ShopCard = CardData & { specs: Spec[] };
@@ -61,11 +62,42 @@ export const getCategoryStats = cache(async () => {
   return { cats, byId, direct, chainOf };
 });
 
-/** Карточки для списка: название на языке сайта и до трёх характеристик (два запроса на весь список). */
-export async function toCards(items: SearchItem[], lang: ShopLang, specOrder?: string[]): Promise<ShopCard[]> {
+/**
+ * Какие характеристики показывать на карточках: для каждого подраздела меню — самые полезные по данным его товаров
+ * (planCardSpecs: есть у большинства, отличаются между товарами, по важности). Категория → ключи характеристик.
+ * Кэш 10 минут; сбрасывается при правке меню, товаров и после импорта.
+ */
+const loadCardSpecPlan = cached(
+  async (): Promise<Record<string, string[]>> => {
+    const [menu, cats, products] = await Promise.all([
+      loadMenuConfig(),
+      prisma.category.findMany({ select: { id: true, parentId: true } }),
+      prisma.product.findMany({ where: { visible: true }, select: { nameUk: true, categoryId: true, attributes: { select: { key: true, value: true } } } }),
+    ]);
+    const { subOf } = assignCategories(cats, menu.groups);
+    const byGroup = new Map<string, { cats: Set<string>; found: ReturnType<typeof readCardSpecs>[] }>();
+    for (const p of products) {
+      const key = subOf.get(p.categoryId) ?? `cat:${p.categoryId}`;
+      const g = byGroup.get(key) ?? byGroup.set(key, { cats: new Set(), found: [] }).get(key)!;
+      g.cats.add(p.categoryId);
+      g.found.push(readCardSpecs(p.attributes.map((a) => ({ name: a.key, value: a.value })), p.nameUk));
+    }
+    const plan: Record<string, string[]> = {};
+    for (const g of byGroup.values()) {
+      const keys = planCardSpecs(g.found);
+      for (const c of g.cats) plan[c] = keys;
+    }
+    return plan;
+  },
+  // номер в ключе — поменять при изменении правил в card-specs.ts, чтобы старый план не жил до 10 минут
+  "card-spec-plan-v2", [TAG_CATALOG, TAG_SHOP], 600,
+);
+
+/** Карточки для списка: название на языке сайта и до трёх самых нужных характеристик («18 В · 900 Вт · Безщітковий»). */
+export async function toCards(items: SearchItem[], lang: ShopLang): Promise<ShopCard[]> {
   const ids = items.map((i) => i.id);
-  const [{ chainOf }, rows] = await Promise.all([
-    getCategoryStats(),
+  const [plan, rows] = await Promise.all([
+    loadCardSpecPlan().catch(() => ({}) as Record<string, string[]>),
     ids.length ? prisma.productAttribute.findMany({ where: { productId: { in: ids } }, select: { productId: true, key: true, value: true }, orderBy: { sort: "asc" } }) : [],
   ]);
   const params = new Map<string, { name: string; value: string }[]>();
@@ -84,7 +116,7 @@ export async function toCards(items: SearchItem[], lang: ShopLang, specOrder?: s
     hit: i.hit === true,
     isNew: i.isNew === true,
     image: i.image,
-    specs: pickSpecs(extractFacets(params.get(i.id) ?? [], chainOf(i.categoryId)), specOrder),
+    specs: cardSpecTexts(readCardSpecs(params.get(i.id) ?? [], i.nameUk), plan[i.categoryId] ?? [], lang),
   }));
 }
 

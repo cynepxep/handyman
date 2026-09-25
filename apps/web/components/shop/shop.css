@@ -112,7 +112,7 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-price { font-family: var(--font-head); font-weight: 700; font-size: var(--fs-price); line-height: 1.1; white-space: nowrap; }
 .hm-price-old { color: var(--c-muted); font-size: .88rem; white-space: nowrap; }
 .hm-specs { display: flex; flex-wrap: wrap; gap: 4px; }
-.hm-specs li { background: var(--c-chip); border-radius: 6px; padding: 2px 8px; font-size: .78rem; line-height: 1.35; }
+.hm-specs li { background: var(--c-chip); border-radius: 8px; padding: 2px 8px; font-size: .78rem; line-height: 1.35; }
 
 /* ---------- поля ---------- */
 .hm-field { display: grid; gap: 4px; }
