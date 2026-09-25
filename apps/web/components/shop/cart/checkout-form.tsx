@@ -214,11 +214,15 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
                       <div className="hm-field">
                         <label htmlFor="co-city">{labels.city}</label>
                         <Combo
-                          id="co-city" value={city} maxLength={80} autoComplete="address-level2" placeholder={labels.cityPlaceholder}
+                          id="co-city" value={city} maxLength={80} autoComplete="address-level2" placeholder={labels.cityPlaceholder} picked={!!cityRef} autoPickOnBlur
                           labels={{ searching: labels.npSearching, none: labels.npNone }}
                           invalid={!!errors.city} describedBy={errors.city ? "e-city" : undefined}
                           onText={(v) => { setCity(v); setCityRef(""); setNpPointRef(""); }}
-                          onPick={(o) => { setCity(o.label); setCityRef(o.ref); setNpPoint(""); setNpPointRef(""); }}
+                          onPick={(o) => {
+                            setCity(o.label); setCityRef(o.ref); setNpPoint(""); setNpPointRef("");
+                            // сразу к отделению: поле откроет список отделений этого города
+                            if (npType !== "address") setTimeout(() => document.getElementById("co-point")?.focus(), 80);
+                          }}
                           load={async (q) => (await npCitiesAction(q))?.map((c) => ({ ref: c.ref, label: c.name })) ?? null}
                         />
                         {errText("city")}
@@ -228,11 +232,11 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
                         {npType !== "address" && cityRef ? (
                           <Combo
                             key={cityRef + npType}
-                            id="co-point" value={npPoint} minChars={0} placeholder={labels.pointPlaceholder}
+                            id="co-point" value={npPoint} minChars={0} placeholder={labels.pointPlaceholder} picked={!!npPointRef} inputMode="search"
                             labels={{ searching: labels.npSearching, none: labels.npNone }}
                             invalid={!!errors.npPoint} describedBy={errors.npPoint ? "e-npPoint" : undefined}
                             onText={(v) => { setNpPoint(v); setNpPointRef(""); }}
-                            onPick={(o) => { setNpPoint(o.label); setNpPointRef(o.ref); }}
+                            onPick={(o) => { setNpPoint(o.hint ? `${o.label}: ${o.hint}` : o.label); setNpPointRef(o.ref); }}
                             load={(q) => npPointsAction(cityRef, npType, q, lang)}
                           />
                         ) : (

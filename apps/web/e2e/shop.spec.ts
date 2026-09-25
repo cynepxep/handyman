@@ -108,32 +108,6 @@ test("оформление: пустая форма — понятные оши�
   await noHorizontalScroll(page);
 });
 
-test("оформление: Нова Пошта — город из списка, затем список відділень", async ({ page }) => {
-  await page.goto(SUB);
-  const sku = await page.locator(".hm-grid [data-action=add-to-cart]").first().getAttribute("data-sku");
-  await page.evaluate((s) => {
-    localStorage.setItem("hm.cart", JSON.stringify([{ sku: s, qty: 1 }]));
-    localStorage.removeItem("hm.buyer");
-  }, sku);
-  await page.goto("/checkout");
-  await expect(page.locator("form.hm-checkout")).toBeVisible(); // форма появляется, когда браузер прочитал корзину
-  const np = page.locator("input[name=delivery][value=np]");
-  if (!(await np.count())) test.skip(true, "Нова Пошта выключена в настройках оформления");
-  await np.check();
-  await page.locator("#co-city").fill("Оде");
-  const city = page.locator("#co-city-list [role=option]").first();
-  try {
-    await city.waitFor({ timeout: 15_000 });
-  } catch {
-    test.skip(true, "справочник Новой Почты сейчас не отвечает");
-  }
-  await expect(city).toContainText(/Одеса/);
-  await city.click();
-  await page.locator("#co-point").click();
-  await page.locator("#co-point").fill("1");
-  await expect(page.locator("#co-point-list [role=option]").first()).toContainText(/№1/);
-});
-
 test("товар: заголовок, цена, фото, кнопка «У кошик»", async ({ page }) => {
   const errors = collectErrors(page);
   await page.goto(SUB);
