@@ -13,6 +13,7 @@ import { reindexProducts, reindexSafely } from "./catalog-search";
 import { notifyManagers } from "./notify";
 import { npPointByRef } from "./novaposhta";
 import { photoStyleOn, pickImage } from "./photo-choice";
+import { recalcClient } from "./clients";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const money = (n: number) => `${n.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} ₴`;
@@ -356,12 +357,13 @@ async function returnOwnStock(tx: Prisma.TransactionClient, orderId: string): Pr
 export async function setOrderStatus(orderId: string, status: OrderStatus, who: string, note?: string): Promise<{ ok: boolean; error?: string }> {
   if (!ORDER_STATUSES.includes(status)) return { ok: false, error: "Неизвестный статус." };
   const changed = await prisma.$transaction(async (tx) => {
-    const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true } });
+    const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, clientId: true } });
     if (!o) return null;
     if (o.status === status && !note) return [];
     await tx.order.update({ where: { id: orderId }, data: { status } });
     await tx.orderHistory.create({ data: { orderId, text: `${o.status !== status ? `Статус: ${ORDER_STATUS_RU[status] ?? status}` : "Заметка"} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
     await tx.auditLog.create({ data: { who, action: "order.status", target: orderId, details: json({ from: o.status, to: status }) } });
+    if (o.status !== status && (o.status === "DONE" || status === "DONE")) await recalcClient(tx, o.clientId); // сумма покупок и уровень
     return status === "CANCELLED" || status === "RETURNED" ? returnOwnStock(tx, orderId) : [];
   });
   if (changed === null) return { ok: false, error: "Заказ не найден." };

@@ -46,6 +46,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           <h2 style={{ marginTop: 0 }}>Покупатель</h2>
           <p><b>{o.recipientName || o.client.name || "—"}</b></p>
           {o.recipientPhone && <p><a className="adm-link" href={`tel:${o.recipientPhone}`}>{formatPhone(o.recipientPhone)}</a></p>}
+          {session.permissions.includes("clients.view") && (
+            <p><Link className="adm-link" href={`/admin/clients/${o.client.id}`}>Карточка клиента →</Link>{o.client.note ? <span className="adm-muted"> · 📝 {o.client.note}</span> : null}</p>
+          )}
           {o.noCallback ? <p><span className="adm-chip warn">просит не звонить для уточнения</span></p> : <p className="adm-muted">Можно звонить для уточнения.</p>}
           {o.comment && <p>Комментарий: <i>{o.comment}</i></p>}
         </section>

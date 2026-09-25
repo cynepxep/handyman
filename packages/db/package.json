@@ -11,6 +11,7 @@
     "./catalog-search": "./src/catalog-search.ts",
     "./site-content": "./src/site-content.ts",
     "./orders": "./src/orders.ts",
+    "./clients": "./src/clients.ts",
     "./search-stats": "./src/search-stats.ts",
     "./warehouses": "./src/warehouses.ts",
     "./novaposhta": "./src/novaposhta.ts",
