@@ -12,6 +12,7 @@ import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
 import { reindexProducts, reindexSafely } from "./catalog-search";
 import { notifyManagers } from "./notify";
 import { npPointByRef } from "./novaposhta";
+import { photoStyleOn, pickImage } from "./photo-choice";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const money = (n: number) => `${n.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} ₴`;
@@ -90,11 +91,11 @@ export async function quoteCart(rawItems: unknown): Promise<{ lines: QuoteLine[]
     where: { sku: { in: items.map((i) => i.sku) }, visible: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS } },
     select: {
       id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, supplierAvailable: true,
-      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true } },
+      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } },
     },
   });
   const bySku = new Map(rows.map((r) => [r.sku, r]));
-  const own = await ownStockOf(rows.map((r) => r.id));
+  const [own, styleOn] = await Promise.all([ownStockOf(rows.map((r) => r.id)), photoStyleOn()]);
   const lines: QuoteLine[] = [];
   const missing: string[] = [];
   for (const it of items) {
@@ -107,7 +108,7 @@ export async function quoteCart(rawItems: unknown): Promise<{ lines: QuoteLine[]
     const old = r.oldPrice?.toNumber() ?? null;
     lines.push({
       productId: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, price, oldPrice: old && old > price ? old : null,
-      image: r.images[0] ? (r.images[0].localUrl ?? r.images[0].url) : null, stock: stockLevel(own.get(r.id) ?? 0, r.supplierAvailable), qty: it.qty,
+      image: r.images[0] ? pickImage(r.images[0], styleOn) : null, stock: stockLevel(own.get(r.id) ?? 0, r.supplierAvailable), qty: it.qty,
     });
   }
   return { lines, missing };

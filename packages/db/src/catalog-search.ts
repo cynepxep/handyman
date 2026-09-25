@@ -4,6 +4,7 @@
 
 import { prisma } from "./client";
 import { loadMenuConfig } from "./site-content";
+import { photoStyleOn, pickImage } from "./photo-choice";
 import {
   FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, menuRanks, sortFacetValues, synonymMap,
 } from "@handyman/core/catalog";
@@ -116,6 +117,7 @@ async function loadRanks(cats: Map<string, CatRow>) {
 async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs: SearchDoc[]; hiddenIds: string[] }> {
   const cats = await loadCatMap();
   const ranks = await loadRanks(cats);
+  const styleOn = await photoStyleOn();
   const docs: SearchDoc[] = [];
   const hiddenIds: string[] = [];
   let cursor: string | undefined;
@@ -127,7 +129,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
       ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
       include: {
         brand: { select: { name: true } },
-        images: { orderBy: { sort: "asc" }, take: 1, select: { url: true, localUrl: true } },
+        images: { orderBy: { sort: "asc" }, take: 1, select: { url: true, localUrl: true, styledUrl: true } },
         attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
         stockItems: { select: { onHand: true } },
       },
@@ -157,7 +159,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         hit: r.isHit,
         isNew: r.isNew,
         menuRank: ranks.get(r.categoryId) ?? NO_RANK,
-        image: r.images[0] ? (r.images[0].localUrl ?? r.images[0].url) : null, // своя копия, если уже скачана
+        image: r.images[0] ? pickImage(r.images[0], styleOn) : null, // фирменный стиль / своя копия / фото поставщика
         descText: htmlToText(r.descUk).slice(0, 400),
         createdTs: r.createdAt.getTime(),
       };
@@ -222,6 +224,7 @@ export async function reindexProducts(ids: string[]): Promise<void> {
 export async function updateMenuRanks(): Promise<{ updated: number }> {
   const cats = await loadCatMap();
   const ranks = await loadRanks(cats);
+  const styleOn = await photoStyleOn();
   const rows = await prisma.product.findMany({ where: { visible: true, categoryId: { not: UNSORTED_ID } }, select: { id: true, categoryId: true } });
   const uid = indexUid();
   const docs = rows.map((r) => ({ id: r.id, menuRank: ranks.get(r.categoryId) ?? NO_RANK }));

@@ -2,6 +2,7 @@
 import "server-only";
 import { cache } from "react";
 import { prisma } from "@handyman/db";
+import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import { searchProducts, SearchUnavailableError } from "@handyman/db/catalog-search";
 import { HIDDEN_CATEGORY_IDS, menuPlaceOf, sanitizeHtml, type MenuConfig } from "@handyman/core/catalog";
 import type { ShopLang } from "@handyman/core/site";
@@ -13,13 +14,14 @@ export const loadProduct = cache(async (sku: string) => {
   const p = await prisma.product.findUnique({
     where: { sku },
     include: {
-      images: { orderBy: { sort: "asc" }, select: { url: true, localUrl: true } },
+      images: { orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } },
       attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
       brand: { select: { name: true } },
       stockItems: { select: { onHand: true } },
     },
   });
   if (!p || !p.visible || HIDDEN_CATEGORY_IDS.includes(p.categoryId)) return null;
+  const styleOn = await photoStyleOn();
   const price = p.price.toNumber();
   const old = p.oldPrice?.toNumber() ?? null;
   return {
@@ -37,7 +39,7 @@ export const loadProduct = cache(async (sku: string) => {
     stock: stockLevel(p.stockItems.reduce((a, x) => a + x.onHand, 0), p.supplierAvailable),
     brand: p.brand?.name ?? null,
     categoryId: p.categoryId,
-    images: p.images.map((i) => i.localUrl ?? i.url), // своя копия, если уже скачана
+    images: p.images.map((i) => pickImage(i, styleOn)), // фирменный стиль / своя копия / фото поставщика
     attributes: p.attributes.map((a) => ({ name: a.key.trim(), value: a.value.trim() })).filter((a) => a.name && a.value),
   };
 });

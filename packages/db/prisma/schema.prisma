@@ -221,6 +221,10 @@ model ProductImage {
   localBytes Int?
   localAt    DateTime?
   localError String? // почему не удалось скачать (для повторной попытки)
+  // фото в фирменном стиле (светлый фон, товар «парит»): «/media/s1/ab/<sha1>.webp»; показывается, если стиль включён в «Фото товаров»
+  styledUrl   String?
+  styledAt    DateTime?
+  styledError String?
 
   @@index([productId])
   @@index([localUrl])
@@ -230,6 +234,7 @@ model ProductImage {
 model MediaSyncRun {
   id            String    @id @default(cuid())
   supplierId    String? // null — товары без поставщика
+  kind          String    @default("download") // download — скачать к себе; style — сделать фирменный стиль
   status        String    @default("running") // running | done | stopped | failed
   total         Int       @default(0)
   done          Int       @default(0)

@@ -10,7 +10,9 @@ import { readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import sharp from "sharp";
 import { prisma } from "./client";
-import { reindexProducts, reindexSafely } from "./catalog-search";
+import { reindexAll, reindexProducts, reindexSafely } from "./catalog-search";
+import { STYLE_VERSION, renderStyled } from "./photo-style";
+import { STYLE_SETTING_KEY, rememberPhotoStyle } from "./photo-choice";
 
 // ---------- где лежат файлы ----------
 
@@ -38,12 +40,21 @@ export function localUrlFor(sourceUrl: string): string {
   return `${PUBLIC_PREFIX}${h.slice(0, 2)}/${h}.webp`;
 }
 
-const SAFE = /^\/media\/([0-9a-f]{2})\/([0-9a-f]{40})\.webp$/;
+/** /media/ab/<sha1>.webp — своя копия; /media/s1/ab/<sha1>.webp — она же в фирменном стиле (версия 1). */
+const SAFE = /^\/media\/(?:(s\d{1,3})\/)?([0-9a-f]{2})\/([0-9a-f]{40})\.webp$/;
 /** Путь к файлу на диске по адресу /media/…; чужой или кривой адрес — null (защита от «../»). */
 export function mediaFilePath(localUrl: string): string | null {
   const m = SAFE.exec(localUrl);
-  if (!m || !m[2].startsWith(m[1])) return null;
-  return join(/*turbopackIgnore: true*/ mediaDir(), m[1], `${m[2]}.webp`);
+  if (!m || !m[3].startsWith(m[2])) return null;
+  return m[1]
+    ? join(/*turbopackIgnore: true*/ mediaDir(), m[1], m[2], `${m[3]}.webp`)
+    : join(/*turbopackIgnore: true*/ mediaDir(), m[2], `${m[3]}.webp`);
+}
+
+/** Адрес фото в фирменном стиле (текущая версия стиля) по адресу фото у поставщика. */
+export function styledUrlFor(sourceUrl: string): string {
+  const h = createHash("sha1").update(sourceUrl.trim()).digest("hex");
+  return `${PUBLIC_PREFIX}s${STYLE_VERSION}/${h.slice(0, 2)}/${h}.webp`;
 }
 
 /** Файл для отдачи сайтом (маршрут /media/…). */
@@ -64,10 +75,34 @@ export function existingLocalUrl(sourceUrl: string): string | null {
   return p && existsSync(/*turbopackIgnore: true*/ p) ? u : null;
 }
 
-/** Строки фото для импорта: сразу с адресом своей копии, если файл уже есть. */
-export function imageRows(urls: string[]): Array<{ url: string; sort: number; localUrl: string | null }> {
-  return urls.map((url, sort) => ({ url, sort, localUrl: existingLocalUrl(url) }));
+/** Фото в фирменном стиле уже сделано (текущей версии) — его адрес, иначе null. */
+export function existingStyledUrl(sourceUrl: string): string | null {
+  const u = styledUrlFor(sourceUrl);
+  const p = mediaFilePath(u);
+  return p && existsSync(/*turbopackIgnore: true*/ p) ? u : null;
 }
+
+/** Строки фото для импорта: сразу с адресами своей копии и фирменного стиля, если файлы уже есть. */
+export function imageRows(urls: string[]): Array<{ url: string; sort: number; localUrl: string | null; styledUrl: string | null }> {
+  return urls.map((url, sort) => ({ url, sort, localUrl: existingLocalUrl(url), styledUrl: existingStyledUrl(url) }));
+}
+
+// ---------- какое фото показывать ----------
+
+export { photoStyleOn, pickImage } from "./photo-choice";
+import { photoStyleOn } from "./photo-choice";
+
+/** Включить/выключить фирменный стиль на сайте; поиск пересобирается (в нём адрес первого фото карточки). */
+export async function setPhotoStyle(on: boolean, who: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.setting.upsert({ where: { key: STYLE_SETTING_KEY }, update: { value: { on } }, create: { key: STYLE_SETTING_KEY, value: { on } } }),
+    prisma.auditLog.create({ data: { who, action: on ? "media.style.on" : "media.style.off" } }),
+  ]);
+  rememberPhotoStyle(on);
+  await reindexSafely(() => reindexAll());
+}
+
+
 
 // ---------- скачивание и уменьшение ----------
 
@@ -119,6 +154,25 @@ export async function storeImage(sourceUrl: string): Promise<{ ok: true; localUr
   return { ok: true, localUrl, bytes: out.length };
 }
 
+/** Сделать фото в фирменном стиле из своей копии. Возвращает адрес или понятную ошибку. */
+export async function storeStyled(img: { url: string; localUrl: string | null }): Promise<{ ok: true; styledUrl: string; bytes: number; cut: boolean } | { ok: false; error: string }> {
+  const styledUrl = styledUrlFor(img.url);
+  const path = mediaFilePath(styledUrl)!;
+  if (existsSync(/*turbopackIgnore: true*/ path)) return { ok: true, styledUrl, bytes: statSync(/*turbopackIgnore: true*/ path).size, cut: true };
+  const src = img.localUrl ? mediaFilePath(img.localUrl) : null;
+  if (!src) return { ok: false, error: "нет своей копии — сначала скачайте фото" };
+  try {
+    const { webp, cut } = await renderStyled(await readFile(/*turbopackIgnore: true*/ src));
+    mkdirSync(/*turbopackIgnore: true*/ dirname(path), { recursive: true });
+    const tmp = `${path}.${process.pid}.tmp`;
+    await writeFile(/*turbopackIgnore: true*/ tmp, webp);
+    await rename(/*turbopackIgnore: true*/ tmp, path);
+    return { ok: true, styledUrl, bytes: webp.length, cut };
+  } catch (e) {
+    return { ok: false, error: `не удалось обработать: ${e instanceof Error ? e.message.slice(0, 80) : "ошибка"}` };
+  }
+}
+
 // ---------- фоновое скачивание по поставщику ----------
 
 export type MediaScope = { supplierId: string | null };
@@ -132,14 +186,18 @@ export function setMediaBatchSize(n: number) {
 
 const supplierWhere = (supplierId: string | null) => ({ product: { supplierId } });
 
-/** Сколько фото у поставщика: всего, уже у нас, ошибок, объём своих копий. */
+/** Сколько фото у поставщика: всего, уже у нас, ошибок, объём своих копий, сколько в фирменном стиле (текущей версии). */
 export async function mediaStats() {
-  const rows = await prisma.$queryRaw<Array<{ supplierId: string | null; total: bigint; local: bigint; errors: bigint; bytes: bigint | null }>>`
+  const prefix = `/media/s${STYLE_VERSION}/%`;
+  const rows = await prisma.$queryRaw<Array<{ supplierId: string | null; total: bigint; local: bigint; errors: bigint; bytes: bigint | null; styled: bigint }>>`
     SELECT p."supplierId", COUNT(*) AS total, COUNT(i."localUrl") AS local,
-      COUNT(*) FILTER (WHERE i."localUrl" IS NULL AND i."localError" IS NOT NULL) AS errors, SUM(i."localBytes") AS bytes
+      COUNT(*) FILTER (WHERE i."localUrl" IS NULL AND i."localError" IS NOT NULL) AS errors, SUM(i."localBytes") AS bytes,
+      COUNT(*) FILTER (WHERE i."styledUrl" LIKE ${prefix}) AS styled
     FROM "ProductImage" i JOIN "Product" p ON p.id = i."productId"
     GROUP BY p."supplierId"`;
-  return rows.map((r) => ({ supplierId: r.supplierId, total: Number(r.total), local: Number(r.local), errors: Number(r.errors), bytes: Number(r.bytes ?? 0) }));
+  return rows.map((r) => ({
+    supplierId: r.supplierId, total: Number(r.total), local: Number(r.local), errors: Number(r.errors), bytes: Number(r.bytes ?? 0), styled: Number(r.styled),
+  }));
 }
 
 /** Последний запуск по каждому поставщику; «running», который сейчас не идёт (сервер перезапускали), помечается «прервано». */
@@ -147,7 +205,7 @@ export async function lastRuns() {
   const runs = await prisma.mediaSyncRun.findMany({ orderBy: { startedAt: "desc" }, take: 200 });
   const seen = new Map<string, (typeof runs)[number] & { interrupted: boolean }>();
   for (const r of runs) {
-    const key = r.supplierId ?? "";
+    const key = `${r.supplierId ?? ""}|${r.kind}`; // последний запуск каждого вида: download / style
     if (!seen.has(key)) seen.set(key, { ...r, interrupted: r.status === "running" && !active.has(r.id) });
   }
   return seen;
@@ -158,14 +216,34 @@ export async function lastRuns() {
  * Уже идёт — вернёт тот же запуск. Возвращает id запуска.
  */
 export async function startMediaSync(scope: MediaScope, who: string, opts: { onlyNew?: boolean } = {}): Promise<{ runId: string; total: number }> {
-  const running = await prisma.mediaSyncRun.findFirst({ where: { supplierId: scope.supplierId, status: "running", id: { in: [...active] } } });
-  if (running) return { runId: running.id, total: running.total };
   const where = { localUrl: null, ...supplierWhere(scope.supplierId), ...(opts.onlyNew ? { localError: null } : {}) };
-  const total = await prisma.productImage.count({ where });
-  const run = await prisma.mediaSyncRun.create({ data: { supplierId: scope.supplierId, who, total, status: total ? "running" : "done", finishedAt: total ? null : new Date() } });
+  return startJob("download", scope, who, where);
+}
+
+/**
+ * Сделать фото поставщика в фирменном стиле (из своих копий; только те, у кого стиля текущей версии ещё нет). В фоне, как скачивание.
+ * `limit` — только первые N (проба на нескольких товарах).
+ */
+export async function startPhotoStyle(scope: MediaScope, who: string, opts: { limit?: number; onlyNew?: boolean } = {}): Promise<{ runId: string; total: number }> {
+  const where = {
+    localUrl: { not: null }, ...supplierWhere(scope.supplierId),
+    OR: [{ styledUrl: null }, { NOT: { styledUrl: { startsWith: `/media/s${STYLE_VERSION}/` } } }],
+    ...(opts.onlyNew ? { styledError: null } : {}),
+  };
+  return startJob("style", scope, who, where, opts.limit);
+}
+
+type JobKind = "download" | "style";
+
+async function startJob(kind: JobKind, scope: MediaScope, who: string, where: object, limit?: number): Promise<{ runId: string; total: number }> {
+  const running = await prisma.mediaSyncRun.findFirst({ where: { supplierId: scope.supplierId, kind, status: "running", id: { in: [...active] } } });
+  if (running) return { runId: running.id, total: running.total };
+  const count = await prisma.productImage.count({ where });
+  const total = limit ? Math.min(limit, count) : count;
+  const run = await prisma.mediaSyncRun.create({ data: { supplierId: scope.supplierId, kind, who, total, status: total ? "running" : "done", finishedAt: total ? null : new Date() } });
   if (!total) return { runId: run.id, total };
   active.add(run.id);
-  void runSync(run.id, where).catch(async (e) => {
+  void runSync(run.id, where, kind, total).catch(async (e) => {
     console.error("[media] скачивание фото прервано:", e);
     await prisma.mediaSyncRun.update({ where: { id: run.id }, data: { status: "failed", error: String(e instanceof Error ? e.message : e).slice(0, 300), finishedAt: new Date() } }).catch(() => {});
   }).finally(() => active.delete(run.id));
@@ -180,7 +258,7 @@ export async function stopMediaSync(runId: string): Promise<void> {
 /** Столько неудач подряд — считаем, что сайт поставщика не работает, и останавливаемся (иначе часы впустую по 30 с на фото). */
 export const GIVE_UP_STREAK = 20;
 
-async function runSync(runId: string, where: object): Promise<void> {
+async function runSync(runId: string, where: object, kind: JobKind, limit: number): Promise<void> {
   let done = 0, failed = 0, savedKb = 0, streak = 0;
   let gaveUp = false;
   const touched = new Set<string>();
@@ -191,19 +269,27 @@ async function runSync(runId: string, where: object): Promise<void> {
     // и cursor со skip: 1 пропускал бы по одному фото на каждую пачку
     const batch = await prisma.productImage.findMany({
       where: { ...where, ...(cursor ? { id: { gt: cursor } } : {}) },
-      orderBy: { id: "asc" }, take: batchSize, select: { id: true, url: true, productId: true, sort: true },
+      orderBy: { id: "asc" }, take: batchSize, select: { id: true, url: true, localUrl: true, productId: true, sort: true },
     });
-    if (!batch.length) break;
+    if (!batch.length || done + failed >= limit) break;
     cursor = batch[batch.length - 1].id;
     for (let i = 0; i < batch.length; i += CONCURRENCY) {
       if (await stopAsked()) break outer;
-      const part = batch.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(part.map((img) => storeImage(img.url)));
+      if (done + failed >= limit) break outer;
+      const part = batch.slice(i, Math.min(i + CONCURRENCY, i + limit - done - failed));
+      const results = kind === "download"
+        ? await Promise.all(part.map((img) => storeImage(img.url)))
+        : await Promise.all(part.map((img) => storeStyled(img)));
       await prisma.$transaction(part.map((img, k) => {
         const r = results[k];
-        return r.ok
+        if (kind === "style") {
+          return r.ok && "styledUrl" in r
+            ? prisma.productImage.update({ where: { id: img.id }, data: { styledUrl: r.styledUrl, styledAt: new Date(), styledError: null } })
+            : prisma.productImage.update({ where: { id: img.id }, data: { styledError: (r.ok ? "" : r.error).slice(0, 200) } });
+        }
+        return r.ok && "localUrl" in r
           ? prisma.productImage.update({ where: { id: img.id }, data: { localUrl: r.localUrl, localBytes: r.bytes, localAt: new Date(), localError: null } })
-          : prisma.productImage.update({ where: { id: img.id }, data: { localError: r.error.slice(0, 200) } });
+          : prisma.productImage.update({ where: { id: img.id }, data: { localError: (r.ok ? "" : r.error).slice(0, 200) } });
       }));
       part.forEach((img, k) => {
         const r = results[k];
@@ -218,7 +304,7 @@ async function runSync(runId: string, where: object): Promise<void> {
         }
       });
       await prisma.mediaSyncRun.update({ where: { id: runId }, data: { done, failed, savedKb } });
-      if (streak >= GIVE_UP_STREAK) {
+      if (kind === "download" && streak >= GIVE_UP_STREAK) {
         gaveUp = true;
         break outer;
       }
@@ -235,6 +321,11 @@ async function runSync(runId: string, where: object): Promise<void> {
   // карточки в поиске показывают первое фото — обновить у них адрес на свою копию
   const ids = [...touched];
   for (let i = 0; i < ids.length; i += 200) await reindexSafely(() => reindexProducts(ids.slice(i, i + 200)));
+  // скачали новые фото, а фирменный стиль на сайте включён — сразу сделать им стиль
+  if (kind === "download" && done > 0 && (await photoStyleOn())) {
+    const run = await prisma.mediaSyncRun.findUnique({ where: { id: runId }, select: { supplierId: true, who: true } });
+    if (run) await startPhotoStyle({ supplierId: run.supplierId }, run.who, { onlyNew: true }).catch((e) => console.error("[media] стиль после скачивания", e));
+  }
 }
 
 /** Ход запуска для полоски в админке. */
