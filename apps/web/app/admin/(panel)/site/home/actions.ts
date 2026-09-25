@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { validateHomeForm } from "@handyman/core/site";
 import { saveHomeSettings } from "@handyman/db/site-content";
 import { requirePermission } from "@/lib/auth";
+import { shopChanged } from "@/lib/shop/cache";
 
 const back = (kind: "ok" | "error", text: string) => `/admin/site/home?${kind}=${encodeURIComponent(text)}`;
 
@@ -16,6 +16,6 @@ export async function saveHomeAction(formData: FormData): Promise<void> {
   const r = validateHomeForm(input);
   if (!r.ok) redirect(back("error", r.error));
   await saveHomeSettings(r.value, session.username);
-  revalidatePath("/", "layout");
+  shopChanged();
   redirect(back("ok", "Главная сохранена — на сайте уже так."));
 }

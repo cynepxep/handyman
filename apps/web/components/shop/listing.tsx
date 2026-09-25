@@ -169,6 +169,8 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
             </div>
           ) : (
             <>
+              {/* заголовок для экранного диктора: названия товаров в карточках — h3, им нужен h2 выше */}
+              <h2 className="hm-vh">{goods(result.total)}</h2>
               <ul className="hm-grid">
                 {cards.map((card, i) => <li key={card.id}><ProductCard card={card} labels={cl} priority={i < 2} /></li>)}
               </ul>

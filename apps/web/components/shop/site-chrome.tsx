@@ -56,9 +56,10 @@ export async function SiteHeader({ c }: { c: ShopContent }) {
         </div>
       </div>
       <div className="hm-headrow">
-        <Link className="hm-logo" href={shopHref(lang, paths.home())} aria-label={`${t("meta.siteName")} — ${t("header.home")}`}>
+        <Link className="hm-logo" href={shopHref(lang, paths.home())}>
           <span className="hm-logo-mark" aria-hidden="true">H</span>
-          <span aria-hidden="true">{t("meta.siteName")}</span>
+          <span>{t("meta.siteName")}</span>
+          <span className="hm-vh"> — {t("header.home")}</span>
         </Link>
         <Link className={`${btn("primary")} hm-catalog-btn`} href={shopHref(lang, paths.catalog())}>
           <Icon name="menu" size={20} />

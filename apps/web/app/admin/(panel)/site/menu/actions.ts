@@ -1,7 +1,6 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { loadMenuConfig, resetMenuConfig, saveMenuConfig } from "@handyman/db/site-content";
 import { reindexSafely, updateMenuRanks } from "@handyman/db/catalog-search";
 import {
@@ -9,6 +8,7 @@ import {
   type MenuConfig,
 } from "@handyman/core/catalog";
 import { requirePermission } from "@/lib/auth";
+import { shopChanged } from "@/lib/shop/cache";
 
 const S = (f: FormData, k: string) => String(f.get(k) ?? "");
 
@@ -40,7 +40,7 @@ async function run(formData: FormData, change: (cfg: MenuConfig, f: FormData) =>
   if (r.error) redirect(back("error", r.error, r.anchor));
   await saveMenuConfig(r.cfg, session.username);
   await reindexSafely(updateMenuRanks); // порядок товаров «как в меню»
-  revalidatePath("/", "layout");
+  shopChanged();
   redirect(back("ok", r.message, r.anchor));
 }
 
@@ -189,6 +189,6 @@ export async function resetMenuAction(formData: FormData): Promise<void> {
   if (formData.get("confirm") !== "on") redirect(back("error", "Поставьте галочку, чтобы подтвердить возврат стандартного меню."));
   await resetMenuConfig(session.username);
   await reindexSafely(updateMenuRanks);
-  revalidatePath("/", "layout");
+  shopChanged();
   redirect(back("ok", "Меню и задачи возвращены к стандартным."));
 }

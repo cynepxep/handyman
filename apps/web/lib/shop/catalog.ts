@@ -11,6 +11,7 @@ import {
 import { paths, shopHref, type ShopLang } from "@handyman/core/site";
 import { stockLevel } from "@handyman/core/shop";
 import type { CardData } from "@/components/shop/product-card";
+import { TAG_CATALOG, cached } from "./cache";
 
 /** Карточка товара для списка (с готовой ссылкой на страницу товара на языке сайта). */
 export type ShopCard = CardData & { specs: Spec[] };
@@ -24,13 +25,33 @@ export const BATTERY_CATEGORY_ID = "ak";
 const discountPct = (price: number, old: number | null) => (old && old > price ? Math.round((1 - price / old) * 100) : 0);
 
 /** Дерево категорий и число товаров прямо в каждой — одним заходом на запрос. */
+/** Категории и число товаров в каждой — в кэше между запросами (сброс при правке товаров/категорий, страховка — 5 минут: импорт). */
+const loadCategoryRows = cached(
+  async () => {
+    const [cats, counts] = await Promise.all([
+      prisma.category.findMany({ select: { id: true, nameUk: true, nameRu: true, parentId: true } }),
+      prisma.product.groupBy({ by: ["categoryId"], where: { visible: true }, _count: { _all: true } }),
+    ]);
+    return { cats, counts: counts.map((c) => ({ categoryId: c.categoryId, n: c._count._all })) };
+  },
+  "category-rows", [TAG_CATALOG], 300,
+);
+
+/** Фото для плиток разделов: самый дорогой товар в наличии с фото в каждой категории (кэш как у счётчиков). */
+const loadCategoryTops = cached(
+  () => prisma.$queryRaw<Array<{ categoryId: string; price: number; url: string }>>`
+    SELECT DISTINCT ON (p."categoryId") p."categoryId", p.price::float8 AS price,
+      (SELECT i.url FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.sort LIMIT 1) AS url
+    FROM "Product" p
+    WHERE p.visible AND p."supplierAvailable" AND EXISTS (SELECT 1 FROM "ProductImage" i WHERE i."productId" = p.id)
+    ORDER BY p."categoryId", p.price DESC`,
+  "category-tops", [TAG_CATALOG], 300,
+);
+
 export const getCategoryStats = cache(async () => {
-  const [cats, counts] = await Promise.all([
-    prisma.category.findMany({ select: { id: true, nameUk: true, nameRu: true, parentId: true } }),
-    prisma.product.groupBy({ by: ["categoryId"], where: { visible: true }, _count: { _all: true } }),
-  ]);
+  const { cats, counts } = await loadCategoryRows();
   const byId = new Map(cats.map((c) => [c.id, c]));
-  const direct = new Map(counts.map((c) => [c.categoryId, c._count._all]));
+  const direct = new Map(counts.map((c) => [c.categoryId, c.n]));
   /** Цепочка названий категорий сверху вниз (из неё берётся серия батареи для характеристик). */
   const chainOf = (id: string): string[] => {
     const out: string[] = [];
@@ -71,12 +92,7 @@ export async function toCards(items: SearchItem[], lang: ShopLang, specOrder?: s
 export async function getMenuView(menu: MenuConfig) {
   const { cats, direct } = await getCategoryStats();
   const { subOf, conflicts, missing } = assignCategories(cats, menu.groups);
-  const tops = await prisma.$queryRaw<Array<{ categoryId: string; price: number; url: string }>>`
-    SELECT DISTINCT ON (p."categoryId") p."categoryId", p.price::float8 AS price,
-      (SELECT i.url FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.sort LIMIT 1) AS url
-    FROM "Product" p
-    WHERE p.visible AND p."supplierAvailable" AND EXISTS (SELECT 1 FROM "ProductImage" i WHERE i."productId" = p.id)
-    ORDER BY p."categoryId", p.price DESC`;
+  const tops = await loadCategoryTops();
   const topOf = new Map(tops.map((t) => [t.categoryId, t]));
 
   const subTotal = new Map<string, number>();

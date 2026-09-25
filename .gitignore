@@ -16,3 +16,7 @@ dist/
 *.tsbuildinfo
 next-env.d.ts
 Thumbs.db
+
+# тесты в браузере (Playwright)
+test-results/
+playwright-report/

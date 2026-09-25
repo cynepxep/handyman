@@ -13,8 +13,12 @@ import { TextEditor } from "@/components/shop/text-editor";
 import { getStaffSession } from "@/lib/auth";
 import "@/components/shop/shop.css";
 
-const robotoC = Roboto_Condensed({ variable: "--f-robotoc", subsets: ["latin", "cyrillic"], weight: ["400", "600", "700"] });
-const roboto = Roboto({ variable: "--f-roboto", subsets: ["latin", "cyrillic"], weight: ["400", "500", "700"] });
+// Переменные шрифты (все начертания в одном файле): вместо 10 файлов ~330 КБ — 4 (кириллица и латиница: цифры цен — в латинице).
+// display "optional": текст не перерисовывается, когда шрифт догрузился (главная задержка LCP на телефоне); если шрифт не успел
+// за ~0,1 с — страница показывается системным шрифтом, а следующие — уже Roboto. Поэтому и adjustFontFallback не нужен
+// (он подгоняет запасной шрифт под размер Roboto для момента замены и ищет Arial через local() — это медленно).
+const robotoC = Roboto_Condensed({ variable: "--f-robotoc", subsets: ["cyrillic", "latin"], display: "optional", adjustFontFallback: false });
+const roboto = Roboto({ variable: "--f-roboto", subsets: ["cyrillic", "latin"], display: "optional", adjustFontFallback: false });
 
 // Цены и наличие меняются после каждого импорта: пока показываем свежие данные на каждый запрос.
 // Кэширование страниц — в шаге 2.8 вместе с замером скорости.

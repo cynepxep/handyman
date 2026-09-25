@@ -1,10 +1,10 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { saveTextEdits, type TextEdit } from "@handyman/db/site-content";
 import type { Lang } from "@handyman/core/site";
 import { requirePermission } from "@/lib/auth";
+import { shopChanged } from "@/lib/shop/cache";
 
 const msg = (kind: "ok" | "error", text: string, group: string) =>
   `/admin/site/texts?${kind}=${encodeURIComponent(text)}${group ? `&group=${encodeURIComponent(group)}` : ""}`;
@@ -24,6 +24,6 @@ export async function saveTextsAction(formData: FormData): Promise<void> {
   }
   const result = await saveTextEdits(edits, session.username);
   if (!result.ok) redirect(msg("error", result.error, group));
-  revalidatePath("/", "layout");
+  shopChanged();
   redirect(msg("ok", reset ? "Стандартный текст возвращён." : `Тексты группы «${group}» сохранены.`, group));
 }

@@ -7,6 +7,7 @@ import { reindexProducts, reindexSafely } from "@handyman/db/catalog-search";
 import { setStockLevels, stockByWarehouse } from "@handyman/db/warehouses";
 import { requirePermission } from "@/lib/auth";
 import { parseMoney } from "@/lib/catalog";
+import { catalogChanged } from "@/lib/shop/cache";
 
 const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
 
@@ -15,6 +16,7 @@ async function run(page: string, fn: () => Promise<string>): Promise<never> {
   let kind: "ok" | "error" = "ok";
   try {
     message = await fn();
+    catalogChanged(); // видимость, категория, остатки — счётчики разделов на сайте
   } catch (e) {
     kind = "error";
     message = e instanceof ProductUserError ? e.message : `Непредвиденная ошибка: ${e instanceof Error ? e.message : String(e)}`;

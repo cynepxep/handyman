@@ -47,7 +47,9 @@
   и чипы частей подраздела (`?part=`); Viber/Telegram из номера/@имени; график выбором (`packages/core/src/site/schedule.ts`); **«Магазины и склады»**
   (`/admin/warehouses`, `packages/db/src/warehouses.ts`: точки самовывоза, остатки по точкам); **Нова Пошта** в оформлении (`packages/db/src/novaposhta.ts`,
   список городов и отделений, кэш на сутки, в тестах — `setNovaPoshtaFetch`).
-Дальше: **2.8** (тесты в браузере, кэширование, Lighthouse, проверка на телефоне). Подробности — `docs/CHANGELOG.md`.
+- **Шаг 2.8**: кэш данных (`lib/shop/cache.ts`, сброс `shopChanged()`/`catalogChanged()` в действиях админки), шрифты легче, тесты в браузере (`apps/web/e2e/`),
+  замер Lighthouse (как повторить — ниже в «Ловушках»).
+Дальше: проверка владельцем на телефоне; затем Этап 3 (оплата, KeyCRM, ТТН Новой Почты) или свои копии фото (Т1). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -94,6 +96,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
+| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 10 сценариев витрины; сайт на :3100 должен работать (или запустится сам). Заказы не создают |
 | `pnpm test` | 151 проверка (core 106 + интеграционные db 45). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
@@ -175,8 +178,14 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
   или сразу Edit.
 - `preview_start` в этой сессии может взять `launch.json` **старого** проекта (порт 3000, `..\handyman`) — сразу останови. Сайт новой версии: `pnpm --filter web dev --port 3100`
   в фоне; перед миграцией останови его (Prisma на Windows не перезапишет занятый файл движка).
+- **Кэш витрины** (шаг 2.8): новое действие админки, после которого что-то меняется на сайте, обязано вызвать `shopChanged()` (контент) или
+  `catalogChanged()` (товары/категории) из `@/lib/shop/cache` — иначе владелец увидит изменения только через 5–60 минут. В `cached()` результат хранится как JSON:
+  без `Map`/`Date`/`Decimal`. Цены и наличие не кэшировать.
+- **Lighthouse**: только на рабочей сборке (`pnpm build`, затем в `apps/web`: `npx dotenv -e ../../.env -- npx next start -p 3200`),
+  `npx -y lighthouse@12 http://localhost:3200/ --chrome-flags="--headless=new"` (путь к Chrome — `CHROME_PATH`). Баллы на этом ПК «плавают» ±8,
+  первая раскладка медленная из-за шрифтов Windows — сравнивай с эталонной пустой страницей, а не с идеалом.
 - Сборщик стилей (Turbopack/Lightning CSS) не понимает `::highlight()` — такое правило задаётся в компоненте (`<style>`), не в `shop.css`.
-- Витрина: `export const dynamic = "force-dynamic"` в `app/[lang]/layout.tsx` (свежие цены после импорта); кэширование — шаг 2.8.
+- Витрина: `export const dynamic = "force-dynamic"` в `app/[lang]/layout.tsx` (свежие цены после импорта); кэшируются только данные (`lib/shop/cache.ts`).
 
 ## Карта репозитория
 

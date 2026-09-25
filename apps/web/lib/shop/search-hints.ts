@@ -8,13 +8,21 @@ import { loadHomeSettings } from "@handyman/db/site-content";
 import { orderedByCategory, topQueries } from "@handyman/db/search-stats";
 import { getCategoryStats } from "./catalog";
 import type { ShopContent } from "./content";
+import { TAG_CATALOG, TAG_SHOP, cached } from "./cache";
+
+/** Данные подсказок (настройки, частые запросы, заказы по категориям) — кэш на 10 минут, сброс при правке в админке. */
+const loadHintData = cached(
+  async () => {
+    const [home, popular, ordered] = await Promise.all([loadHomeSettings(), topQueries({ found: true, limit: 20 }), orderedByCategory(30)]);
+    return { hidden: home.hints.hidden, max: home.hints.max, popular: popular.map((q) => q.query), ordered: [...ordered.entries()] };
+  },
+  "search-hints", [TAG_SHOP, TAG_CATALOG], 600,
+);
 
 export const getSearchHints = cache(async (c: ShopContent): Promise<SearchHint[]> => {
   const pinned = c.t("home.hints").split(",").map((s) => s.trim()).filter(Boolean);
   try {
-    const [home, popular, ordered, { cats }] = await Promise.all([
-      loadHomeSettings(), topQueries({ found: true, limit: 20 }), orderedByCategory(30), getCategoryStats(),
-    ]);
+    const [{ hidden, max, popular, ordered }, { cats }] = await Promise.all([loadHintData(), getCategoryStats()]);
     // подразделы меню, из которых больше всего заказывали
     const { subOf } = assignCategories(cats, c.menu.groups);
     const bySub = new Map<string, number>();
@@ -30,7 +38,7 @@ export const getSearchHints = cache(async (c: ShopContent): Promise<SearchHint[]
         const sub = group?.subs.find((s) => s.id === subId);
         return group && sub ? [{ text: c.pick(sub.nameUk, sub.nameRu), href: shopHref(c.lang, paths.sub(slugOf(group), slugOf(sub))) }] : [];
       });
-    return mergeHints({ pinned, popular: popular.map((q) => q.query), fromOrders, hidden: home.hints.hidden, max: home.hints.max });
+    return mergeHints({ pinned, popular, fromOrders, hidden, max });
   } catch (e) {
     console.error("[shop] подсказки поиска: беру только заданные вручную", e);
     return pinned.slice(0, 8).map((text) => ({ text }));

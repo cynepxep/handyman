@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@handyman/db";
 import { reindexAll, reindexSafely } from "@handyman/db/catalog-search";
 import { requirePermission } from "@/lib/auth";
+import { catalogChanged } from "@/lib/shop/cache";
 
 export async function saveCategoryAction(formData: FormData): Promise<void> {
   const session = await requirePermission("products.edit");
@@ -23,6 +24,7 @@ export async function saveCategoryAction(formData: FormData): Promise<void> {
         prisma.auditLog.create({ data: { who: session.username, action: "category.edit", target: id, details: { nameUk, nameRu, sort } } }),
       ]);
       await reindexSafely(() => reindexAll()); // названия категорий входят в индекс поиска
+      catalogChanged(); // названия частей подраздела на сайте
       result = "ok=" + encodeURIComponent(`Категория «${nameUk}» сохранена.`);
     }
   }

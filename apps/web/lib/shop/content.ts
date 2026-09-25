@@ -4,6 +4,10 @@ import { cache } from "react";
 import { loadSiteContent, type SiteContent } from "@handyman/db/site-content";
 import { EMPTY_CONTACTS, defaultTexts, fillText, shopHref, type ShopLang } from "@handyman/core/site";
 import { defaultMenuConfig } from "@handyman/core/catalog";
+import { TAG_SHOP, cached } from "./cache";
+
+/** Контент из базы — в кэше между запросами (сбрасывается при сохранении в админке, страховка — час). */
+const loadCached = cached((lang: ShopLang) => loadSiteContent(lang), "site-content", [TAG_SHOP], 3600);
 
 /** Текст по ключу с подстановкой {переменных}. */
 export type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -13,7 +17,7 @@ export type ShopContent = SiteContent & { lang: ShopLang; t: T; pick: (uk: strin
 export const getShopContent = cache(async (lang: ShopLang): Promise<ShopContent> => {
   let content: SiteContent;
   try {
-    content = await loadSiteContent(lang);
+    content = await loadCached(lang);
   } catch (e) {
     // База недоступна: сайт не падает, показывает стандартные тексты и меню.
     console.error("[shop] не удалось загрузить контент сайта", e);

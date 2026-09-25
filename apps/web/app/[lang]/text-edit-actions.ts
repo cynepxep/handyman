@@ -2,10 +2,10 @@
 
 // Правка текстов прямо на странице сайта (режим «✎ Редагувати тексти» для сотрудника с правом «Тексты и страницы сайта»).
 // Правила те же, что в админке «Сайт → Тексты»: пустое поле = стандартный текст, {слова в скобках} терять нельзя.
-import { revalidatePath } from "next/cache";
 import { TEXT_ENTRIES, resolveTexts, textVars } from "@handyman/core/site";
 import { loadTextOverrides, saveTextEdits } from "@handyman/db/site-content";
 import { getStaffSession } from "@/lib/auth";
+import { shopChanged } from "@/lib/shop/cache";
 
 export type EditableText = {
   key: string; group: string; hint: string; vars: string[];
@@ -40,6 +40,6 @@ export async function saveTextAction(key: string, uk: string, ru: string): Promi
     s.username,
   );
   if (!r.ok) return r;
-  revalidatePath("/", "layout");
+  shopChanged();
   return { ok: true };
 }

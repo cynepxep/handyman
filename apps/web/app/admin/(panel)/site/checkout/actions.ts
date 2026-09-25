@@ -1,11 +1,11 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import { validateCheckoutSettingsForm } from "@handyman/core/shop";
 import { saveCheckoutSettings } from "@handyman/db/orders";
 import { saveTextEdits } from "@handyman/db/site-content";
 import { requirePermission } from "@/lib/auth";
+import { shopChanged } from "@/lib/shop/cache";
 
 const back = (kind: "ok" | "error", text: string) => `/admin/site/checkout?${kind}=${encodeURIComponent(text)}`;
 
@@ -25,6 +25,6 @@ export async function saveCheckoutAction(formData: FormData): Promise<void> {
     session.username,
   );
   if (!texts.ok) redirect(back("error", texts.error));
-  revalidatePath("/", "layout");
+  shopChanged();
   redirect(back("ok", "Настройки оформления сохранены — на сайте они уже действуют."));
 }

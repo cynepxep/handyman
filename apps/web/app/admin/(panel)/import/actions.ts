@@ -8,6 +8,7 @@ import {
 } from "@handyman/db/catalog-import";
 import { reindexAll, reindexSafely } from "@handyman/db/catalog-search";
 import { requirePermission } from "@/lib/auth";
+import { catalogChanged } from "@/lib/shop/cache";
 
 const BASE = "/admin/import";
 
@@ -82,6 +83,7 @@ export async function applyAction(formData: FormData): Promise<void> {
     const approved = formData.getAll("approve").map(String);
     // Когда импорт закончится, поисковый индекс пересобирается сам; при сбое поиск помечается устаревшим.
     await startApply({ runId, approvedSkus: approved, who: session.username, afterDone: () => reindexSafely(() => reindexAll()) });
+    catalogChanged(); // счётчики разделов на сайте обновятся и сами за 5 минут после окончания импорта
     return `${BASE}?run=${runId}`;
   });
 }

@@ -7,21 +7,23 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:e2e": "playwright test",
     "typecheck": "next typegen && tsc --noEmit"
   },
   "dependencies": {
+    "@handyman/core": "workspace:*",
+    "@handyman/db": "workspace:*",
     "next": "16.3.6",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "@handyman/db": "workspace:*",
-    "@handyman/core": "workspace:*",
     "server-only": "^0.0.1"
   },
   "devDependencies": {
-    "dotenv-cli": "^7.4.0",
+    "@playwright/test": "^1.63.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv-cli": "^7.4.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "typescript": "^5"

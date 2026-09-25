@@ -9,6 +9,7 @@
     "build": "pnpm --filter web build",
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
+    "test:e2e": "pnpm --filter web test:e2e",
     "infra:up": "docker compose up -d postgres redis meilisearch",
     "infra:down": "docker compose down",
     "db:migrate": "pnpm --filter @handyman/db run migrate:deploy",
