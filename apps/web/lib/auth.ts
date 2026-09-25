@@ -7,6 +7,7 @@ import {
   hashPassword,
   verifyPassword,
   STAFF_SESSION_TTL_MS,
+  PERMISSIONS,
   type Permission,
 } from "@handyman/core";
 
@@ -53,7 +54,8 @@ export async function getStaffSession(): Promise<StaffSessionInfo | null> {
     name: session.staff.name,
     roleKey: session.staff.roleKey,
     roleTitle: session.staff.role.title,
-    permissions: session.staff.role.permissions.map((p) => p.permission as Permission),
+    // владелец имеет все права всегда (и новые — без пересохранения роли); остальные — по списку роли
+    permissions: session.staff.roleKey === "owner" ? [...PERMISSIONS] : session.staff.role.permissions.map((p) => p.permission as Permission),
   };
 }
 

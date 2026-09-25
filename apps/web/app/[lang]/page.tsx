@@ -8,8 +8,9 @@ import { getShopContent } from "@/lib/shop/content";
 import { getSearchHints } from "@/lib/shop/search-hints";
 import { getBatteries, getFlaggedCards, getMenuView, getSaleCards, type ShopCard } from "@/lib/shop/catalog";
 import { loadHomeSettings } from "@handyman/db/site-content";
-import { DEFAULT_HOME, bannerVisible, type HomeBlock } from "@handyman/core/site";
-import { HomeBanner } from "@/components/shop/home-banner";
+import { DEFAULT_HOME, type HomeBlock } from "@handyman/core/site";
+import { PromoBanner } from "@/components/shop/promo-banner";
+import { bannersFor } from "@/lib/shop/banners";
 import { ViewedRail } from "@/components/shop/viewed";
 import { Icon } from "@/components/shop/icons";
 import { ProductCard, cardLabels } from "@/components/shop/product-card";
@@ -24,10 +25,12 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const { t, pick } = c;
   const home = await loadHomeSettings().catch(() => null);
   const on = (id: HomeBlock) => home ? home.blocks.some((b) => b.id === id && b.on) : true;
-  const [menu, batteries, sale, hits, news] = await Promise.all([
+  const [menu, batteries, sale, hits, news, homeBanners] = await Promise.all([
     getMenuView(c.menu), on("battery") ? getBatteries() : [], on("sale") ? getSaleCards(lang) : [],
     on("hits") ? getFlaggedCards(lang, "hit") : null, on("new") ? getFlaggedCards(lang, "isNew") : null,
+    on("banner") ? bannersFor("home") : [],
   ]);
+  const homeBanner = homeBanners[0] ?? null;
   const cl = cardLabels(t);
   const rail = (id: string, title: string, cards: ShopCard[], allHref?: string) =>
     cards.length > 0 && (
@@ -55,7 +58,8 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       : shopHref(lang, paths.search(series));
 
   const blocks: Record<HomeBlock, React.ReactNode> = {
-    banner: home && bannerVisible(home.banner) ? <HomeBanner key="banner" banner={home.banner} lang={lang} /> : null,
+    // баннер главной — из «Реклама и баннеры» (место «Главная»); несколько — первый по порядку
+    banner: homeBanner ? <PromoBanner key="banner" banner={homeBanner} lang={lang} /> : null,
     tasks: tasks.length > 0 && (
       <section key="tasks" className="hm-section" aria-labelledby="h-tasks">
           <h2 id="h-tasks" className="hm-h2">{t("home.tasks.title")}</h2>

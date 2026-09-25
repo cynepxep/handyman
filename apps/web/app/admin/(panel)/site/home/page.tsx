@@ -18,11 +18,10 @@ export default async function HomeSettingsPage({ searchParams }: { searchParams:
     topQueries({ found: false, limit: 15 }),
   ]);
   const hidden = new Set(s.hints.hidden);
-  const b = s.banner;
   const note: Partial<Record<string, React.ReactNode>> = {
     hits: <>отмечено: <b>{hits}</b> — <Link className="adm-link" href="/admin/products?flag=hit">список</Link></>,
     new: <>отмечено: <b>{news}</b> — <Link className="adm-link" href="/admin/products?flag=new">список</Link></>,
-    banner: b.on ? "включён" : "выключен — заполните ниже",
+    banner: <>баннеры места «Главная» — в <Link className="adm-link" href="/admin/banners">«Реклама и баннеры»</Link></>,
   };
 
   return (
@@ -54,29 +53,11 @@ export default async function HomeSettingsPage({ searchParams }: { searchParams:
         </div>
 
         <h2>Баннер акции</h2>
-        <label className="adm-row"><input type="checkbox" name="banner.on" defaultChecked={b.on} /> Показывать баннер</label>
-        <div className="adm-grid2">
-          <div className="adm-field"><label htmlFor="b-tu">Заголовок (українською)</label><input id="b-tu" name="banner.titleUk" defaultValue={b.titleUk} className="adm-input wide" maxLength={120} placeholder="Знижки на диски до −20%" /></div>
-          <div className="adm-field"><label htmlFor="b-tr">Заголовок (по-русски)</label><input id="b-tr" name="banner.titleRu" defaultValue={b.titleRu} className="adm-input wide" maxLength={120} placeholder="Скидки на диски до −20%" /></div>
-          <div className="adm-field"><label htmlFor="b-xu">Текст (українською)</label><textarea id="b-xu" name="banner.textUk" defaultValue={b.textUk} rows={2} className="adm-textarea" maxLength={300} /></div>
-          <div className="adm-field"><label htmlFor="b-xr">Текст (по-русски)</label><textarea id="b-xr" name="banner.textRu" defaultValue={b.textRu} rows={2} className="adm-textarea" maxLength={300} /></div>
-          <div className="adm-field"><label htmlFor="b-bu">Надпись на кнопке (українською)</label><input id="b-bu" name="banner.buttonUk" defaultValue={b.buttonUk} className="adm-input wide" maxLength={40} placeholder="Дивитися" /></div>
-          <div className="adm-field"><label htmlFor="b-br">Надпись на кнопке (по-русски)</label><input id="b-br" name="banner.buttonRu" defaultValue={b.buttonRu} className="adm-input wide" maxLength={40} placeholder="Смотреть" /></div>
-        </div>
-        <div className="adm-field">
-          <label htmlFor="b-href">Куда ведёт кнопка</label>
-          <input id="b-href" name="banner.href" defaultValue={b.href} className="adm-input wide" placeholder="/catalog/dysky-ta-kruhy или /search?sale=1" />
-          <span className="adm-muted">Страница нашего сайта — адрес без домена, начиная с «/» (скопируйте из адресной строки часть после :3100). Чужой сайт — полностью, с https://.</span>
-        </div>
-        <div className="adm-field">
-          <label htmlFor="b-img">Картинка (ссылка, необязательно)</label>
-          <input id="b-img" name="banner.image" defaultValue={b.image} className="adm-input wide" placeholder="https://…/banner.jpg" inputMode="url" />
-          <span className="adm-muted">Полный адрес картинки с https://. Лучше широкая (примерно 1200×600). Без картинки баннер — тёмная плашка с жёлтым заголовком.</span>
-        </div>
-        {b.image && (
-          // eslint-disable-next-line @next/next/no-img-element -- предпросмотр картинки по ссылке владельца
-          <img src={b.image} alt="Картинка баннера" style={{ maxWidth: 360, maxHeight: 180, objectFit: "cover", borderRadius: 8 }} />
-        )}
+        <p className="adm-muted">
+          Баннеры теперь в отдельном разделе <Link className="adm-link" href="/admin/banners">«Реклама и баннеры»</Link>: там можно сделать несколько,
+          включать и выключать, задать даты и показывать их не только на главной, но и между товарами и на странице товара. Здесь — только место
+          блока на главной (строка «Баннер акции» в таблице выше).
+        </p>
 
         <h2>Подсказки поиска («круг 125», «болгарка»…)</h2>
         <p className="adm-muted">

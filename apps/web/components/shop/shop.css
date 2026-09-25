@@ -538,18 +538,6 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-te-dialog { width: min(560px, calc(100vw - 24px)); }
 @media (min-width: 700px) { .hm-te-bar { bottom: 16px; } }
 
-/* ---------- баннер акции на главной (шаг 2.7) ---------- */
-.hm-banner { display: grid; gap: 14px; align-items: center; background: var(--c-dark); color: var(--c-on-dark); border-radius: var(--radius); padding: 20px; overflow: hidden; }
-.hm-banner-text { display: grid; gap: 10px; justify-items: start; }
-.hm-banner-text p { color: #d7d9dc; }
-.hm-banner-text .hm-h2 { color: var(--c-primary); }
-.hm-banner-img { width: 100%; max-height: 260px; object-fit: cover; border-radius: var(--radius-sm); background: #2a2e34; }
-.hm-banner :focus-visible { outline-color: var(--c-primary); }
-@media (min-width: 700px) {
-  .hm-banner { padding: 26px 30px; }
-  .hm-banner.has-image { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
-}
-
 /* ---------- круглая кнопка корзины внизу справа (после первого добавления товаров) ---------- */
 .hm-fab-cart { position: fixed; right: 14px; bottom: calc(72px + env(safe-area-inset-bottom)); z-index: 55; width: 58px; height: 58px; border-radius: 50%; border: 0; background: var(--c-primary); color: var(--c-on-primary); box-shadow: 0 6px 18px rgba(20, 22, 26, .28); display: grid; place-items: center; cursor: pointer; animation: hm-fab-in .25s ease-out; }
 .hm-fab-cart .hm-cart-count { top: 4px; right: 2px; }
@@ -586,3 +574,24 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-combo.is-picked .hm-input { padding-right: 40px; border-color: var(--c-success); }
 .hm-combo.is-picked::after { content: "✓"; position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: var(--c-success); font-weight: 800; pointer-events: none; }
 .hm-combo-list li small { margin-top: 2px; }
+
+/* ---------- баннеры «Реклама и баннеры» (мягкий стиль: скругления, плавный фон, мягкая тень) ---------- */
+.hm-promo { display: grid; gap: 12px; align-items: center; border-radius: 18px; padding: 18px; overflow: hidden; position: relative;
+  box-shadow: 0 1px 2px rgba(30, 33, 38, .06), 0 8px 22px rgba(30, 33, 38, .09); text-decoration: none; }
+.hm-promo-light { background: radial-gradient(120% 120% at 20% 10%, #ffffff 0%, #f1efe7 100%); color: var(--c-text); border: 1px solid rgba(30, 33, 38, .07); }
+.hm-promo-yellow { background: radial-gradient(120% 120% at 20% 10%, #ffd65c 0%, var(--c-primary) 70%); color: var(--c-on-primary); }
+.hm-promo-dark { background: radial-gradient(120% 120% at 20% 10%, #3a3f47 0%, var(--c-dark) 75%); color: var(--c-on-dark); }
+.hm-promo-text { display: grid; gap: 8px; justify-items: start; }
+.hm-promo-title { font-family: var(--font-head); font-weight: 700; font-size: 1.35rem; line-height: 1.15; }
+.hm-promo-dark .hm-promo-title { color: var(--c-primary); }
+.hm-promo-desc { opacity: .85; line-height: 1.4; }
+.hm-promo-btn { display: inline-flex; align-items: center; min-height: 44px; padding: 0 18px; border-radius: 22px; font-weight: 700; background: var(--c-dark); color: var(--c-on-dark); }
+.hm-promo-dark .hm-promo-btn { background: var(--c-primary); color: var(--c-on-primary); }
+.hm-promo-img { width: 100%; max-height: 240px; object-fit: cover; border-radius: 14px; }
+a.hm-promo:hover { box-shadow: 0 0 0 2px var(--c-primary), 0 8px 22px rgba(30, 33, 38, .09); }
+.hm-promo-tile { height: 100%; align-content: center; }
+.hm-promo-tile .hm-promo-title { font-size: 1.2rem; }
+@media (min-width: 700px) {
+  .hm-promo-wide { padding: 26px 30px; }
+  .hm-promo-wide.has-image { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+}

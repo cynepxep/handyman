@@ -13,6 +13,8 @@ import { ProductCard, cardLabels, stockLabels } from "@/components/shop/product-
 import { AddToCartButton, OneClickButton } from "@/components/shop/cart/cart-buttons";
 import { RememberView } from "@/components/shop/viewed";
 import { contactLinks } from "@/components/shop/site-chrome";
+import { PromoBanner } from "@/components/shop/promo-banner";
+import { bannersFor } from "@/lib/shop/banners";
 import { Breadcrumbs, Price, StockBadge, btn } from "@/components/shop/ui";
 
 const SPECS_VISIBLE = 8;
@@ -50,6 +52,8 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
   const c = await getShopContent(lang);
   const { t, pick } = c;
   const [place, similar] = await Promise.all([productPlace(c.menu, p.categoryId), similarProducts(p, lang)]);
+  // баннер места «Страница товара» (ограниченный разделами — только в своих)
+  const [promo] = await bannersFor("product", place?.group.id ?? null);
   const name = pick(p.nameUk, p.nameRu);
   const desc = productDescription(p, lang);
   const help = contactLinks(c, t("help.call"));
@@ -130,6 +134,8 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
             <span className="hm-price">{formatPrice(p.price)}</span>
             <AddToCartButton sku={p.sku} label={t("card.buy")} />
           </div>
+
+          {promo && <PromoBanner banner={promo} lang={lang} />}
 
           <ul className="hm-product-trust">
             <li><Icon name="shield" size={22} /><span><b>{t("trust.warranty.title")}</b> {t("trust.warranty.text")}</span></li>

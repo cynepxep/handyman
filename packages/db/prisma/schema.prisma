@@ -392,21 +392,34 @@ model StockMovement {
 
 // ---------- под будущее: маркетинг (не используется на Этапе 0) ----------
 
+// Баннеры и реклама (раздел админки «Реклама и баннеры», основа — после 2.8; правила — packages/core/src/site/banners.ts).
 model Banner {
   id               String    @id @default(cuid())
-  zone             String // home, catalog_top, category, product, cart, miniapp
+  zone             String // место: home | listing | product (BANNER_PLACEMENTS); задел: cart, miniapp
   titleUk          String
   titleRu          String
   textUk           String?
   textRu           String?
-  imageDesktopUrl  String?
-  imageMobileUrl   String?
-  linkTarget       String? // "cat:ak" | "brand:Milwaukee" | "page:offer" | URL
-  startsAt         DateTime?
-  endsAt           DateTime?
-  visible          Boolean   @default(true)
-  impressions      Int       @default(0)
-  clicks           Int       @default(0)
+  imageDesktopUrl  String? // картинка (https:// или своя /media/…)
+  imageMobileUrl   String? // задел: отдельная картинка для телефона
+  linkTarget       String? // куда ведёт: страница сайта «/…» или https://
+  startsAt         DateTime? // показывать с (включительно)
+  endsAt           DateTime? // по (включительно)
+  visible          Boolean   @default(true) // включён
+  impressions      Int       @default(0) // задел: показы
+  clicks           Int       @default(0) // нажатия (через /api/banner/<id>)
+  // после 2.8:
+  name             String    @default("") // название для себя
+  buttonUk         String?
+  buttonRu         String?
+  theme            String    @default("light") // light | yellow | dark
+  sort             Int       @default(0)
+  settings         Json? // настройки места: через сколько товаров, какие разделы (BannerSettings)
+  createdBy        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
+
+  @@index([zone, visible])
 }
 
 model PromoCode {
@@ -775,3 +788,4 @@ model SearchQueryDay {
   @@id([day, query])
   @@index([query])
 }
+

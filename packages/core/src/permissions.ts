@@ -19,6 +19,7 @@ export const PERMISSIONS = [
   "audit.view",
   "suppliers.edit",
   "texts.edit",
+  "ads.edit",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -41,6 +42,7 @@ export const PERMISSION_LABELS_RU: Record<Permission, string> = {
   "audit.view": "Журнал действий",
   "suppliers.edit": "Поставщики и бренды",
   "texts.edit": "Тексты и страницы сайта",
+  "ads.edit": "Реклама и баннеры",
 };
 
 interface RoleSeed {

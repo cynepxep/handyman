@@ -1,7 +1,10 @@
 // Список товаров (раздел, подраздел, задача, поиск): заголовок, подразделы, быстрый выбор размера, фильтры, выбранные фильтры,
 // сортировка, карточки, «Показати ще» и номера страниц. Серверный компонент; интерактивные части — в listing-client.tsx.
+import { Fragment } from "react";
 import Link from "next/link";
-import { clearFilters, countWord, hasFilters, listingQuery, shopHref, toggleFacet, type ListingState } from "@handyman/core/site";
+import { clearFilters, countWord, hasFilters, listingQuery, listingSlots, shopHref, toggleFacet, type ListingState } from "@handyman/core/site";
+import { bannersFor } from "@/lib/shop/banners";
+import { PromoBanner } from "./promo-banner";
 import type { ShopContent } from "@/lib/shop/content";
 import { PER_PAGE, type ListingData, type ResolvedListing } from "@/lib/shop/listing";
 import { contactLinks } from "./site-chrome";
@@ -23,7 +26,7 @@ export type ListingProps = {
   subs?: Array<{ label: string; href: string; count: number; current: boolean }>;
 };
 
-export function ProductListing({ c, resolved, data, state, path, title, crumbs, subs }: ListingProps) {
+export async function ProductListing({ c, resolved, data, state, path, title, crumbs, subs }: ListingProps) {
   const { t, lang } = c;
   const q = resolved.q;
   const base = shopHref(lang, path);
@@ -99,6 +102,9 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
   }
 
   const help = contactLinks(c, t("help.call"));
+  // баннеры мест «Списки товаров» (только на первой странице списка; ограниченные разделами — только в своих)
+  const promos = result.page === 1 ? await bannersFor("listing", resolved.group?.id ?? null) : [];
+  const promoAfter = new Map(listingSlots(cards.length, promos).map((s) => [s.after, s.banner]));
   const cl = cardLabels(t);
 
   return (
@@ -172,7 +178,13 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
               {/* заголовок для экранного диктора: названия товаров в карточках — h3, им нужен h2 выше */}
               <h2 className="hm-vh">{goods(result.total)}</h2>
               <ul className="hm-grid">
-                {cards.map((card, i) => <li key={card.id}><ProductCard card={card} labels={cl} priority={i < 2} /></li>)}
+                {cards.map((card, i) => (
+                  <Fragment key={card.id}>
+                    <li><ProductCard card={card} labels={cl} priority={i < 2} /></li>
+                    {/* плитка-баннер из «Реклама и баннеры» после каждых N товаров */}
+                    {promoAfter.get(i) && <li className="hm-grid-promo"><PromoBanner banner={promoAfter.get(i)!} lang={lang} variant="tile" /></li>}
+                  </Fragment>
+                ))}
               </ul>
               <LoadMore
                 key={listingQuery(state, q)}
