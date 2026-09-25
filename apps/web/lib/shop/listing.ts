@@ -86,6 +86,8 @@ export async function runListing(
       available: state.available,
       local: state.local,
       sale: state.sale,
+      hit: state.hit,
+      isNew: state.isNew,
       min: state.min,
       max: state.max,
       sort: state.sort,

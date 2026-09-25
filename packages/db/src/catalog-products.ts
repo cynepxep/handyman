@@ -132,6 +132,19 @@ export async function moveProductsToCategory(productIds: string[], categoryId: s
   return toMove.length;
 }
 
+/** Отметки «Хіт» / «Новинка» (шаг 2.7): владелец ставит их сам, импорт не трогает. Возвращает, у скольких товаров изменилось. */
+export async function setProductFlag(productIds: string[], flag: "isHit" | "isNew", value: boolean, who: string): Promise<string[]> {
+  const ids = [...new Set(productIds)].filter(Boolean).slice(0, 500);
+  if (!ids.length) throw new ProductUserError("Не выбрано ни одного товара.");
+  const found = await prisma.product.findMany({ where: { id: { in: ids }, [flag]: !value }, select: { id: true, sku: true } });
+  if (!found.length) return [];
+  await prisma.$transaction([
+    prisma.product.updateMany({ where: { id: { in: found.map((p) => p.id) } }, data: { [flag]: value } }),
+    prisma.auditLog.create({ data: { who, action: flag === "isHit" ? "product.hit" : "product.new", details: { value, count: found.length, skus: found.slice(0, 50).map((p) => p.sku) } } }),
+  ]);
+  return found.map((p) => p.id);
+}
+
 /** Принять цену поставщика вместо ручной: цена = цене поставщика, защита цены снимается. */
 export async function acceptSupplierPrice(productId: string, who: string): Promise<void> {
   const cur = await prisma.product.findUnique({ where: { id: productId } });

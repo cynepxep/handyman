@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isShopLang, parseListing, paths, shopHref } from "@handyman/core/site";
+import { hasFilters, isShopLang, parseListing, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
 import { FACET_KEYS, resolveListing, runListing } from "@/lib/shop/listing";
 import { ProductListing } from "@/components/shop/listing";
@@ -13,9 +13,11 @@ const one = (v: string | string[] | undefined) => ((Array.isArray(v) ? v[0] : v)
 export async function generateMetadata({ params, searchParams }: PageProps<"/[lang]/search">): Promise<Metadata> {
   const { lang } = await params;
   if (!isShopLang(lang)) return {};
-  const q = one((await searchParams).q);
+  const sp = await searchParams;
+  const q = one(sp.q);
   const { t } = await getShopContent(lang);
-  return { title: q ? t("search.results", { q }) : t("search.title"), alternates: alternatesFor(lang, paths.search(q || undefined)) };
+  const flag = one(sp.hit) === "1" ? t("home.hits.title") : one(sp.new) === "1" ? t("home.new.title") : one(sp.sale) === "1" ? t("home.sale.title") : "";
+  return { title: q ? t("search.results", { q }) : flag || t("search.title"), alternates: alternatesFor(lang, paths.search(q || undefined)) };
 }
 
 export default async function SearchPage({ params, searchParams }: PageProps<"/[lang]/search">) {
@@ -26,8 +28,11 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   const c = await getShopContent(lang);
   const { t } = c;
   const home = { href: shopHref(lang, paths.home()), label: t("crumbs.home") };
+  const state = parseListing(sp, FACET_KEYS);
+  // «Усі хіти» / «Усі новинки» / все акции (ссылки с главной и баннера) — список без текста поиска
+  const flagTitle = state.hit ? t("home.hits.title") : state.isNew ? t("home.new.title") : state.sale ? t("home.sale.title") : hasFilters(state) ? t("search.title") : "";
 
-  if (!q) {
+  if (!q && !flagTitle) {
     const hints = t("home.hints").split(",").map((s) => s.trim()).filter(Boolean);
     return (
       <section className="hm-section">
@@ -44,7 +49,6 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   }
 
   const r = (await resolveListing({ kind: "search", q }, c.menu))!;
-  const state = parseListing(sp, FACET_KEYS);
   const data = await runListing(r, state, lang);
 
   return (
@@ -54,8 +58,8 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
       data={data}
       state={state}
       path="/search"
-      title={t("search.results", { q })}
-      crumbs={[home, { label: t("search.title") }]}
+      title={q ? t("search.results", { q }) : flagTitle}
+      crumbs={q ? [home, { label: t("search.title") }] : [home]}
     />
   );
 }

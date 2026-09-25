@@ -16,12 +16,15 @@ export type CardData = {
   discountPct: number;
   available: boolean;
   stock: "local" | "supplier" | "order";
+  /** отметки владельца */
+  hit?: boolean;
+  isNew?: boolean;
   image: string | null;
   specs: Array<{ key: string; text: string }>;
 };
 
 export type CardLabels = {
-  noPhoto: string; specs: string; buy: string; buy1click: string; stock: StockLabels;
+  noPhoto: string; specs: string; buy: string; buy1click: string; stock: StockLabels; hit: string; isNew: string;
   /** «Стара ціна {price}» — {price} подставляет карточка */
   oldPrice: string;
 };
@@ -30,7 +33,7 @@ export const stockLabels = (t: T): StockLabels => ({ local: t("stock.local"), su
 
 export const cardLabels = (t: T): CardLabels => ({
   noPhoto: t("card.noPhoto"), specs: t("card.specs.label"), buy: t("card.buy"), buy1click: t("card.buy1click"), oldPrice: t("card.oldPrice"),
-  stock: stockLabels(t),
+  stock: stockLabels(t), hit: t("badge.hit"), isNew: t("badge.new"),
 });
 
 /** Размеры фото для браузера: сколько пикселей реально нужно на каждой ширине экрана (грузится ровно столько). */
@@ -46,7 +49,13 @@ export function ProductCard({ card, labels, rail, priority }: { card: CardData; 
         ) : (
           <div className="hm-noimg">{labels.noPhoto}</div>
         )}
-        {card.discountPct > 0 && <span className="hm-badge hm-badge-sale">−{card.discountPct}%</span>}
+        {(card.discountPct > 0 || card.hit || card.isNew) && (
+          <span className="hm-badges">
+            {card.discountPct > 0 && <span className="hm-badge hm-badge-sale">−{card.discountPct}%</span>}
+            {card.hit && <span className="hm-badge hm-badge-hit">{labels.hit}</span>}
+            {card.isNew && <span className="hm-badge hm-badge-new">{labels.isNew}</span>}
+          </span>
+        )}
       </div>
       <div className="hm-card-body">
         <h3 className="hm-card-title"><Link href={card.href}>{card.name}</Link></h3>

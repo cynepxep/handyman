@@ -3,3 +3,5 @@ export * from "./page-body";
 export * from "./contacts";
 export * from "./routes";
 export * from "./listing";
+export * from "./home";
+export * from "./delivery-draft";

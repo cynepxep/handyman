@@ -1,11 +1,15 @@
-// Главная: «Що потрібно зробити?» (задачи), «Яка у вас батарея?», разделы каталога, акции, доверие, «Не знайшли? Підберемо».
-// Все надписи — из админки «Сайт → Тексты», задачи и разделы — из «Сайт → Меню и задачи». Пустые блоки не показываются.
+// Главная: шапка с поиском, дальше блоки в порядке из админки «Сайт → Главная» (баннер, задачи, батарея, разделы, хиты, акции, новинки,
+// «Ви переглядали», доверие, «Не знайшли? Підберемо»). Надписи — «Сайт → Тексты», задачи и разделы — «Сайт → Меню и задачи». Пустые блоки не показываются.
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
 import { countWord, isShopLang, listingQuery, paths, shopHref } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
-import { getBatteries, getMenuView, getSaleCards } from "@/lib/shop/catalog";
+import { getBatteries, getFlaggedCards, getMenuView, getSaleCards, type ShopCard } from "@/lib/shop/catalog";
+import { loadHomeSettings } from "@handyman/db/site-content";
+import { DEFAULT_HOME, bannerVisible, type HomeBlock } from "@handyman/core/site";
+import { HomeBanner } from "@/components/shop/home-banner";
+import { ViewedRail } from "@/components/shop/viewed";
 import { Icon } from "@/components/shop/icons";
 import { ProductCard, cardLabels } from "@/components/shop/product-card";
 import { contactLinks } from "@/components/shop/site-chrome";
@@ -17,7 +21,25 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   if (!isShopLang(lang)) notFound();
   const c = await getShopContent(lang);
   const { t, pick } = c;
-  const [menu, batteries, sale] = await Promise.all([getMenuView(c.menu), getBatteries(), getSaleCards(lang)]);
+  const home = await loadHomeSettings().catch(() => null);
+  const on = (id: HomeBlock) => home ? home.blocks.some((b) => b.id === id && b.on) : true;
+  const [menu, batteries, sale, hits, news] = await Promise.all([
+    getMenuView(c.menu), on("battery") ? getBatteries() : [], on("sale") ? getSaleCards(lang) : [],
+    on("hits") ? getFlaggedCards(lang, "hit") : null, on("new") ? getFlaggedCards(lang, "isNew") : null,
+  ]);
+  const cl = cardLabels(t);
+  const rail = (id: string, title: string, cards: ShopCard[], allHref?: string) =>
+    cards.length > 0 && (
+      <section key={id} className="hm-section" aria-labelledby={`h-${id}`}>
+        <div className="hm-section-head">
+          <h2 id={`h-${id}`} className="hm-h2">{title}</h2>
+          {allHref && <Link className="hm-link" href={allHref}>{t("home.all")} →</Link>}
+        </div>
+        <ul className="hm-rail">
+          {cards.map((card) => <li key={card.id}><ProductCard card={card} labels={cl} rail /></li>)}
+        </ul>
+      </section>
+    );
   const goods = (n: number) => countWord(c.texts, "goods", n);
   const tasks = menu.tasks.filter((x) => !x.task.hidden && x.total > 0);
   const groups = menu.groups.filter((g) => !g.group.hidden && g.total > 0);
@@ -31,20 +53,10 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       ? `${shopHref(lang, paths.group(slugOf(batteryGroup)))}${listingQuery({ facets: { series: [series] }, available: false, local: false, sale: false, page: 1 })}`
       : shopHref(lang, paths.search(series));
 
-  return (
-    <>
-      <section className="hm-hero">
-        <h1 className="hm-h1">{t("home.title")}</h1>
-        <p className="hm-lead">{t("home.lead")}</p>
-        {hints.length > 0 && (
-          <ul className="hm-chips">
-            {hints.map((h) => <li key={h}><Link className="hm-chip" href={shopHref(lang, paths.search(h))}>{h}</Link></li>)}
-          </ul>
-        )}
-      </section>
-
-      {tasks.length > 0 && (
-        <section className="hm-section" aria-labelledby="h-tasks">
+  const blocks: Record<HomeBlock, React.ReactNode> = {
+    banner: home && bannerVisible(home.banner) ? <HomeBanner key="banner" banner={home.banner} lang={lang} /> : null,
+    tasks: tasks.length > 0 && (
+      <section key="tasks" className="hm-section" aria-labelledby="h-tasks">
           <h2 id="h-tasks" className="hm-h2">{t("home.tasks.title")}</h2>
           <ul className="hm-tasks">
             {tasks.map(({ task, total }) => (
@@ -54,10 +66,10 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             ))}
           </ul>
         </section>
-      )}
-
-      {batteries.length > 0 && (
-        <section className="hm-section hm-battery" aria-labelledby="h-battery">
+      
+    ),
+    battery: batteries.length > 0 && (
+      <section key="battery" className="hm-section hm-battery" aria-labelledby="h-battery">
           <div className="hm-battery-head">
             <span className="hm-task-icon"><Icon name="battery" size={28} /></span>
             <div>
@@ -75,10 +87,10 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             ))}
           </ul>
         </section>
-      )}
-
-      {groups.length > 0 && (
-        <section className="hm-section" aria-labelledby="h-groups">
+      
+    ),
+    groups: groups.length > 0 && (
+      <section key="groups" className="hm-section" aria-labelledby="h-groups">
           <div className="hm-section-head">
             <h2 id="h-groups" className="hm-h2">{t("home.groups.title")}</h2>
             <Link className="hm-link" href={shopHref(lang, paths.catalog())}>{t("header.catalog")} →</Link>
@@ -91,24 +103,21 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             ))}
           </ul>
         </section>
-      )}
-
-      {sale.length > 0 && (
-        <section className="hm-section" aria-labelledby="h-sale">
-          <h2 id="h-sale" className="hm-h2">{t("home.sale.title")}</h2>
-          <ul className="hm-rail">
-            {sale.map((card) => <li key={card.id}><ProductCard card={card} labels={cardLabels(t)} rail /></li>)}
-          </ul>
-        </section>
-      )}
-
-      <section className="hm-section hm-trust" aria-label={t("trust.warranty.title")}>
+      
+    ),
+    hits: hits && rail("hits", t("home.hits.title"), hits.cards, shopHref(lang, paths.hits())),
+    sale: rail("sale", t("home.sale.title"), sale),
+    new: news && rail("new", t("home.new.title"), news.cards, shopHref(lang, paths.news())),
+    viewed: <ViewedRail key="viewed" lang={lang} title={t("home.viewed.title")} clear={t("home.viewed.clear")} labels={cl} />,
+    trust: (
+      <section key="trust" className="hm-section hm-trust" aria-label={t("trust.warranty.title")}>
         <div><Icon name="shield" size={26} /><b>{t("trust.warranty.title")}</b><span>{t("trust.warranty.text")}</span></div>
         <div><Icon name="back" size={26} /><b>{t("trust.return.title")}</b><span>{t("trust.return.text")}</span></div>
         <div><Icon name="truck" size={26} /><b>{t("trust.delivery.title")}</b><span>{t("trust.delivery.text")}</span></div>
       </section>
-
-      <section className="hm-help" aria-labelledby="h-help">
+    ),
+    help: (
+      <section key="help" className="hm-help" aria-labelledby="h-help">
         <h2 id="h-help" className="hm-h2">{t("help.title")}</h2>
         <p>{t("help.text")}</p>
         {(c.contacts.telegram || phone) && (
@@ -118,6 +127,22 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
           </div>
         )}
       </section>
+    ),
+  };
+  const order = home?.blocks ?? DEFAULT_HOME.blocks;
+
+  return (
+    <>
+      <section className="hm-hero">
+        <h1 className="hm-h1">{t("home.title")}</h1>
+        <p className="hm-lead">{t("home.lead")}</p>
+        {hints.length > 0 && (
+          <ul className="hm-chips">
+            {hints.map((h) => <li key={h}><Link className="hm-chip" href={shopHref(lang, paths.search(h))}>{h}</Link></li>)}
+          </ul>
+        )}
+      </section>
+      {order.filter((b) => b.on).map((b) => blocks[b.id])}
     </>
   );
 }

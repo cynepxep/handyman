@@ -41,7 +41,9 @@
   `/cart`; `components/shop/cart/`), оформление `/checkout` → заказ `HM-####` (`packages/db/src/orders.ts`, цены с сервера, свой склад списывается), «Дякуємо»
   `/order/<номер>?k=`, «Купити в 1 клік», админка «Заказы» и «Сайт → Оформление заказа», остаток «на нашем складе» у товара, перенаправление старых адресов разделов,
   правка текстов прямо на сайте (`components/shop/text-editor.tsx`). Уведомления менеджеру — Outbox; **в `.env` нет `BOT_TOKEN`/`ADMIN_CHAT_ID`** → пока «не отправлено».
-Дальше: **2.7** (главная: хиты/новинки, страницы) → **2.8** (тесты, кэширование, Lighthouse). Подробности — `docs/CHANGELOG.md`.
+- **Шаг 2.7**: главная из админки «Сайт → Главная» (порядок и включение блоков, баннер; `packages/core/src/site/home.ts`), отметки «Хит»/«Новинка» у товара
+  (`Product.isHit/isNew`, значки на карточках, полки и `/search?hit=1|new=1`), «Ви переглядали» (`components/shop/viewed.tsx`), черновик «Доставка і оплата».
+Дальше: **2.8** (тесты в браузере, кэширование, Lighthouse, проверка на телефоне). Подробности — `docs/CHANGELOG.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -88,7 +90,7 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test` | 132 проверки (core 91 + интеграционные db 41). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 138 проверок (core 96 + интеграционные db 42). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
@@ -171,7 +173,7 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
 - `apps/web` — сайт + Mini App + админка + API (Next.js, App Router).
   - `app/admin/login` — вход; `app/admin/(panel)/` — всё остальное под общим меню (`layout.tsx`, `admin.css`, `nav.tsx`):
     `page.tsx` (главная), `orders/` (+`[id]`: заказы), `import/` (экран импорта: `page`, `views`, `actions`, `client-bits`), `products/` (+`[id]`, остаток склада),
-    `categories/`, `roles/`, `site/` (контент сайта: `texts`, `contacts`, `pages` (+`[slug]`), `menu`, `checkout`; вкладки `tabs.tsx`), `search-actions.ts`.
+    `categories/`, `roles/`, `site/` (контент сайта: `home`, `texts`, `contacts`, `pages` (+`[slug]`, черновик доставки), `menu`, `checkout`; вкладки `tabs.tsx`), `search-actions.ts`.
   - `app/[lang]/` — **витрина** (укр. без приставки, рус. `/ru`): `layout.tsx` (корень: шапка, подвал, нижняя панель), `page.tsx` (главная), `catalog/` (+`[group]/`,
     `[group]/[sub]/`), `task/[slug]/`, `product/[sku]/[[...slug]]/`, `search/` (+`loading`), `info/[slug]/`, `cart/`, `checkout/`, `order/[no]/` («Дякуємо»), `listing-actions.ts` («Показати ще», счётчик шторки),
     `cart-actions.ts` (цены корзины, заказ, «1 клік»), `text-edit-actions.ts` (правка текстов на сайте),

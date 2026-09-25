@@ -83,6 +83,9 @@ export type SearchDoc = {
   local: boolean;
   /** для сортировки: 2 — наш склад, 1 — поставщик, 0 — под заказ */
   inStock: 0 | 1 | 2;
+  /** отметки владельца «Хіт» и «Новинка» (шаг 2.7) */
+  hit: boolean;
+  isNew: boolean;
   image: string | null;
   descText: string;
   createdTs: number;
@@ -141,6 +144,8 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         hasDiscount: oldPrice != null && oldPrice > price,
         discountPct: oldPrice != null && oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0,
         ...stockFields(r.stockItems.reduce((a, s) => a + s.onHand, 0), r.supplierAvailable),
+        hit: r.isHit,
+        isNew: r.isNew,
         image: r.images[0]?.url ?? null,
         descText: htmlToText(r.descUk).slice(0, 400),
         createdTs: r.createdAt.getTime(),
@@ -163,7 +168,7 @@ function stockFields(ownQty: number, supplierAvailable: boolean) {
 
 const SETTINGS = () => ({
   searchableAttributes: ["nameUk", "nameRu", "sku", "articleCode", "brand", "categoryNames", "descText"],
-  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "local", "hasDiscount", ...FACET_FIELDS],
+  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "local", "hasDiscount", "hit", "isNew", ...FACET_FIELDS],
   sortableAttributes: ["price", "createdTs", "nameSort", "inStock"],
   rankingRules: ["words", "typo", "proximity", "attribute", "sort", "exactness", "inStock:desc"],
   synonyms: synonymMap(),
@@ -244,6 +249,9 @@ export type SearchParams = {
   /** только наш склад в Одессе */
   local?: boolean;
   sale?: boolean;
+  /** только отмеченные «Хіт» / «Новинка» */
+  hit?: boolean;
+  isNew?: boolean;
   /** код фильтра → выбранные значения (см. FACET_DEFS) */
   facets?: Record<string, string[]>;
   sort?: SearchSort;
@@ -262,6 +270,8 @@ export type SearchItem = {
   discountPct: number;
   available: boolean;
   stock: StockLevel;
+  hit?: boolean;
+  isNew?: boolean;
   image: string | null;
   categoryId: string;
 };
@@ -310,7 +320,7 @@ type MeiliResponse = {
   processingTimeMs: number;
 };
 
-const RETRIEVE = ["id", "sku", "nameUk", "nameRu", "brand", "price", "oldPrice", "discountPct", "available", "stock", "image", "categoryId"];
+const RETRIEVE = ["id", "sku", "nameUk", "nameRu", "brand", "price", "oldPrice", "discountPct", "available", "stock", "hit", "isNew", "image", "categoryId"];
 
 export async function searchProducts(params: SearchParams): Promise<SearchResult> {
   const perPage = Math.min(60, Math.max(1, params.perPage ?? 24));
@@ -335,6 +345,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   if (params.available) groups.available = "available = true";
   if (params.local) groups.local = "local = true";
   if (params.sale) groups.sale = "hasDiscount = true";
+  if (params.hit) groups.hit = "hit = true";
+  if (params.isNew) groups.isNew = "isNew = true";
   for (const [k, v] of Object.entries(selectedFacets)) groups[`f:${k}`] = inList(facetField(k), v);
   const filterWithout = (skip?: string) => Object.entries(groups).filter(([g]) => g !== skip).map(([, f]) => f);
 
@@ -409,8 +421,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   const stats = res.main.facetStats?.price;
   return {
     total, page, perPage, pages: Math.max(1, Math.ceil(total / perPage)),
-    items: res.main.hits.map(({ id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available, stock, image, categoryId }) => ({
-      id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available,
+    items: res.main.hits.map(({ id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available, stock, hit, isNew, image, categoryId }) => ({
+      id, sku, nameUk, nameRu, brand, price, oldPrice, discountPct, available, hit: hit === true, isNew: isNew === true,
       // индекс без поля stock (собран до шага 2.6) — считаем по «available»
       stock: stock ?? (available ? "supplier" : "order"), image, categoryId,
     })),

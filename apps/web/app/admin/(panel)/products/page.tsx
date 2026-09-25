@@ -5,7 +5,7 @@ import { UNSORTED_ID } from "@handyman/core/catalog";
 import { requirePermission } from "@/lib/auth";
 import { PAGE_SIZE, loadCategories, money } from "@/lib/catalog";
 import { SelectAll, SubmitButton } from "../import/client-bits";
-import { moveProductsAction } from "./actions";
+import { markProductsAction, moveProductsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (p.flag === "hidden") and.push({ visible: false });
   if (p.flag === "locked") and.push({ fieldLocks: { some: {} } });
   if (p.flag === "missing") and.push({ missingFromFeedSince: { not: null } });
+  if (p.flag === "hit") and.push({ isHit: true });
+  if (p.flag === "new") and.push({ isNew: true });
   const where: Prisma.ProductWhereInput = and.length ? { AND: and } : {};
 
   const [total, rows] = await Promise.all([
@@ -86,6 +88,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <option value="locked">Есть ручные правки</option>
             <option value="hidden">Скрытые с сайта</option>
             <option value="missing">Пропали из фида</option>
+            <option value="hit">Хиты</option>
+            <option value="new">Новинки</option>
           </select>
           <button type="submit" className="adm-btn primary">Найти</button>
           <Link href="/admin/products" className="adm-btn">Сбросить</Link>
@@ -145,6 +149,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                       return own > 0 ? <span className="adm-chip ok">на складе: {own} шт.</span> : null;
                     })()}
                     <span className={r.supplierAvailable ? "adm-chip ok" : "adm-chip"}>{r.supplierAvailable ? "Есть у поставщика" : "Под заказ"}</span>
+                    {r.isHit && <span className="adm-chip warn">хит</span>}
+                    {r.isNew && <span className="adm-chip warn">новинка</span>}
                     {r.priceConflict && <span className="adm-chip warn">расхождение цен</span>}
                     {r._count.fieldLocks > 0 && <span className="adm-chip">правки: {r._count.fieldLocks}</span>}
                     {!r.visible && <span className="adm-chip bad">скрыт</span>}
@@ -173,6 +179,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
                 ))}
               </select>
               <SubmitButton pendingText="Переношу…">Перенести</SubmitButton>
+            </div>
+            <div className="adm-row" style={{ marginTop: 8 }}>
+              <b>Отметки:</b>
+              <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "hit:on")}>Сделать хитом</button>
+              <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "hit:off")}>Снять «хит»</button>
+              <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "new:on")}>Сделать новинкой</button>
+              <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "new:off")}>Снять «новинку»</button>
             </div>
             <p className="adm-muted" style={{ marginTop: 6 }}>
               Перенесённая категория защищается от импорта: он её не вернёт назад. Галочка в шапке таблицы отмечает все товары на странице.

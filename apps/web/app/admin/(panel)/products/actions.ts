@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@handyman/db";
-import { acceptSupplierPrice, moveProductsToCategory, ProductUserError, unlockField, updateProductManual } from "@handyman/db/catalog-products";
+import { acceptSupplierPrice, moveProductsToCategory, ProductUserError, setProductFlag, unlockField, updateProductManual } from "@handyman/db/catalog-products";
 import { reindexProducts, reindexSafely } from "@handyman/db/catalog-search";
 import { setOwnStock } from "@handyman/db/orders";
 import { requirePermission } from "@/lib/auth";
@@ -105,5 +105,34 @@ export async function setOwnStockAction(formData: FormData): Promise<void> {
     if (!/^\d+$/.test(raw.replace(/\s/g, "")) || !Number.isFinite(qty) || qty > 100_000) throw new ProductUserError("Остаток — целое число штук от 0 до 100 000.");
     await setOwnStock(id, qty, session.username);
     return qty > 0 ? `На складе ${qty} шт. — на сайте «В наявності в Одесі».` : "Остаток на нашем складе обнулён.";
+  });
+}
+
+/** «Хит» / «Новинка» в карточке товара (две галочки). */
+export async function setFlagsAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("products.edit");
+  const id = String(formData.get("id"));
+  return run(`/admin/products/${id}`, async () => {
+    const changed = [
+      ...(await setProductFlag([id], "isHit", formData.get("isHit") === "on", session.username)),
+      ...(await setProductFlag([id], "isNew", formData.get("isNew") === "on", session.username)),
+    ];
+    if (changed.length) await reindexSafely(() => reindexProducts([id]));
+    return changed.length ? "Отметки сохранены — на сайте уже видно." : "Ничего не изменилось.";
+  });
+}
+
+/** Массово из списка товаров: у каждой кнопки своё mark = hit:on | hit:off | new:on | new:off (привязано через bind). */
+export async function markProductsAction(mark: string, formData: FormData): Promise<void> {
+  const session = await requirePermission("products.edit");
+  const back = String(formData.get("back") || "/admin/products");
+  const ids = formData.getAll("ids").map(String);
+  const [what, value] = String(mark ?? "").split(":");
+  return run(back, async () => {
+    if (what !== "hit" && what !== "new") throw new ProductUserError("Непонятная кнопка.");
+    const changed = await setProductFlag(ids, what === "hit" ? "isHit" : "isNew", value === "on", session.username);
+    if (changed.length) await reindexSafely(() => reindexProducts(changed));
+    const name = what === "hit" ? "«Хит»" : "«Новинка»";
+    return value === "on" ? `Отметка ${name} поставлена: ${changed.length} шт.` : `Отметка ${name} снята: ${changed.length} шт.`;
   });
 }

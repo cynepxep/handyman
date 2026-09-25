@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPageBySlug, STANDARD_PAGES } from "@handyman/db/site-content";
-import { renderPageBody } from "@handyman/core/site";
+import { getPageBySlug, loadContacts, STANDARD_PAGES } from "@handyman/db/site-content";
+import { loadCheckoutSettings } from "@handyman/db/orders";
+import { deliveryPageDraft, renderPageBody } from "@handyman/core/site";
+import { DraftButton } from "../draft-button";
 import { SubmitButton } from "../../../import/client-bits";
 import { deletePageAction, savePageAction } from "../actions";
 
@@ -25,6 +27,8 @@ export default async function EditPagePage({ params, searchParams }: { params: P
   const p = await getPageBySlug(slug);
   if (!p) notFound();
   const standard = (STANDARD_PAGES as readonly string[]).includes(p.slug);
+  // для «Доставка і оплата» — черновик из настроек оформления и контактов
+  const draft = p.slug === "delivery" ? deliveryPageDraft(...(await Promise.all([loadCheckoutSettings(), loadContacts()]))) : null;
 
   return (
     <>
@@ -39,6 +43,8 @@ export default async function EditPagePage({ params, searchParams }: { params: P
         <p className="adm-muted" style={{ margin: "6px 0 0" }}>Кнопок форматирования нет — всё делается простыми знаками. Скопируйте образец и замените слова:</p>
         <pre>{CHEAT}</pre>
       </details>
+
+      {draft && <DraftButton uk={draft.uk} ru={draft.ru} />}
 
       <form action={savePageAction} className="adm-card">
         <input type="hidden" name="slug" value={p.slug} />

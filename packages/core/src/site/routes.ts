@@ -75,6 +75,9 @@ export const paths = {
   /** Товар: /product/<артикул>/<название>. Артикул — главное (название в адресе может устареть, тогда перенаправим). */
   product: (sku: string, name: string) => `/product/${encodeURIComponent(sku)}/${productSlug(name)}`,
   info: (slug: string) => `/info/${encodeURIComponent(slug)}`,
+  /** все «Хіти» / «Новинки» (ссылка «Усі» с главной) */
+  hits: () => "/search?hit=1",
+  news: () => "/search?new=1",
   cart: () => "/cart",
   checkout: () => "/checkout",
   /** Страница «Дякуємо» после заказа: без ключа доступа не открывается. */

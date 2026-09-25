@@ -82,6 +82,8 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
   if (state.available) chips.push({ text: t("inStockOnly"), href: href({ ...state, available: false, page: 1 }) });
   if (state.local) chips.push({ text: t("filters.fast"), href: href({ ...state, local: false, page: 1 }) });
   if (state.sale) chips.push({ text: t("onSale"), href: href({ ...state, sale: false, page: 1 }) });
+  if (state.hit) chips.push({ text: t("home.hits.title"), href: href({ ...state, hit: false, page: 1 }) });
+  if (state.isNew) chips.push({ text: t("home.new.title"), href: href({ ...state, isNew: false, page: 1 }) });
   if (state.min != null || state.max != null) {
     const noPrice: ListingState = { ...state, page: 1 };
     delete noPrice.min;

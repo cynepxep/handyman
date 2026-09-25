@@ -4,7 +4,7 @@
 
 import { prisma, type Prisma } from "./client";
 import {
-  CONTACTS_SETTING_KEY, TEXT_BY_KEY, missingVars, normalizeTextEdit, parseContacts, resolveTexts, toDbLocale,
+  CONTACTS_SETTING_KEY, HOME_SETTING_KEY, TEXT_BY_KEY, parseHomeSettings, type HomeSettings, missingVars, normalizeTextEdit, parseContacts, resolveTexts, toDbLocale,
   type Contacts, type Lang, type TextOverrideRow,
 } from "@handyman/core/site";
 import { MENU_SETTING_KEY, defaultMenuConfig, parseMenuConfig, type MenuConfig } from "@handyman/core/catalog";
@@ -143,6 +143,20 @@ export async function resetMenuConfig(who: string): Promise<void> {
   await prisma.$transaction([
     prisma.setting.deleteMany({ where: { key: MENU_SETTING_KEY } }),
     prisma.auditLog.create({ data: { who, action: "site.menu.reset" } }),
+  ]);
+}
+
+// ---------- главная (блоки и баннер) ----------
+
+export async function loadHomeSettings(): Promise<HomeSettings> {
+  const row = await prisma.setting.findUnique({ where: { key: HOME_SETTING_KEY } });
+  return parseHomeSettings(row?.value);
+}
+
+export async function saveHomeSettings(value: HomeSettings, who: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.setting.upsert({ where: { key: HOME_SETTING_KEY }, update: { value: json(value) }, create: { key: HOME_SETTING_KEY, value: json(value) } }),
+    prisma.auditLog.create({ data: { who, action: "site.home.edit", details: { on: value.blocks.filter((b) => b.on).map((b) => b.id), banner: value.banner.on } } }),
   ]);
 }
 

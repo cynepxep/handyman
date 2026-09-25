@@ -130,6 +130,22 @@ test("свой склад: товар из Одессы первым в спис
   assert.equal((await search.searchProducts({ local: true })).total, 0);
 });
 
+test("отметки «Хіт» и «Новинка»: ставятся массово, видны в поиске и фильтруются", async (t) => {
+  if (!ready) return t.skip(noMeili);
+  const products = await import("../src/catalog-products");
+  const two = await prisma.product.findMany({ where: { visible: true }, take: 2, orderBy: { sku: "asc" } });
+  const changed = await products.setProductFlag(two.map((p) => p.id), "isHit", true, "test");
+  assert.equal(changed.length, 2);
+  assert.equal((await products.setProductFlag(two.map((p) => p.id), "isHit", true, "test")).length, 0, "повторно — ничего не меняется");
+  await search.reindexProducts(changed);
+  const hits = await search.searchProducts({ hit: true });
+  assert.deepEqual(hits.items.map((i) => i.id).sort(), two.map((p) => p.id).sort());
+  assert.ok(hits.items.every((i) => i.hit === true && i.isNew === false));
+  assert.equal((await search.searchProducts({ isNew: true })).total, 0);
+  await search.reindexProducts(await products.setProductFlag(two.map((p) => p.id), "isHit", false, "test"));
+  assert.equal((await search.searchProducts({ hit: true })).total, 0);
+});
+
 test("недоступные товары в списке идут после доступных", async (t) => {
   if (!ready) return t.skip(noMeili);
   const r = await search.searchProducts({ perPage: 30 });

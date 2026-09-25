@@ -11,6 +11,7 @@ import { Gallery } from "@/components/shop/gallery";
 import { Icon } from "@/components/shop/icons";
 import { ProductCard, cardLabels, stockLabels } from "@/components/shop/product-card";
 import { AddToCartButton, OneClickButton } from "@/components/shop/cart/cart-buttons";
+import { RememberView } from "@/components/shop/viewed";
 import { contactLinks } from "@/components/shop/site-chrome";
 import { Breadcrumbs, Price, StockBadge, btn } from "@/components/shop/ui";
 
@@ -93,6 +94,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
   return (
     <article className="hm-section hm-product" data-product-id={p.id}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
+      <RememberView sku={p.sku} />
       <Breadcrumbs label={t("crumbs.label")} items={crumbs} />
 
       <div className="hm-product-top">

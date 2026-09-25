@@ -24,6 +24,8 @@ export async function GET(req: NextRequest) {
       max: s.max,
       available: s.available,
       sale: s.sale,
+      hit: s.hit,
+      isNew: s.isNew,
       facets: s.facets,
       sort: s.sort,
       page: s.page,

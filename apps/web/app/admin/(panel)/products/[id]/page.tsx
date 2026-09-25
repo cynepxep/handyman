@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { loadCategories, money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { Gallery } from "./gallery";
-import { acceptPriceAction, saveProductAction, setOwnStockAction, unlockFieldAction } from "../actions";
+import { acceptPriceAction, saveProductAction, setFlagsAction, setOwnStockAction, unlockFieldAction } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -71,6 +71,8 @@ export default async function ProductPage({
       </p>
       <div className="adm-row" style={{ gap: 6, margin: "8px 0" }}>
         {own > 0 && <span className="adm-chip ok">на нашем складе: {own} шт.</span>}
+        {p.isHit && <span className="adm-chip warn">хит</span>}
+        {p.isNew && <span className="adm-chip warn">новинка</span>}
         <span className={p.supplierAvailable ? "adm-chip ok" : "adm-chip"}>{p.supplierAvailable ? "В наличии у поставщика" : "Под заказ"}</span>
         {!p.visible && <span className="adm-chip bad">скрыт с сайта</span>}
         {p.missingFromFeedSince && <span className="adm-chip warn">нет в фиде с {p.missingFromFeedSince.toLocaleDateString("ru-RU")}</span>}
@@ -104,6 +106,17 @@ export default async function ProductPage({
           Больше 0 — на сайте «В наявності в Одесі», товар выше в списках и попадает в фильтр «Швидка відправка з Одеси». 0 — берём у поставщика
           («Відправка за 3–4 дні») или «Під замовлення». При заказе остаток уменьшается сам, при отмене заказа — возвращается.
         </p>
+      </form>
+
+      <form action={setFlagsAction} className="adm-card">
+        <input type="hidden" name="id" value={p.id} />
+        <div className="adm-row">
+          <b>Отметки на сайте:</b>
+          <label className="adm-row" style={{ gap: 6 }}><input type="checkbox" name="isHit" defaultChecked={p.isHit} disabled={!canEdit} /> Хит</label>
+          <label className="adm-row" style={{ gap: 6 }}><input type="checkbox" name="isNew" defaultChecked={p.isNew} disabled={!canEdit} /> Новинка</label>
+          {canEdit && <SubmitButton pendingText="Сохраняю…">Сохранить отметки</SubmitButton>}
+        </div>
+        <p className="adm-muted" style={{ marginTop: 6 }}>Хиты и новинки показываются на главной (если блоки включены в «Сайт → Главная») и со значком на карточке товара. Импорт отметки не трогает.</p>
       </form>
 
       <form action={saveProductAction} className="adm-card">

@@ -60,6 +60,8 @@ export async function toCards(items: SearchItem[], lang: ShopLang, specOrder?: s
     discountPct: i.discountPct,
     available: i.available,
     stock: i.stock,
+    hit: i.hit === true,
+    isNew: i.isNew === true,
     image: i.image,
     specs: pickSpecs(extractFacets(params.get(i.id) ?? [], chainOf(i.categoryId)), specOrder),
   }));
@@ -110,7 +112,7 @@ export async function getBatteries(): Promise<Array<{ value: string; count: numb
 export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[]> {
   const rows = await prisma.product.findMany({
     where: { visible: true, oldPrice: { not: null }, supplierAvailable: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} } },
-    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } }, stockItems: { select: { onHand: true } } },
+    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } }, stockItems: { select: { onHand: true } } },
   });
   const items: SearchItem[] = rows
     .map((r) => {
@@ -123,8 +125,45 @@ export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[
     .slice(0, limit)
     .map(({ r, price, old, pct }) => ({
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old, discountPct: pct, available: true,
-      stock: stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), true),
+      stock: stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), true), hit: r.isHit, isNew: r.isNew,
       image: r.images[0]?.url ?? null, categoryId: r.categoryId,
     }));
+  return toCards(items, lang);
+}
+
+/** «Хіти» или «Новинки» для главной: товары, отмеченные владельцем (сначала те, что можно отправить быстрее). Поиск недоступен — пусто. */
+export async function getFlaggedCards(lang: ShopLang, flag: "hit" | "isNew", limit = 12): Promise<{ cards: ShopCard[]; total: number }> {
+  try {
+    const r = await searchProducts({ [flag]: true, perPage: limit });
+    return { cards: await toCards(r.items, lang), total: r.total };
+  } catch (e) {
+    if (e instanceof SearchUnavailableError) return { cards: [], total: 0 };
+    throw e;
+  }
+}
+
+/** Карточки по списку артикулов в том же порядке («Ви переглядали»). Скрытые и снятые с продажи пропускаются. */
+export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<ShopCard[]> {
+  const list = [...new Set(skus.filter((s) => typeof s === "string" && s.length > 0 && s.length <= 40))].slice(0, 12);
+  if (!list.length) return [];
+  const rows = await prisma.product.findMany({
+    where: { sku: { in: list }, visible: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS } },
+    select: {
+      id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, supplierAvailable: true, isHit: true, isNew: true,
+      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } }, stockItems: { select: { onHand: true } },
+    },
+  });
+  const bySku = new Map(rows.map((r) => [r.sku, r]));
+  const items: SearchItem[] = list.flatMap((sku) => {
+    const r = bySku.get(sku);
+    if (!r) return [];
+    const price = r.price.toNumber();
+    const old = r.oldPrice ? r.oldPrice.toNumber() : null;
+    const stock = stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), r.supplierAvailable);
+    return [{
+      id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old && old > price ? old : null,
+      discountPct: discountPct(price, old), available: stock !== "order", stock, hit: r.isHit, isNew: r.isNew, image: r.images[0]?.url ?? null, categoryId: r.categoryId,
+    }];
+  });
   return toCards(items, lang);
 }
