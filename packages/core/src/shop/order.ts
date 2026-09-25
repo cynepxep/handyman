@@ -74,8 +74,10 @@ export const orderNumber = (seq: number) => `HM-${1000 + seq}`;
 
 // ---------- форма оформления ----------
 
+/** address — «кур’єр НП на адресу»: больше не предлагается (решение владельца), остаётся для старых заказов. */
 export type NpType = "warehouse" | "postomat" | "address";
-export const NP_TYPES: NpType[] = ["warehouse", "postomat", "address"];
+/** Что можно выбрать при оформлении: відділення або поштомат. */
+export const NP_TYPES: NpType[] = ["warehouse", "postomat"];
 
 export type CheckoutInput = {
   firstName: string;
@@ -140,10 +142,10 @@ export function validateCheckout(raw: Record<string, unknown>, s: CheckoutSettin
     value.city = txt(raw.city, 80);
     value.npPoint = txt(raw.npPoint, 160);
     if (value.city.length < 2) errors.city = "err.city";
-    if (value.npPoint.length < 1) errors.npPoint = npType === "address" ? "errAddr" : "err.npPoint";
+    if (value.npPoint.length < 1) errors.npPoint = "err.npPoint";
     const ref = (v: unknown) => (typeof v === "string" && NP_REF.test(v) ? v : undefined);
     value.npCityRef = ref(raw.npCityRef);
-    value.npPointRef = npType === "address" || !value.npCityRef ? undefined : ref(raw.npPointRef);
+    value.npPointRef = value.npCityRef ? ref(raw.npPointRef) : undefined;
   } else if (delivery === "pickup") {
     const id = String(raw.pickupId ?? "");
     if (PICKUP_ID.test(id)) value.pickupId = id;

@@ -125,8 +125,9 @@ test("оформление: коды Новой Почты и точка сам�
   assert.ok(np.ok && np.value.npCityRef === ref && np.value.npPointRef === ref);
   const bad = validateCheckout({ ...base, delivery: "np", city: "Одеса", npPoint: "2", npCityRef: "'; DROP", npPointRef: ref }, s);
   assert.ok(bad.ok && bad.value.npCityRef === undefined && bad.value.npPointRef === undefined, "без города код отделения не принимается");
-  const addr = validateCheckout({ ...base, delivery: "np", npType: "address", city: "Одеса", npPoint: "вул. Прикладна, 1", npCityRef: ref, npPointRef: ref }, s);
-  assert.ok(addr.ok && addr.value.npPointRef === undefined);
+  // «кур’єр НП на адресу» больше не предлагается: такой выбор из старой вкладки браузера считается відділенням
+  const addr = validateCheckout({ ...base, delivery: "np", npType: "address", city: "Одеса", npPoint: "2", npCityRef: ref, npPointRef: ref }, s);
+  assert.ok(addr.ok && addr.value.npType === "warehouse" && addr.value.npPointRef === ref);
   const pickup = validateCheckout({ ...base, delivery: "pickup", pickupId: "default" }, s);
   assert.ok(pickup.ok && pickup.value.pickupId === "default");
   const pickupBad = validateCheckout({ ...base, delivery: "pickup", pickupId: "a b" }, s);

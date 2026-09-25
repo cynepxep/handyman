@@ -497,7 +497,8 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-choice-sub { display: flex; flex-wrap: wrap; gap: 8px; }
 .hm-choice-sub .hm-chip { cursor: pointer; }
 .hm-choice-sub input { position: absolute; opacity: 0; pointer-events: none; }
-.hm-choice-sub label:has(input:checked) { background: var(--c-dark); color: var(--c-on-dark); border-color: var(--c-dark); }
+.hm-choice-sub label:has(input:checked) { background: var(--c-primary); color: var(--c-on-primary); border: 2px solid var(--c-text); }
+.hm-choice-sub label:has(input:checked)::before { content: "✓"; font-weight: 800; }
 .hm-choice-sub label:has(input:focus-visible) { outline: 3px solid var(--c-focus); outline-offset: 2px; }
 .hm-check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .hm-check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--c-text); flex: none; }

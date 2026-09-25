@@ -19,7 +19,8 @@ import { cartStore, useCart } from "./store";
 
 type Pay = "prepay" | "full" | "card";
 type Delivery = "np" | "pickup" | "courier";
-type NpType = "warehouse" | "postomat" | "address";
+/** Нова Пошта: только відділення или поштомат (курьера НП покупатель оформляет сам в приложении НП). */
+type NpType = "warehouse" | "postomat";
 
 export type CheckoutLabels = {
   contacts: string; firstName: string; lastName: string; phone: string;
@@ -38,7 +39,7 @@ export type CheckoutOptions = { pay: Pay[]; delivery: Delivery[] };
 
 const SAVED_KEY = "hm.buyer";
 type Saved = {
-  firstName?: string; lastName?: string; phone?: string; delivery?: Delivery; npType?: NpType; city?: string; npPoint?: string; address?: string;
+  firstName?: string; lastName?: string; phone?: string; delivery?: Delivery; npType?: NpType | "address"; city?: string; npPoint?: string; address?: string;
   cityRef?: string; npPointRef?: string; pickupId?: string;
 };
 
@@ -90,7 +91,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
     if (s.lastName) setLastName(s.lastName);
     if (s.phone) setPhone(s.phone);
     if (s.delivery && options.delivery.includes(s.delivery)) setDelivery(s.delivery);
-    if (s.npType) setNpType(s.npType);
+    if (s.npType === "warehouse" || s.npType === "postomat") setNpType(s.npType); // старое «кур’єр на адресу» не восстанавливаем
     if (s.city) setCity(s.city);
     if (s.npPoint) setNpPoint(s.npPoint);
     if (s.address) setAddress(s.address);
@@ -203,7 +204,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
                 {delivery === "np" && (
                   <div className="hm-section" style={{ gap: 12, paddingLeft: 4 }}>
                     <div className="hm-choice-sub" role="radiogroup" aria-label={labels.np}>
-                      {(["warehouse", "postomat", "address"] as const).map((k) => (
+                      {(["warehouse", "postomat"] as const).map((k) => (
                         <label key={k} className="hm-chip">
                           <input type="radio" name="npType" value={k} checked={npType === k} onChange={() => { setNpType(k); setNpPoint(""); setNpPointRef(""); }} />
                           {labels.npTypes[k]}
@@ -221,7 +222,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
                           onPick={(o) => {
                             setCity(o.label); setCityRef(o.ref); setNpPoint(""); setNpPointRef("");
                             // сразу к отделению: поле откроет список отделений этого города
-                            if (npType !== "address") setTimeout(() => document.getElementById("co-point")?.focus(), 80);
+                            setTimeout(() => document.getElementById("co-point")?.focus(), 80);
                           }}
                           load={async (q) => (await npCitiesAction(q))?.map((c) => ({ ref: c.ref, label: c.name })) ?? null}
                         />
@@ -229,7 +230,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
                       </div>
                       <div className="hm-field">
                         <label htmlFor="co-point">{labels.npPoint[npType]}</label>
-                        {npType !== "address" && cityRef ? (
+                        {cityRef ? (
                           <Combo
                             key={cityRef + npType}
                             id="co-point" value={npPoint} minChars={0} placeholder={labels.pointPlaceholder} picked={!!npPointRef} inputMode="search"
@@ -242,10 +243,10 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
                         ) : (
                           <input
                             id="co-point" className="hm-input" value={npPoint} onChange={(e) => setNpPoint(e.target.value)} maxLength={160}
-                            inputMode={npType === "address" ? "text" : "numeric"} autoComplete={npType === "address" ? "street-address" : "off"} {...err("npPoint")}
+                            inputMode="numeric" autoComplete="off" {...err("npPoint")}
                           />
                         )}
-                        {npType !== "address" && city.trim().length >= 2 && !cityRef && <span className="hm-small">{labels.npPickCity}</span>}
+                        {city.trim().length >= 2 && !cityRef && <span className="hm-small">{labels.npPickCity}</span>}
                         {errText("npPoint")}
                       </div>
                     </div>

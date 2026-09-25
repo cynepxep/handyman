@@ -37,10 +37,10 @@ export default async function CheckoutPage({ params }: PageProps<"/[lang]/checko
   const labels: CheckoutLabels = {
     contacts: t("checkout.contacts"), firstName: t("checkout.firstName"), lastName: t("checkout.lastName"), phone: t("checkout.phone"),
     delivery: t("deliv"), np: t("checkout.np"), npHint: t("checkout.np.hint"),
-    npTypes: { warehouse: t("delivery.np.warehouse"), postomat: t("delivery.np.postomat"), address: t("delivery.np.address") },
+    npTypes: { warehouse: t("delivery.np.warehouse"), postomat: t("delivery.np.postomat") },
     city: t("checkout.city"), cityPlaceholder: t("checkout.city.placeholder"), pointPlaceholder: t("checkout.npPoint.placeholder"),
     npSearching: t("checkout.np.searching"), npNone: t("checkout.np.none"), npPickCity: t("checkout.np.pickCity"), pickupChoose: t("checkout.pickup.choose"),
-    npPoint: { warehouse: t("checkout.npPoint.warehouse"), postomat: t("checkout.npPoint.postomat"), address: t("checkout.npPoint.address") },
+    npPoint: { warehouse: t("checkout.npPoint.warehouse"), postomat: t("checkout.npPoint.postomat") },
     pickup: t("delivery.pickup"), pickupHint: t("delivery.pickup.hint", { address }),
     courier: t("delivery.courier"), courierHint: t("delivery.courier.hint"), courierAddr: t("checkout.courierAddr"),
     pay: t("pay"),
