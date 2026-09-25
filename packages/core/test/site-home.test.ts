@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DEFAULT_HOME, HOME_BLOCKS, bannerVisible, mergeHints, normalizeQuery, parseHidden, deliveryPageDraft, parseHomeSettings, renderPageBody, safeBannerHref, validateHomeForm, listingQuery, parseListing,
+  DEFAULT_HOME, HOME_BLOCKS, bannerVisible, mergeHints, normalizeQuery, parseHidden, deliveryPageDraft, parseHomeSettings, renderPageBody, safeBannerHref, validateHomeForm, listingQuery, parseListing, clearFilters,
 } from "../src/site";
 import { DEFAULT_CHECKOUT } from "../src/shop";
 
@@ -99,4 +99,13 @@ test("главная: настройки подсказок поиска", () =>
   assert.deepEqual(parseHomeSettings({ hints: { max: 99, hidden: ["Лайно", 5] } }).hints, { max: 20, hidden: ["лайно"] });
   const r = validateHomeForm({ "hints.max": "5", "hints.hidden": "погане слово\nще одне", "hide.0": "Дурня", "hide.1": "" });
   assert.ok(r.ok && r.value.hints.max === 5 && r.value.hints.hidden.join("|") === "погане слово|ще одне|дурня");
+});
+
+test("список: часть подраздела ?part= — в адресе туда и обратно, мусор отбрасывается, «Скинути» её не сбрасывает", () => {
+  const s = parseListing(new URLSearchParams("part=bity-ta-trymachi&avail=1"), []);
+  assert.equal(s.part, "bity-ta-trymachi");
+  assert.match(listingQuery(s), /part=bity-ta-trymachi/);
+  assert.equal(parseListing(new URLSearchParams("part=<script>"), []).part, undefined);
+  assert.equal(clearFilters(s).part, "bity-ta-trymachi");
+  assert.equal(clearFilters(s).available, false);
 });

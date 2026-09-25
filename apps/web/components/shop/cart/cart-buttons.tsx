@@ -1,26 +1,23 @@
 "use client";
 
-// Кнопки корзины: «У кошик» (кладёт товар и открывает мини-корзину), «Купити в 1 клік» (окно с телефоном), значок корзины.
+// Кнопки корзины: «У кошик» (первый раз открывает мини-корзину, дальше — «полёт» в круглую кнопку), «Купити в 1 клік» (окно с телефоном), значок корзины.
 import Link from "next/link";
 import { btn } from "../ui";
 import { Icon } from "../icons";
 import { CartCount, useShopCart } from "./cart-context";
-import { cartStore, useCart } from "./store";
+import { useCart } from "./store";
 
 export function AddToCartButton({ sku, label, block, variant = "primary", className }: {
   sku: string; label: string; block?: boolean; variant?: "primary" | "secondary"; className?: string;
 }) {
-  const { openCart } = useShopCart();
+  const { addToCart } = useShopCart();
   return (
     <button
       type="button"
       className={`${btn(variant, { block })}${className ? ` ${className}` : ""}`}
       data-action="add-to-cart"
       data-sku={sku}
-      onClick={() => {
-        cartStore.add(sku, 1);
-        openCart();
-      }}
+      onClick={(e) => addToCart(sku, e.currentTarget)}
     >
       {label}
     </button>

@@ -10,7 +10,8 @@
     "./site": "./src/site/index.ts",
     "./site/routes": "./src/site/routes.ts",
     "./site/listing": "./src/site/listing.ts",
-    "./shop": "./src/shop/index.ts"
+    "./shop": "./src/shop/index.ts",
+    "./shop/warehouse": "./src/shop/warehouse.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

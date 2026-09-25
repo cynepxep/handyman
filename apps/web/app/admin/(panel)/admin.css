@@ -144,3 +144,15 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-preview h2 { margin: 12px 0 6px; } .adm-preview h3 { margin: 10px 0 4px; }
 .adm-preview p, .adm-preview ul, .adm-preview ol { margin: 0 0 10px; }
 .adm-preview ul, .adm-preview ol { padding-left: 22px; }
+
+/* график работы: день — с — до — выходной */
+.adm-week { display: grid; gap: 6px; }
+.adm-week-row { display: grid; grid-template-columns: 110px auto auto 1fr; align-items: center; gap: 8px 12px; padding: 4px 0; border-bottom: 1px dashed var(--adm-line); }
+.adm-week-time { display: inline-flex; align-items: center; gap: 6px; }
+.adm-week-time span { color: var(--adm-muted); font-size: 13px; }
+.adm-week-row:has(input[type="checkbox"]:checked) .adm-week-time { opacity: .35; }
+@media (max-width: 560px) {
+  .adm-week-row { grid-template-columns: 1fr 1fr; }
+  .adm-week-row > b { grid-column: 1 / -1; }
+}
+.adm-week .adm-check { display: inline-flex; gap: 6px; align-items: center; min-height: 40px; }

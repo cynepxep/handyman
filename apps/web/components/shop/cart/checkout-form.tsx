@@ -9,8 +9,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ShopLang } from "@handyman/core/site/routes";
 import { checkoutQuoteAction, placeOrderAction, type CheckoutQuote } from "@/app/[lang]/cart-actions";
+import { npCitiesAction, npPointsAction } from "@/app/[lang]/np-actions";
+import type { PickupPoint } from "@handyman/core/shop/warehouse";
 import { formatPrice } from "../format";
 import { StockBadge, btn, type StockLabels } from "../ui";
+import { Combo } from "./combo";
 import { PhoneInput } from "./phone-input";
 import { cartStore, useCart } from "./store";
 
@@ -21,7 +24,8 @@ type NpType = "warehouse" | "postomat" | "address";
 export type CheckoutLabels = {
   contacts: string; firstName: string; lastName: string; phone: string;
   delivery: string; np: string; npHint: string; npTypes: Record<NpType, string>; city: string; npPoint: Record<NpType, string>;
-  pickup: string; pickupHint: string; courier: string; courierHint: string; courierAddr: string;
+  cityPlaceholder: string; pointPlaceholder: string; npSearching: string; npNone: string; npPickCity: string;
+  pickup: string; pickupHint: string; pickupChoose: string; courier: string; courierHint: string; courierAddr: string;
   pay: string; payTitles: Record<Pay, string>; payHints: Record<Pay, string>;
   comment: string; noCall: string; noCallOff: string;
   summary: string; subtotal: string; discount: string; shipping: string; shippingTariff: string; shippingFree: string;
@@ -33,7 +37,10 @@ export type CheckoutLabels = {
 export type CheckoutOptions = { pay: Pay[]; delivery: Delivery[] };
 
 const SAVED_KEY = "hm.buyer";
-type Saved = { firstName?: string; lastName?: string; phone?: string; delivery?: Delivery; npType?: NpType; city?: string; npPoint?: string; address?: string };
+type Saved = {
+  firstName?: string; lastName?: string; phone?: string; delivery?: Delivery; npType?: NpType; city?: string; npPoint?: string; address?: string;
+  cityRef?: string; npPointRef?: string; pickupId?: string;
+};
 
 function readSaved(): Saved {
   try {
@@ -44,7 +51,11 @@ function readSaved(): Saved {
   }
 }
 
-export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: ShopLang; labels: CheckoutLabels; options: CheckoutOptions; catalogHref: string }) {
+export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
+  lang: ShopLang; labels: CheckoutLabels; options: CheckoutOptions; catalogHref: string;
+  /** точки самовывоза (магазины); если их несколько — покупатель выбирает */
+  pickups: PickupPoint[];
+}) {
   const router = useRouter();
   const lines = useCart();
   const [firstName, setFirstName] = useState("");
@@ -54,6 +65,10 @@ export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: Sho
   const [npType, setNpType] = useState<NpType>("warehouse");
   const [city, setCity] = useState("");
   const [npPoint, setNpPoint] = useState("");
+  // выбрано из справочника Новой Почты (пусто — написано вручную)
+  const [cityRef, setCityRef] = useState("");
+  const [npPointRef, setNpPointRef] = useState("");
+  const [pickupId, setPickupId] = useState(pickups[0]?.id ?? "");
   const [address, setAddress] = useState("");
   const [pay, setPay] = useState<Pay>(options.pay[0]);
   const [comment, setComment] = useState("");
@@ -79,8 +94,11 @@ export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: Sho
     if (s.city) setCity(s.city);
     if (s.npPoint) setNpPoint(s.npPoint);
     if (s.address) setAddress(s.address);
+    if (s.cityRef) setCityRef(s.cityRef);
+    if (s.npPointRef) setNpPointRef(s.npPointRef);
+    if (s.pickupId && pickups.some((p) => p.id === s.pickupId)) setPickupId(s.pickupId);
     /* eslint-enable react-hooks/set-state-in-effect */
-  }, [options.delivery]);
+  }, [options.delivery, pickups]);
 
   // итог с сервера при каждом изменении корзины или способа оплаты
   const key = JSON.stringify(lines);
@@ -119,14 +137,14 @@ export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: Sho
     e.preventDefault();
     setMessage("");
     const form = {
-      firstName, lastName, phone, delivery, npType, city, npPoint, address, pay, comment,
+      firstName, lastName, phone, delivery, npType, city, npPoint, address, pay, comment, npCityRef: cityRef, npPointRef, pickupId,
       noCallback: canSkipCall && noCall, items: lines, website: trap,
     };
     start(async () => {
       const r = await placeOrderAction(lang, form);
       if (r.ok) {
         try {
-          localStorage.setItem(SAVED_KEY, JSON.stringify({ firstName, lastName, phone, delivery, npType, city, npPoint, address } satisfies Saved));
+          localStorage.setItem(SAVED_KEY, JSON.stringify({ firstName, lastName, phone, delivery, npType, city, npPoint, address, cityRef, npPointRef, pickupId } satisfies Saved));
         } catch {
           /* приватный режим — просто не запоминаем */
         }
@@ -187,7 +205,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: Sho
                     <div className="hm-choice-sub" role="radiogroup" aria-label={labels.np}>
                       {(["warehouse", "postomat", "address"] as const).map((k) => (
                         <label key={k} className="hm-chip">
-                          <input type="radio" name="npType" value={k} checked={npType === k} onChange={() => setNpType(k)} />
+                          <input type="radio" name="npType" value={k} checked={npType === k} onChange={() => { setNpType(k); setNpPoint(""); setNpPointRef(""); }} />
                           {labels.npTypes[k]}
                         </label>
                       ))}
@@ -195,15 +213,35 @@ export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: Sho
                     <div className="hm-fields2">
                       <div className="hm-field">
                         <label htmlFor="co-city">{labels.city}</label>
-                        <input id="co-city" className="hm-input" autoComplete="address-level2" value={city} onChange={(e) => setCity(e.target.value)} maxLength={80} {...err("city")} />
+                        <Combo
+                          id="co-city" value={city} maxLength={80} autoComplete="address-level2" placeholder={labels.cityPlaceholder}
+                          labels={{ searching: labels.npSearching, none: labels.npNone }}
+                          invalid={!!errors.city} describedBy={errors.city ? "e-city" : undefined}
+                          onText={(v) => { setCity(v); setCityRef(""); setNpPointRef(""); }}
+                          onPick={(o) => { setCity(o.label); setCityRef(o.ref); setNpPoint(""); setNpPointRef(""); }}
+                          load={async (q) => (await npCitiesAction(q))?.map((c) => ({ ref: c.ref, label: c.name })) ?? null}
+                        />
                         {errText("city")}
                       </div>
                       <div className="hm-field">
                         <label htmlFor="co-point">{labels.npPoint[npType]}</label>
-                        <input
-                          id="co-point" className="hm-input" value={npPoint} onChange={(e) => setNpPoint(e.target.value)} maxLength={160}
-                          inputMode={npType === "address" ? "text" : "numeric"} autoComplete={npType === "address" ? "street-address" : "off"} {...err("npPoint")}
-                        />
+                        {npType !== "address" && cityRef ? (
+                          <Combo
+                            key={cityRef + npType}
+                            id="co-point" value={npPoint} minChars={0} placeholder={labels.pointPlaceholder}
+                            labels={{ searching: labels.npSearching, none: labels.npNone }}
+                            invalid={!!errors.npPoint} describedBy={errors.npPoint ? "e-npPoint" : undefined}
+                            onText={(v) => { setNpPoint(v); setNpPointRef(""); }}
+                            onPick={(o) => { setNpPoint(o.label); setNpPointRef(o.ref); }}
+                            load={(q) => npPointsAction(cityRef, npType, q, lang)}
+                          />
+                        ) : (
+                          <input
+                            id="co-point" className="hm-input" value={npPoint} onChange={(e) => setNpPoint(e.target.value)} maxLength={160}
+                            inputMode={npType === "address" ? "text" : "numeric"} autoComplete={npType === "address" ? "street-address" : "off"} {...err("npPoint")}
+                          />
+                        )}
+                        {npType !== "address" && city.trim().length >= 2 && !cityRef && <span className="hm-small">{labels.npPickCity}</span>}
                         {errText("npPoint")}
                       </div>
                     </div>
@@ -217,6 +255,19 @@ export function CheckoutForm({ lang, labels, options, catalogHref }: { lang: Sho
                 <b>{labels.pickup}</b>
                 <small>{labels.pickupHint}</small>
               </label>
+            )}
+            {options.delivery.includes("pickup") && delivery === "pickup" && pickups.length > 1 && (
+              <div className="hm-pickups" role="radiogroup" aria-label={labels.pickupChoose}>
+                <b>{labels.pickupChoose}</b>
+                {pickups.map((p) => (
+                  <label key={p.id} className="hm-choice">
+                    <input type="radio" name="pickupId" value={p.id} checked={pickupId === p.id} onChange={() => setPickupId(p.id)} />
+                    <b>{p.city}, {p.address}</b>
+                    {p.hours && <small>{p.hours}</small>}
+                  </label>
+                ))}
+                {errText("pickup")}
+              </div>
             )}
             {options.delivery.includes("courier") && (
               <>

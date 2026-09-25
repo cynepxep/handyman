@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/auth";
 import { loadCategories, money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { Gallery } from "./gallery";
+import { stockByWarehouse } from "@handyman/db/warehouses";
 import { acceptPriceAction, saveProductAction, setFlagsAction, setOwnStockAction, unlockFieldAction } from "../actions";
 
 export const dynamic = "force-dynamic";
@@ -47,7 +48,7 @@ export default async function ProductPage({
     },
   });
   if (!p) notFound();
-  const [cats, brands] = await Promise.all([loadCategories(), prisma.brand.findMany({ orderBy: { name: "asc" } })]);
+  const [cats, brands, stock] = await Promise.all([loadCategories(), prisma.brand.findMany({ orderBy: { name: "asc" } }), stockByWarehouse(p.id)]);
   const canEdit = can("products.edit");
   const canPrices = can("prices.edit");
   const price = p.price.toNumber();
@@ -96,10 +97,12 @@ export default async function ProductPage({
       <form action={setOwnStockAction} className="adm-card">
         <input type="hidden" name="id" value={p.id} />
         <div className="adm-row" style={{ alignItems: "flex-end" }}>
-          <div className="adm-field" style={{ margin: 0 }}>
-            <label htmlFor="onHand">На нашем складе (Одесса), шт.</label>
-            <input id="onHand" name="onHand" className="adm-input" inputMode="numeric" defaultValue={String(own)} style={{ width: 120 }} disabled={!canEdit} />
-          </div>
+          {stock.map((w) => (
+            <div key={w.id} className="adm-field" style={{ margin: 0 }}>
+              <label htmlFor={`stock-${w.id}`}>{stock.length > 1 ? `${w.name}, шт.` : "На нашем складе (Одесса), шт."}</label>
+              <input id={`stock-${w.id}`} name={`stock.${w.id}`} className="adm-input" inputMode="numeric" defaultValue={String(w.onHand)} style={{ width: 120 }} disabled={!canEdit} />
+            </div>
+          ))}
           {canEdit && <SubmitButton pendingText="Сохраняю…">Сохранить остаток</SubmitButton>}
         </div>
         <p className="adm-muted" style={{ marginTop: 6 }}>

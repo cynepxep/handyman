@@ -11,6 +11,7 @@ import {
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
 import { reindexProducts, reindexSafely } from "./catalog-search";
 import { notifyManagers } from "./notify";
+import { npPointByRef } from "./novaposhta";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const money = (n: number) => `${n.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} ₴`;
@@ -30,13 +31,16 @@ export async function ownStockOf(productIds: string[]): Promise<Map<string, numb
   return new Map(rows.map((r) => [r.productId, r._sum.onHand ?? 0]));
 }
 
-/** Установить остаток на нашем складе (правка в админке). Изменение пишется в StockMovement, поиск обновляется. */
-export async function setOwnStock(productId: string, qty: number, who: string): Promise<void> {
+/**
+ * Установить остаток на нашем складе (правка в админке). Изменение пишется в StockMovement, поиск обновляется.
+ * `warehouseId` — какой магазин/склад (по умолчанию основной). Возвращает true, если остаток изменился.
+ */
+export async function setOwnStock(productId: string, qty: number, who: string, warehouseId?: string, opts: { reindex?: boolean } = {}): Promise<boolean> {
   const target = Math.max(0, Math.min(100_000, Math.floor(qty)));
-  const warehouseId = await defaultWarehouseId();
+  warehouseId ??= await defaultWarehouseId();
   const cur = await prisma.stockItem.findUnique({ where: { productId_warehouseId: { productId, warehouseId } } });
   const delta = target - (cur?.onHand ?? 0);
-  if (delta === 0) return;
+  if (delta === 0) return false;
   await prisma.$transaction(async (tx) => {
     const item = await tx.stockItem.upsert({
       where: { productId_warehouseId: { productId, warehouseId } },
@@ -44,9 +48,10 @@ export async function setOwnStock(productId: string, qty: number, who: string): 
       update: { onHand: target },
     });
     await tx.stockMovement.create({ data: { stockItemId: item.id, delta, reason: "ADJUSTMENT", who } });
-    await tx.auditLog.create({ data: { who, action: "stock.set", target: productId, details: json({ onHand: target, delta }) } });
+    await tx.auditLog.create({ data: { who, action: "stock.set", target: productId, details: json({ onHand: target, delta, warehouseId }) } });
   });
-  await reindexSafely(() => reindexProducts([productId]));
+  if (opts.reindex !== false) await reindexSafely(() => reindexProducts([productId]));
+  return true;
 }
 
 // ---------- настройки оформления ----------
@@ -167,6 +172,9 @@ async function createOrderRecord(p: {
   address?: string | null;
   npType?: string | null;
   npPoint?: string | null;
+  npCityRef?: string | null;
+  npPointRef?: string | null;
+  pickupWarehouseId?: string | null;
   comment?: string | null;
   noCallback?: boolean;
   history: string;
@@ -182,6 +190,7 @@ async function createOrderRecord(p: {
         payMode: PAY_DB[p.pay], delivery: p.delivery === "to_confirm" ? "TO_CONFIRM" : DELIVERY_DB[p.delivery],
         subtotal: totals.subtotal, discountPct: totals.discountPct, total: totals.total, dueNow: totals.dueNow,
         city: p.city ?? null, address: p.address ?? null, npWarehouseRef: p.npPoint ?? null, deliveryType: p.npType ?? null,
+        npCityRef: p.npCityRef ?? null, npPointRef: p.npPointRef ?? null, pickupWarehouseId: p.pickupWarehouseId ?? null,
         comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest,
         recipientName: p.name, recipientPhone: p.phone, source: p.source, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
         items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i] })) },
@@ -211,14 +220,38 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
   const qtyBySku = new Map(v.items.map((i) => [i.sku, i.qty]));
   const lines = quote.lines.map((l) => ({ ...l, qty: qtyBySku.get(l.sku) ?? l.qty }));
   const name = `${v.lastName} ${v.firstName}`.trim();
+
+  // самовывоз: точка из списка магазинов (одна — выбирается сама)
+  let pickup: { id: string; cityUk: string; addressUk: string } | null = null;
+  if (v.delivery === "pickup") {
+    const list = await prisma.warehouse.findMany({ where: { isPickup: true }, orderBy: [{ sort: "asc" }, { isDefault: "desc" }], select: { id: true, cityUk: true, addressUk: true } });
+    pickup = list.find((w) => w.id === v.pickupId) ?? (list.length === 1 ? list[0] : null);
+    if (!pickup && list.length > 1) return { ok: false, errors: { pickup: "err.pickup" } };
+  }
+  // Нова Пошта: отделение выбрано из справочника — сверяем код и берём точное название
+  let npPoint = v.npPoint ?? null;
+  let npPointRef: string | null = null;
+  if (v.delivery === "np" && v.npCityRef && v.npPointRef) {
+    const found = await npPointByRef(v.npCityRef, v.npPointRef);
+    if (found) {
+      npPoint = found.uk;
+      npPointRef = found.ref;
+    }
+  }
+
   const { order, totals, accessKey } = await createOrderRecord({
     lines, pay: v.pay, delivery: v.delivery, settings, phone: v.phone, name, lang: opts.lang, isTest: opts.isTest ?? false, source: "site",
-    city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : null,
-    address: v.delivery === "courier" ? v.address : null,
-    npType: v.delivery === "np" ? v.npType : null, npPoint: v.delivery === "np" ? v.npPoint : null,
+    city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : pickup?.cityUk ?? null,
+    address: v.delivery === "courier" ? v.address : pickup?.addressUk ?? null,
+    npType: v.delivery === "np" ? v.npType : null, npPoint: v.delivery === "np" ? npPoint : null,
+    npCityRef: v.delivery === "np" ? (v.npCityRef ?? null) : null, npPointRef,
+    pickupWarehouseId: pickup?.id ?? null,
     comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте",
   });
-  const delivery = v.delivery === "np" ? `Нова Пошта: ${v.city}, ${NP_RU[v.npType ?? "warehouse"]} ${v.npPoint}` : v.delivery === "pickup" ? "Самовывоз из магазина" : `Курьер по Одессе: ${v.address}`;
+  const delivery =
+    v.delivery === "np" ? `Нова Пошта: ${v.city}, ${npPointRef ? npPoint : `${NP_RU[v.npType ?? "warehouse"]} ${npPoint}`}`
+    : v.delivery === "pickup" ? `Самовывоз${pickup ? `: ${pickup.cityUk}, ${pickup.addressUk}` : " из магазина"}`
+    : `Курьер по Одессе: ${v.address}`;
   await notifyManagers(managerText(order, "🆕 Новый заказ", [
     `${name}, ${formatPhone(v.phone)}${v.noCallback ? " (просит не звонить)" : ""}`,
     delivery,
@@ -294,7 +327,10 @@ export async function listOrders(opts: { status?: string; q?: string; page?: num
 export const getOrderDetail = (id: string) =>
   prisma.order.findUnique({
     where: { id },
-    include: { items: { include: { product: { select: { id: true, supplierAvailable: true } } } }, history: { orderBy: { ts: "asc" } }, client: true, outboxEntries: { orderBy: { createdAt: "asc" } } },
+    include: {
+      items: { include: { product: { select: { id: true, supplierAvailable: true } } } }, history: { orderBy: { ts: "asc" } }, client: true,
+      outboxEntries: { orderBy: { createdAt: "asc" } }, pickupWarehouse: { select: { name: true } },
+    },
   });
 
 /** Вернуть на склад то, что было списано под заказ (при отмене). Повторная отмена ничего не добавляет. */

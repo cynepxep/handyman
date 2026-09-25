@@ -8,9 +8,35 @@ import type { ShopLang } from "@handyman/core/site/routes";
 import { oneClickAction } from "@/app/[lang]/cart-actions";
 import type { StockLabels } from "../ui";
 import { btn } from "../ui";
+import { Icon } from "../icons";
 import { CartLines } from "./cart-view";
 import { PhoneInput } from "./phone-input";
-import { useCart } from "./store";
+import { cartStore, useCart } from "./store";
+
+const SHOWN_KEY = "hm.cartShown";
+
+/** Фото товара «летит» от кнопки к круглой кнопке корзины. Без анимации, если в телефоне включено «меньше движения». */
+function flyToCart(from: Element | null | undefined) {
+  const target = document.querySelector(".hm-fab-cart");
+  const img = from?.closest("article, .hm-product")?.querySelector("img");
+  if (!target || !img || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const a = img.getBoundingClientRect();
+  const b = target.getBoundingClientRect();
+  if (!a.width || !b.width) return;
+  const ghost = img.cloneNode() as HTMLImageElement;
+  Object.assign(ghost.style, { position: "fixed", left: a.left + "px", top: a.top + "px", width: a.width + "px", height: a.height + "px", objectFit: "contain", zIndex: "80", pointerEvents: "none", borderRadius: "12px", background: "#fff" });
+  ghost.removeAttribute("srcset");
+  ghost.src = (img as HTMLImageElement).currentSrc || (img as HTMLImageElement).src;
+  document.body.appendChild(ghost);
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+  const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  const anim = ghost.animate(
+    [{ transform: "translate(0,0) scale(1)", opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(0.12)`, opacity: 0.6 }],
+    { duration: 650, easing: "cubic-bezier(.5,-0.2,.7,1)" },
+  );
+  anim.onfinish = () => ghost.remove();
+  anim.oncancel = () => ghost.remove();
+}
 
 export type CartUiLabels = {
   cart: string; empty: string; emptyText: string; subtotal: string; checkout: string; continueShopping: string;
@@ -27,6 +53,8 @@ type Ctx = {
   checkoutHref: string;
   cartHref: string;
   openCart: () => void;
+  /** Положить товар: первый раз за визит — открыть мини-корзину, дальше — «полёт» фото в круглую кнопку корзины. */
+  addToCart: (sku: string, from?: Element | null) => void;
   openOneClick: (sku: string, name: string) => void;
 };
 
@@ -52,6 +80,23 @@ export function ShopCartProvider({ lang, labels, checkoutHref, cartHref, childre
       drawer.current?.showModal();
       setDrawerOpen(true);
     },
+    addToCart: (sku, from) => {
+      cartStore.add(sku, 1);
+      let shown = false;
+      try {
+        shown = sessionStorage.getItem(SHOWN_KEY) === "1";
+        sessionStorage.setItem(SHOWN_KEY, "1");
+      } catch {
+        /* нет хранилища — ведём себя как в первый раз */
+      }
+      if (!shown) {
+        drawer.current?.showModal();
+        setDrawerOpen(true);
+      } else {
+        // круглая кнопка появляется после перерисовки — запускаем полёт на следующем кадре
+        setTimeout(() => flyToCart(from), 30);
+      }
+    },
     openOneClick: (sku, name) => {
       setOc({ sku, name });
       oneClick.current?.showModal();
@@ -61,6 +106,10 @@ export function ShopCartProvider({ lang, labels, checkoutHref, cartHref, childre
   return (
     <CartContext.Provider value={value}>
       {children}
+      <FloatingCart label={labels.openCart} onOpen={() => {
+        drawer.current?.showModal();
+        setDrawerOpen(true);
+      }} />
       <dialog
         ref={drawer}
         className="hm-drawer"
@@ -159,4 +208,16 @@ export function CartCount({ className }: { className?: string }) {
   }, [n]);
   if (!n) return null;
   return <span className={`hm-cart-count${bump ? " is-bump" : ""}${className ? ` ${className}` : ""}`}>{n > 99 ? "99+" : n}</span>;
+}
+
+/** Круглая кнопка корзины внизу справа: видна, когда в корзине что-то есть. */
+function FloatingCart({ label, onOpen }: { label: string; onOpen: () => void }) {
+  const n = useCart().reduce((a, l) => a + l.qty, 0);
+  if (!n) return null;
+  return (
+    <button type="button" className="hm-fab-cart" onClick={onOpen} aria-label={label.replace("{n}", String(n))} data-te-ui>
+      <Icon name="cart" size={26} />
+      <CartCount />
+    </button>
+  );
 }

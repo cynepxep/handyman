@@ -3,8 +3,9 @@
 // Если Meilisearch недоступен, каталог и импорт работают, а индекс помечается устаревшим (см. markSearchStale).
 
 import { prisma } from "./client";
+import { loadMenuConfig } from "./site-content";
 import {
-  FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, sortFacetValues, synonymMap,
+  FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, menuRanks, sortFacetValues, synonymMap,
 } from "@handyman/core/catalog";
 import { STOCK_RANK, stockLevel, type StockLevel } from "@handyman/core/shop";
 
@@ -86,6 +87,8 @@ export type SearchDoc = {
   /** отметки владельца «Хіт» и «Новинка» (шаг 2.7) */
   hit: boolean;
   isNew: boolean;
+  /** место категории в меню витрины (группа → подгруппа → порядок категорий): порядок «как в меню» в разделах */
+  menuRank: number;
   image: string | null;
   descText: string;
   createdTs: number;
@@ -104,8 +107,15 @@ async function loadCatMap() {
   return new Map(rows.map((r) => [r.id, r]));
 }
 
+const NO_RANK = 999_999_999;
+
+async function loadRanks(cats: Map<string, CatRow>) {
+  return menuRanks([...cats.values()], (await loadMenuConfig()).groups);
+}
+
 async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs: SearchDoc[]; hiddenIds: string[] }> {
   const cats = await loadCatMap();
+  const ranks = await loadRanks(cats);
   const docs: SearchDoc[] = [];
   const hiddenIds: string[] = [];
   let cursor: string | undefined;
@@ -146,6 +156,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         ...stockFields(r.stockItems.reduce((a, s) => a + s.onHand, 0), r.supplierAvailable),
         hit: r.isHit,
         isNew: r.isNew,
+        menuRank: ranks.get(r.categoryId) ?? NO_RANK,
         image: r.images[0]?.url ?? null,
         descText: htmlToText(r.descUk).slice(0, 400),
         createdTs: r.createdAt.getTime(),
@@ -169,7 +180,7 @@ function stockFields(ownQty: number, supplierAvailable: boolean) {
 const SETTINGS = () => ({
   searchableAttributes: ["nameUk", "nameRu", "sku", "articleCode", "brand", "categoryNames", "descText"],
   filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "local", "hasDiscount", "hit", "isNew", ...FACET_FIELDS],
-  sortableAttributes: ["price", "createdTs", "nameSort", "inStock"],
+  sortableAttributes: ["price", "createdTs", "nameSort", "inStock", "menuRank"],
   rankingRules: ["words", "typo", "proximity", "attribute", "sort", "exactness", "inStock:desc"],
   synonyms: synonymMap(),
   // Опечатки допускаются в названиях, но не в артикулах (артикул ищем точно).
@@ -207,6 +218,18 @@ export async function reindexProducts(ids: string[]): Promise<void> {
   if (remove.length) await task("POST", `/indexes/${uid}/documents/delete-batch`, remove);
 }
 
+/** После правки меню: пересчитать у товаров в индексе только «место в меню» (быстро, без полной пересборки). */
+export async function updateMenuRanks(): Promise<{ updated: number }> {
+  const cats = await loadCatMap();
+  const ranks = await loadRanks(cats);
+  const rows = await prisma.product.findMany({ where: { visible: true, categoryId: { not: UNSORTED_ID } }, select: { id: true, categoryId: true } });
+  const uid = indexUid();
+  const docs = rows.map((r) => ({ id: r.id, menuRank: ranks.get(r.categoryId) ?? NO_RANK }));
+  // PUT — частичное обновление: остальные поля документа не трогаются
+  for (let i = 0; i < docs.length; i += 1000) await task("PUT", `/indexes/${uid}/documents`, docs.slice(i, i + 1000));
+  return { updated: docs.length };
+}
+
 /** Безопасный вариант для мест, где сбой поиска не должен ломать основное действие. */
 export async function reindexSafely(fn: () => Promise<unknown>): Promise<void> {
   try {
@@ -235,13 +258,16 @@ export async function searchStats(): Promise<{ ok: boolean; documents: number | 
 
 // ---------- поиск ----------
 
-export type SearchSort = "relevance" | "price_asc" | "price_desc" | "new" | "name";
+/** menu — «как в меню» (порядок категорий подгруппы); по умолчанию в разделах, подразделах и задачах */
+export type SearchSort = "relevance" | "price_asc" | "price_desc" | "new" | "name" | "menu";
 
 export type SearchParams = {
   q?: string;
   cat?: string;
   /** Точный список категорий (раздел или задача витрины): товары, лежащие прямо в этих категориях. Пустой список — ничего. */
   categories?: string[];
+  /** часть подраздела: одна категория (с вложенными) — чипы «Викрутки · Біти · …» */
+  part?: string;
   brand?: string[];
   min?: number;
   max?: number;
@@ -287,6 +313,8 @@ export type SearchResult = {
   correctedQuery: string | null;
   /** сколько товаров есть на нашем складе в Одессе */
   localCount: number;
+  /** категория (и все её родители) → сколько товаров, без учёта выбранной части подраздела (счётчики чипов «Викрутки · Біти») */
+  categoryCounts: Record<string, number>;
   facets: {
     brand: FacetValue[];
     categories: { id: string; name: string; count: number }[];
@@ -305,6 +333,7 @@ function sortRules(sort: SearchSort | undefined, hasQuery: boolean): string[] | 
     case "price_desc": return ["inStock:desc", "price:desc"];
     case "new": return ["inStock:desc", "createdTs:desc"];
     case "name": return ["inStock:desc", "nameSort:asc"];
+    case "menu": return ["menuRank:asc", "inStock:desc", "nameSort:asc"];
     default: return hasQuery ? undefined : ["inStock:desc", "nameSort:asc"];
   }
 }
@@ -319,6 +348,9 @@ type MeiliResponse = {
   facetStats?: Record<string, { min: number; max: number }>;
   processingTimeMs: number;
 };
+
+/** Поле, по которому дополнительный запрос считает счётчики «без своей группы». */
+const extraField = (g: string) => (g === "brand" ? "brand" : g === "part" ? "categoryIds" : facetField(g.slice(2)));
 
 const RETRIEVE = ["id", "sku", "nameUk", "nameRu", "brand", "price", "oldPrice", "discountPct", "available", "stock", "hit", "isNew", "image", "categoryId"];
 
@@ -335,10 +367,11 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   if (params.cat) groups.cat = `categoryIds = ${esc(params.cat)}`;
   if (params.categories) {
     if (params.categories.length === 0) {
-      return { total: 0, page, perPage, pages: 1, items: [], correctedQuery: null, localCount: 0, facets: { brand: [], categories: [], price: null, attrs: [] }, processingMs: 0 };
+      return { total: 0, page, perPage, pages: 1, items: [], correctedQuery: null, localCount: 0, categoryCounts: {}, facets: { brand: [], categories: [], price: null, attrs: [] }, processingMs: 0 };
     }
     groups.cats = inList("categoryId", params.categories.slice(0, 500));
   }
+  if (params.part) groups.part = `categoryIds = ${esc(params.part)}`;
   if (brands.length) groups.brand = inList("brand", brands);
   if (params.min != null && Number.isFinite(params.min)) groups.min = `price >= ${params.min}`;
   if (params.max != null && Number.isFinite(params.max)) groups.max = `price <= ${params.max}`;
@@ -360,10 +393,9 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     ];
     const extra: string[] = [];
     if (groups.brand) extra.push("brand");
+    if (groups.part) extra.push("part");
     for (const k of Object.keys(selectedFacets)) extra.push(`f:${k}`);
-    for (const g of extra) {
-      queries.push({ indexUid: uid, q, filter: filterWithout(g), limit: 0, facets: [g === "brand" ? "brand" : facetField(g.slice(2))] });
-    }
+    for (const g of extra) queries.push({ indexUid: uid, q, filter: filterWithout(g), limit: 0, facets: [extraField(g)] });
     const { status, data } = await meili<{ results: MeiliResponse[]; message?: string }>("POST", "/multi-search", { queries });
     if (status >= 400) {
       if (status === 404) throw new SearchUnavailableError("Поисковый индекс ещё не создан. Соберите его в админке.");
@@ -388,7 +420,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   const total = res.main.estimatedTotalHits ?? res.main.totalHits ?? res.main.hits.length;
   const dist: Distribution = { ...(res.main.facetDistribution ?? {}) };
   res.extraGroups.forEach((g, i) => {
-    const field = g === "brand" ? "brand" : facetField(g.slice(2));
+    const field = extraField(g);
     if (res.extra[i]?.facetDistribution?.[field]) dist[field] = res.extra[i].facetDistribution![field];
   });
 
@@ -428,6 +460,7 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     })),
     /** сколько товаров выдачи есть на нашем складе (показывать ли фильтр «Швидка відправка з Одеси») */
     localCount: res.main.facetDistribution?.local?.["true"] ?? 0,
+    categoryCounts: dist.categoryIds ?? {},
     correctedQuery,
     facets: { brand: toValues("brand", brands, 30), categories, price: stats ? { min: Math.floor(stats.min), max: Math.ceil(stats.max) } : null, attrs },
     processingMs: res.main.processingTimeMs,

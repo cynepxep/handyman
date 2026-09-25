@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_CHECKOUT, canSkipCall, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel,
-  validateCheckout, validateCheckoutSettingsForm, type CheckoutSettings,
+  validateCheckout, validateCheckoutSettingsForm, validateWarehouseForm, toPickupPoint, type CheckoutSettings,
 } from "../src/shop";
 
 test("телефон: разные записи → +380XXXXXXXXX, чужие номера не проходят", () => {
@@ -97,4 +97,38 @@ test("настройки оформления: стандартные, мусо�
   assert.ok(form.ok && form.value.prepayAmount === 300 && form.value.pay.full === false && form.value.delivery.pickup === false);
   assert.ok(!validateCheckoutSettingsForm({ prepayAmount: "300", "delivery.np": "on" }).ok, "без способа оплаты нельзя");
   assert.ok(!validateCheckoutSettingsForm({ prepayAmount: "abc", "pay.full": "on", "delivery.np": "on" }).ok);
+});
+
+test("магазины: форма точки — название обязательно, для самовывоза нужны город и адрес, русское берётся из украинского", () => {
+  const week: Record<string, string> = {};
+  for (const d of ["mon", "tue", "wed", "thu", "fri", "sat", "sun"]) Object.assign(week, { [`h.${d}.from`]: "09:00", [`h.${d}.to`]: "18:00" });
+  week["h.sun.off"] = "on";
+  const ok = validateWarehouseForm({ ...week, name: "Магазин", cityUk: "Одеса", addressUk: "вул. Богданівська, 5", isPickup: "on", sort: "2" });
+  assert.ok(ok.ok);
+  if (ok.ok) {
+    assert.equal(ok.value.addressRu, "вул. Богданівська, 5");
+    assert.equal(ok.value.sort, 2);
+    const p = toPickupPoint({ id: "w1", ...ok.value }, "ru");
+    assert.equal(p.hours, "Пн–Сб 9:00–18:00, Вс — выходной");
+  }
+  const noAddr = validateWarehouseForm({ ...week, name: "Склад", isPickup: "on" });
+  assert.ok(!noAddr.ok && /адрес/.test(noAddr.error));
+  assert.ok(validateWarehouseForm({ ...week, name: "Склад" }).ok, "просто склад без самовывоза — без адреса можно");
+  assert.ok(!validateWarehouseForm({ ...week, name: "" }).ok);
+});
+
+test("оформление: коды Новой Почты и точка самовывоза — только в правильном виде", () => {
+  const s = { ...DEFAULT_CHECKOUT, delivery: { np: true, pickup: true, courier: true }, pay: { prepay: true, full: true, card: true } };
+  const base = { firstName: "Іван", lastName: "Петренко", phone: "0933662407", pay: "prepay", items: [{ sku: "1", qty: 1 }] };
+  const ref = "db5c88d0-391c-11dd-90d9-001a92567626";
+  const np = validateCheckout({ ...base, delivery: "np", city: "Одеса", npPoint: "2", npCityRef: ref, npPointRef: ref }, s);
+  assert.ok(np.ok && np.value.npCityRef === ref && np.value.npPointRef === ref);
+  const bad = validateCheckout({ ...base, delivery: "np", city: "Одеса", npPoint: "2", npCityRef: "'; DROP", npPointRef: ref }, s);
+  assert.ok(bad.ok && bad.value.npCityRef === undefined && bad.value.npPointRef === undefined, "без города код отделения не принимается");
+  const addr = validateCheckout({ ...base, delivery: "np", npType: "address", city: "Одеса", npPoint: "вул. Прикладна, 1", npCityRef: ref, npPointRef: ref }, s);
+  assert.ok(addr.ok && addr.value.npPointRef === undefined);
+  const pickup = validateCheckout({ ...base, delivery: "pickup", pickupId: "default" }, s);
+  assert.ok(pickup.ok && pickup.value.pickupId === "default");
+  const pickupBad = validateCheckout({ ...base, delivery: "pickup", pickupId: "a b" }, s);
+  assert.ok(pickupBad.ok && pickupBad.value.pickupId === undefined);
 });

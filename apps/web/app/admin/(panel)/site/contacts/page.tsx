@@ -1,6 +1,7 @@
 import { loadContacts } from "@handyman/db/site-content";
 import { LINK_FIELDS, isContactsEmpty } from "@handyman/core/site";
 import { SubmitButton } from "../../import/client-bits";
+import { ScheduleFields } from "../../schedule-fields";
 import { saveContactsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -41,17 +42,23 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         </div>
 
         <h2>График работы</h2>
-        <div className="adm-grid2">
-          <div className="adm-field"><label htmlFor="hoursUk">Графік (українською)</label><textarea id="hoursUk" name="hoursUk" defaultValue={c.hoursUk} rows={2} className="adm-textarea" placeholder="Пн–Сб 9:00–18:00, Нд — вихідний" /></div>
-          <div className="adm-field"><label htmlFor="hoursRu">График (по-русски)</label><textarea id="hoursRu" name="hoursRu" defaultValue={c.hoursRu} rows={2} className="adm-textarea" placeholder="Пн–Сб 9:00–18:00, Вс — выходной" /></div>
-        </div>
+        <p className="adm-muted">
+          Выберите время для каждого дня или отметьте «выходной» — текст для сайта соберётся сам на двух языках
+          (например, «Пн–Пт 9:00–18:00, Сб 10:00–15:00, Нд — вихідний»).
+          {!c.schedule && c.hoursUk ? <> Сейчас на сайте ваш текст: «{c.hoursUk}» — после сохранения его заменит график ниже.</> : null}
+        </p>
+        <ScheduleFields value={c.schedule} />
 
         <h2>Мессенджеры и соцсети</h2>
+        <p className="adm-muted">
+          Viber и Telegram: можно вписать просто <b>номер телефона</b> (+380 93 123 45 67) или для Telegram — <b>@имя</b>; ссылка сделается сама.
+          Как только поле заполнено, на сайте рядом с «Подзвонити» появится кнопка.
+        </p>
         <div className="adm-grid2">
           {LINK_FIELDS.map((f) => (
             <div key={f.key} className="adm-field">
               <label htmlFor={f.key}>{f.label}</label>
-              <input id={f.key} name={f.key} defaultValue={c[f.key]} className="adm-input wide" placeholder={f.hint} inputMode="url" />
+              <input id={f.key} name={f.key} defaultValue={c[f.key]} className="adm-input wide" placeholder={f.hint} inputMode={f.key === "viber" ? "tel" : "url"} />
             </div>
           ))}
         </div>

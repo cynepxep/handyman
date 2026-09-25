@@ -266,6 +266,35 @@ export function assignCategories(nodes: CatNode[], groups: MenuGroup[] = MENU_GR
   return { subOf, conflicts, missing };
 }
 
+/**
+ * Место категории в меню — для порядка товаров «как в меню»: группа, подгруппа, затем порядок категорий в подгруппе
+ * («Викрутки, біти, шестигранники» → сначала викрутки, потом біти…). Вложенные категории — на месте своего предка. Не в меню — в конце.
+ */
+export function menuRanks(nodes: CatNode[], groups: MenuGroup[] = MENU_GROUPS): Map<string, number> {
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  const pos = new Map<string, number>();
+  groups.forEach((g, gi) =>
+    g.subs.forEach((s, si) => {
+      s.categoryIds.forEach((id, ci) => !pos.has(id) && pos.set(id, gi * 1_000_000 + si * 1_000 + ci));
+      (s.ownIds ?? []).forEach((id, ci) => !pos.has(id) && pos.set(id, gi * 1_000_000 + si * 1_000 + 500 + ci));
+    }),
+  );
+  const out = new Map<string, number>();
+  for (const n of nodes) {
+    let cur: CatNode | undefined = n;
+    for (let depth = 0; cur && depth < 10; depth++) {
+      const p = pos.get(cur.id);
+      if (p != null) {
+        out.set(n.id, p);
+        break;
+      }
+      cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+    }
+    if (!out.has(n.id)) out.set(n.id, 999_999_999);
+  }
+  return out;
+}
+
 /** Код группы по коду подгруппы. */
 export const groupOfSub = (subId: string, groups: MenuGroup[] = MENU_GROUPS) => groups.find((g) => g.subs.some((s) => s.id === subId));
 

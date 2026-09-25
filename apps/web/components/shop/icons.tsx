@@ -12,6 +12,8 @@ const PATHS: Record<string, React.ReactNode> = {
   battery: (<><rect x="3" y="7" width="16" height="10" rx="2" /><path d="M21 10v4M7 10v4M11 10v4" /></>),
   phone: (<path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" />),
   chat: (<path d="M4 5h16v11H9l-5 4z" />),
+  telegram: (<path d="M21 4L3 11.5l6.5 2.2M21 4l-3 16-8.5-6.3M21 4L9.5 13.7V19l3-3.2" />),
+  viber: (<><path d="M12 3c5 0 8.5 2.6 8.5 7.3S17 17.6 12 17.6c-.8 0-1.6-.1-2.3-.2L6 20v-3.6c-1.6-1.3-2.5-3.4-2.5-6.1C3.5 5.6 7 3 12 3z" /><path d="M9.6 7.8h1.3l.6 1.5-.8.6a3.6 3.6 0 001.7 1.7l.6-.8 1.5.6v1.3a.8.8 0 01-.8.8 5.2 5.2 0 01-4.9-4.9.8.8 0 01.8-.8z" /></>),
   search: (<><circle cx="11" cy="11" r="6.5" /><path d="M16 16l5 5" /></>),
   cart: (<><path d="M3 4h3l2.4 11h9.2L20 8H7" /><circle cx="9.5" cy="19" r="1.4" /><circle cx="17" cy="19" r="1.4" /></>),
   menu: (<path d="M4 7h16M4 12h16M4 17h16" />),

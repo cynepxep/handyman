@@ -30,9 +30,9 @@ export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog
       <h1 id="h-catalog" className="hm-h1">{t("menu.title")}</h1>
       <p className="hm-lead">{t("menu.lead")}</p>
       <ul className="hm-menu">
-        {visible.map((g, i) => (
+        {visible.map((g) => (
           <li key={g.group.id} id={`g-${g.group.id}`} className="hm-menu-group">
-            <details open={i < 2}>
+            <details>
               <summary>
                 <span className="hm-group-img hm-menu-img">
                   {g.image && <Image src={g.image} alt="" fill sizes="56px" />}

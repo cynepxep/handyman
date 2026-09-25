@@ -86,6 +86,11 @@ export type CheckoutInput = {
   city?: string;
   /** номер отделения/почтомата или адрес курьера НП */
   npPoint?: string;
+  /** коды из справочника НП (выбрано из списка); проверяются на сервере */
+  npCityRef?: string;
+  npPointRef?: string;
+  /** самовывоз: код магазина (Warehouse.id); проверяется на сервере */
+  pickupId?: string;
   /** адрес курьера по Одессе */
   address?: string;
   pay: PayChoice;
@@ -95,12 +100,14 @@ export type CheckoutInput = {
 };
 
 /** Ошибки — ключи текстов витрины (показываются на языке сайта). */
-export type CheckoutErrors = Partial<Record<"firstName" | "lastName" | "phone" | "delivery" | "city" | "npPoint" | "address" | "pay" | "items" | "noCallback", string>>;
+export type CheckoutErrors = Partial<Record<"firstName" | "lastName" | "phone" | "delivery" | "city" | "npPoint" | "address" | "pickup" | "pay" | "items" | "noCallback", string>>;
 
 export type CheckoutCheck =
   | { ok: true; value: CheckoutInput & { phone: string } }
   | { ok: false; errors: CheckoutErrors };
 
+const NP_REF = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const PICKUP_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const txt = (v: unknown, max: number) => String(v ?? "").replace(/[\u0000-\u001F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
 /**
@@ -134,6 +141,12 @@ export function validateCheckout(raw: Record<string, unknown>, s: CheckoutSettin
     value.npPoint = txt(raw.npPoint, 160);
     if (value.city.length < 2) errors.city = "err.city";
     if (value.npPoint.length < 1) errors.npPoint = npType === "address" ? "errAddr" : "err.npPoint";
+    const ref = (v: unknown) => (typeof v === "string" && NP_REF.test(v) ? v : undefined);
+    value.npCityRef = ref(raw.npCityRef);
+    value.npPointRef = npType === "address" || !value.npCityRef ? undefined : ref(raw.npPointRef);
+  } else if (delivery === "pickup") {
+    const id = String(raw.pickupId ?? "");
+    if (PICKUP_ID.test(id)) value.pickupId = id;
   } else if (delivery === "courier") {
     value.address = txt(raw.address, 160);
     if (value.address.length < 5) errors.address = "errAddr";

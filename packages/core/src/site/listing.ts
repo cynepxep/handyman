@@ -14,6 +14,8 @@ export type ListingState = {
   /** только «Хіти» / «Новинки» (ссылка «Усі» с главной) */
   hit?: boolean;
   isNew?: boolean;
+  /** часть подраздела — код одной категории (чипы «Викрутки · Біти · …»); проверяет сервер */
+  part?: string;
   min?: number;
   max?: number;
   sort?: ListingSort;
@@ -54,6 +56,7 @@ export function parseListing(raw: Raw, facetKeys: readonly string[]): ListingSta
     sale: first(raw, "sale") === "1",
     ...(first(raw, "hit") === "1" ? { hit: true } : {}),
     ...(first(raw, "new") === "1" ? { isNew: true } : {}),
+    ...(/^[\w-]{1,80}$/.test(first(raw, "part") ?? "") ? { part: first(raw, "part") } : {}),
     ...(min != null ? { min } : {}),
     ...(max != null ? { max } : {}),
     ...(sort && (LISTING_SORTS as readonly string[]).includes(sort) ? { sort: sort as ListingSort } : {}),
@@ -71,6 +74,7 @@ export function listingQuery(state: ListingState, q?: string): string {
   if (state.sale) qs.set("sale", "1");
   if (state.hit) qs.set("hit", "1");
   if (state.isNew) qs.set("new", "1");
+  if (state.part) qs.set("part", state.part);
   if (state.min != null) qs.set("min", String(state.min));
   if (state.max != null) qs.set("max", String(state.max));
   if (state.sort) qs.set("sort", state.sort);
@@ -93,8 +97,10 @@ export function toggleFacet(state: ListingState, key: string, value: string, sin
 /** Есть ли выбранные фильтры (для кнопки «Скинути»). Сортировка фильтром не считается. */
 export const hasFilters = (s: ListingState) => Object.keys(s.facets).length > 0 || s.available || s.local || s.sale || !!s.hit || !!s.isNew || s.min != null || s.max != null;
 
-/** Сбросить все фильтры, оставив сортировку. */
-export const clearFilters = (s: ListingState): ListingState => ({ facets: {}, available: false, local: false, sale: false, page: 1, ...(s.sort ? { sort: s.sort } : {}) });
+/** Сбросить все фильтры, оставив сортировку и выбранную часть подраздела (это не фильтр, а место в каталоге). */
+export const clearFilters = (s: ListingState): ListingState => ({
+  facets: {}, available: false, local: false, sale: false, page: 1, ...(s.sort ? { sort: s.sort } : {}), ...(s.part ? { part: s.part } : {}),
+});
 
 /** Сколько фильтров выбрано (число на кнопке «Фільтри»). */
 export const filterCount = (s: ListingState) =>

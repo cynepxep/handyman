@@ -82,7 +82,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
             {batteries.map((b) => (
               <li key={b.value}>
                 <Link className="hm-battery-btn" href={batteryHref(b.value)}>
-                  <b>{b.value}</b><span>{goods(b.count)}</span>
+                  <b>{[t("home.battery.brand"), b.value].filter(Boolean).join(" ")}</b><span>{goods(b.count)}</span>
                 </Link>
               </li>
             ))}

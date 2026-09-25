@@ -59,7 +59,14 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
     );
   }
 
-  const { result, cards, quick } = data;
+  const { result, cards, quick, parts } = data;
+  const partHref = (part?: string) => {
+    const next: ListingState = { ...state, page: 1 };
+    if (part) next.part = part;
+    else delete next.part;
+    return href(next);
+  };
+  const partOn = parts.some((p) => p.id === state.part) ? state.part : undefined;
   const labels: FilterLabels = {
     title: t("filters"), show: t("filters.show"), reset: t("filters.reset"), price: t("filters.price"), from: t("filters.from"), to: t("filters.to"),
     apply: t("filters.apply"), moreValues: t("filters.moreValues"), less: t("filters.less"), inStock: t("inStockOnly"), fast: t("filters.fast"), sale: t("onSale"), close: t("close"),
@@ -98,6 +105,19 @@ export function ProductListing({ c, resolved, data, state, path, title, crumbs, 
     <section className="hm-section">
       {head}
       {result.correctedQuery && <p className="hm-alert">{t("search.corrected", { q: result.correctedQuery })}</p>}
+
+      {parts.length > 0 && (
+        <ul className="hm-chips hm-chips-scroll hm-parts" aria-label={t("listing.parts")}>
+          <li><Link className={`hm-chip${!partOn ? " is-on" : ""}`} href={partHref()} aria-current={!partOn ? "true" : undefined} scroll={false}>{t("category.quick.all")}</Link></li>
+          {parts.map((p) => (
+            <li key={p.id}>
+              <Link className={`hm-chip${partOn === p.id ? " is-on" : ""}`} href={partHref(p.id)} aria-current={partOn === p.id ? "true" : undefined} scroll={false}>
+                {p.name} <em>{p.count}</em>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {quick && (
         <div className="hm-quick">

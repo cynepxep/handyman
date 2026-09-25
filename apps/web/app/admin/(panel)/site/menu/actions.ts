@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { loadMenuConfig, resetMenuConfig, saveMenuConfig } from "@handyman/db/site-content";
+import { reindexSafely, updateMenuRanks } from "@handyman/db/catalog-search";
 import {
   TASK_ICONS, addGroup, addSub, addTask, changeSlug, cleanName, claimOf, isValidSlug, moveClaim, removeGroup, removeSub, removeTask, slugOf,
   type MenuConfig,
@@ -38,6 +39,7 @@ async function run(formData: FormData, change: (cfg: MenuConfig, f: FormData) =>
   const r = await change(cfg, formData);
   if (r.error) redirect(back("error", r.error, r.anchor));
   await saveMenuConfig(r.cfg, session.username);
+  await reindexSafely(updateMenuRanks); // порядок товаров «как в меню»
   revalidatePath("/", "layout");
   redirect(back("ok", r.message, r.anchor));
 }
@@ -186,6 +188,7 @@ export async function resetMenuAction(formData: FormData): Promise<void> {
   const session = await requirePermission("texts.edit");
   if (formData.get("confirm") !== "on") redirect(back("error", "Поставьте галочку, чтобы подтвердить возврат стандартного меню."));
   await resetMenuConfig(session.username);
+  await reindexSafely(updateMenuRanks);
   revalidatePath("/", "layout");
   redirect(back("ok", "Меню и задачи возвращены к стандартным."));
 }

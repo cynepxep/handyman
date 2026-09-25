@@ -26,8 +26,8 @@ function ContactPill({ href, icon, label }: { href: string; icon: string; label:
 export function contactLinks(c: ShopContent, callLabel: string) {
   const phone = c.contacts.phones[0];
   return [
-    c.contacts.telegram ? { href: c.contacts.telegram, icon: "chat", label: "Telegram" } : null,
-    c.contacts.viber ? { href: c.contacts.viber, icon: "chat", label: "Viber" } : null,
+    c.contacts.telegram ? { href: c.contacts.telegram, icon: "telegram", label: "Telegram" } : null,
+    c.contacts.viber ? { href: c.contacts.viber, icon: "viber", label: "Viber" } : null,
     phone ? { href: telHref(phone), icon: "phone", label: callLabel } : null,
   ].filter((x): x is { href: string; icon: string; label: string } => x !== null);
 }

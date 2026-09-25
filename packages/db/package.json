@@ -12,6 +12,8 @@
     "./site-content": "./src/site-content.ts",
     "./orders": "./src/orders.ts",
     "./search-stats": "./src/search-stats.ts",
+    "./warehouses": "./src/warehouses.ts",
+    "./novaposhta": "./src/novaposhta.ts",
     "./notify": "./src/notify.ts"
   },
   "scripts": {

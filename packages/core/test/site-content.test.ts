@@ -1,6 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { renderPageBody, hasFillMarker, validateContactsForm, parseContacts, telHref, isContactsEmpty, EMPTY_CONTACTS } from "../src/site";
+import {
+  renderPageBody, hasFillMarker, validateContactsForm, parseContacts, telHref, isContactsEmpty, messengerLink, EMPTY_CONTACTS,
+  scheduleText, parseScheduleForm, parseSchedule, DEFAULT_WEEK, DAY_KEYS, TIME_OPTIONS, type DayHours, type WeekSchedule,
+} from "../src/site";
 
 test("страница: абзацы, заголовки, списки, жирный, ссылки", () => {
   const html = renderPageBody("## Доставка\n\nПерший рядок\nдругий рядок\n\n- Нова Пошта\n- Кур’єр\n\n1. Оформіть\n2. Отримайте\n\nЦе **важливо** і [сайт](https://example.com/a?b=1&c=2).");
@@ -74,4 +77,48 @@ test("телефон для ссылки tel:", () => {
   assert.equal(telHref("0933662407"), "tel:+380933662407", "местный номер с 0 — добавляется код Украины");
   assert.equal(telHref("093 366-24-07"), "tel:+380933662407");
   assert.equal(telHref("380933662407"), "tel:+380933662407");
+});
+
+test("контакты: Viber и Telegram можно вписать номером или @именем — ссылка делается сама", () => {
+  assert.equal(messengerLink("viber", "093 366 24 07"), "viber://chat?number=%2B380933662407");
+  assert.equal(messengerLink("viber", "+380 (93) 366-24-07"), "viber://chat?number=%2B380933662407");
+  assert.equal(messengerLink("telegram", "@handyman_odesa"), "https://t.me/handyman_odesa");
+  assert.equal(messengerLink("telegram", "t.me/handyman_odesa"), "https://t.me/handyman_odesa");
+  assert.equal(messengerLink("telegram", "+380933662407"), "https://t.me/+380933662407");
+  assert.equal(messengerLink("telegram", "https://t.me/handyman"), "https://t.me/handyman");
+  assert.equal(messengerLink("viber", "@handyman"), null, "у Viber нет @имён");
+  assert.equal(messengerLink("telegram", "viber://chat?number=1"), null);
+  const r = validateContactsForm({ viber: "0933662407", telegram: "@handyman_odesa" });
+  assert.ok(r.ok && r.value.viber.startsWith("viber://") && r.value.telegram === "https://t.me/handyman_odesa");
+  const bad = validateContactsForm({ viber: "мій вайбер" });
+  assert.ok(!bad.ok && /Viber/.test(bad.error));
+});
+
+test("график: дни с одинаковым временем склеиваются, выходные подписаны, два языка, примечание", () => {
+  const w = (days: DayHours[], noteUk = "", noteRu = ""): WeekSchedule => ({ days, noteUk, noteRu });
+  const work = { from: "09:00", to: "18:00" };
+  const s = w([work, work, work, work, work, { from: "10:00", to: "15:00" }, { off: true }], "перерва 13:00–14:00");
+  assert.equal(scheduleText(s, "uk"), "Пн–Пт 9:00–18:00, Сб 10:00–15:00, Нд — вихідний. перерва 13:00–14:00");
+  assert.equal(scheduleText(s, "ru"), "Пн–Пт 9:00–18:00, Сб 10:00–15:00, Вс — выходной. перерва 13:00–14:00", "нет русского примечания — берётся украинское");
+  assert.equal(scheduleText(w([...Array(5).fill(work), { off: true }, { off: true }]), "uk"), "Пн–Пт 9:00–18:00, Сб, Нд — вихідний");
+  assert.equal(scheduleText(w(Array(7).fill({ off: true })), "uk"), "");
+  assert.equal(scheduleText(DEFAULT_WEEK, "ru"), "Пн–Сб 9:00–18:00, Вс — выходной");
+});
+
+test("график: форма админки — выходной, неправильное время, мусор из базы", () => {
+  const f: Record<string, string> = {};
+  for (const d of DAY_KEYS) Object.assign(f, { [`h.${d}.from`]: "09:00", [`h.${d}.to`]: "18:00" });
+  f["h.sun.off"] = "on";
+  const r = parseScheduleForm(f);
+  assert.ok(r.ok && r.value.days[6].off === true && !r.value.days[0].off);
+  const bad = parseScheduleForm({ ...f, "h.mon.to": "08:00" });
+  assert.ok(!bad.ok && /Понедельник/.test(bad.error));
+  assert.ok(!parseScheduleForm({ ...f, "h.tue.from": "25:00" }).ok);
+  assert.equal(parseSchedule({ days: [1, 2] }), null);
+  assert.equal(parseSchedule(null), null);
+  assert.deepEqual(parseSchedule(r.ok ? r.value : null), r.ok ? r.value : null);
+  // контакты: график из формы превращается в текст на сайте
+  const c = validateContactsForm(f);
+  assert.ok(c.ok && c.value.hoursUk === "Пн–Сб 9:00–18:00, Нд — вихідний" && c.value.schedule?.days.length === 7);
+  assert.ok(TIME_OPTIONS.includes("09:30") && TIME_OPTIONS[0] === "06:00");
 });

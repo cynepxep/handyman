@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  MENU_GROUPS, TASKS, assignCategories, taskCategoryIds, pickQuickPick, pickSpecs, formatSpec, extractFacets, type MenuGroup, type CatNode,
+  MENU_GROUPS, TASKS, assignCategories, menuRanks, taskCategoryIds, pickQuickPick, pickSpecs, formatSpec, extractFacets, type MenuGroup, type CatNode,
 } from "../src/catalog";
 
 const group = (subs: MenuGroup["subs"]): MenuGroup => ({ id: "g", nameUk: "Г", nameRu: "Г", hintUk: "", hintRu: "", quickPick: [], subs });
@@ -85,4 +85,24 @@ test("ключевые характеристики: не больше 3, по �
   assert.deepEqual(pickSpecs({}), []);
   // порядок группы сильнее общего
   assert.equal(pickSpecs(facets, ["material"], 1)[0].key, "material");
+});
+
+test("место в меню: порядок категорий подгруппы (викрутки раньше біт), вложенные — как родитель, чужие — в конце", () => {
+  const nodes: CatNode[] = [
+    { id: "bits", parentId: null }, { id: "screwdrivers", parentId: null }, { id: "hex", parentId: null },
+    { id: "bits-ph", parentId: "bits" }, { id: "other", parentId: null }, { id: "saw", parentId: null },
+  ];
+  const groups = [
+    group([sub("hand", ["screwdrivers", "bits", "hex"])]),
+    { ...group([sub("saws", ["saw"])]), id: "g2" },
+  ];
+  const r = menuRanks(nodes, groups);
+  assert.ok(r.get("screwdrivers")! < r.get("bits")!);
+  assert.ok(r.get("bits")! < r.get("hex")!);
+  assert.equal(r.get("bits-ph"), r.get("bits"));
+  assert.ok(r.get("hex")! < r.get("saw")!, "вторая группа после первой");
+  assert.equal(r.get("other"), 999_999_999);
+  // стандартное меню: в «Викрутки, біти, шестигранники» викрутки идут первыми
+  const hs = MENU_GROUPS.flatMap((g) => g.subs).find((s) => s.id === "hand-screw");
+  assert.ok(hs && hs.categoryIds[0].endsWith("vykrutky-ta-nabory-vykrutok"));
 });

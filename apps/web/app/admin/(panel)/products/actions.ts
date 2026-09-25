@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@handyman/db";
 import { acceptSupplierPrice, moveProductsToCategory, ProductUserError, setProductFlag, unlockField, updateProductManual } from "@handyman/db/catalog-products";
 import { reindexProducts, reindexSafely } from "@handyman/db/catalog-search";
-import { setOwnStock } from "@handyman/db/orders";
+import { setStockLevels, stockByWarehouse } from "@handyman/db/warehouses";
 import { requirePermission } from "@/lib/auth";
 import { parseMoney } from "@/lib/catalog";
 
@@ -100,11 +100,20 @@ export async function setOwnStockAction(formData: FormData): Promise<void> {
   const session = await requirePermission("products.edit");
   const id = String(formData.get("id"));
   return run(`/admin/products/${id}`, async () => {
-    const raw = String(formData.get("onHand") ?? "").trim();
-    const qty = Number(raw.replace(/\s/g, ""));
-    if (!/^\d+$/.test(raw.replace(/\s/g, "")) || !Number.isFinite(qty) || qty > 100_000) throw new ProductUserError("Остаток — целое число штук от 0 до 100 000.");
-    await setOwnStock(id, qty, session.username);
-    return qty > 0 ? `На складе ${qty} шт. — на сайте «В наявності в Одесі».` : "Остаток на нашем складе обнулён.";
+    // поля stock.<код точки>: остаток в каждом магазине/складе
+    const levels: Array<{ warehouseId: string; qty: number }> = [];
+    for (const [k, v] of formData.entries()) {
+      if (!k.startsWith("stock.") || typeof v !== "string") continue;
+      const raw = v.replace(/\s/g, "");
+      const qty = Number(raw);
+      if (!/^\d+$/.test(raw) || qty > 100_000) throw new ProductUserError("Остаток — целое число штук от 0 до 100 000.");
+      levels.push({ warehouseId: k.slice(6), qty });
+    }
+    const known = new Set((await stockByWarehouse(id)).map((w) => w.id));
+    if (!levels.length || levels.some((l) => !known.has(l.warehouseId))) throw new ProductUserError("Склад не найден — обновите страницу.");
+    await setStockLevels(id, levels, session.username);
+    const total = levels.reduce((a, l) => a + l.qty, 0);
+    return total > 0 ? `Остаток сохранён: всего ${total} шт. — на сайте «В наявності».` : "Остаток обнулён.";
   });
 }
 

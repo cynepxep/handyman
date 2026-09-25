@@ -56,7 +56,12 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
             {o.deliveryType && <> — {NP_TYPE_RU[o.deliveryType] ?? o.deliveryType}</>}
           </p>
           {o.city && <p>Город: {o.city}</p>}
-          {o.npWarehouseRef && <p>{o.deliveryType === "address" ? "Адрес" : "Номер"}: {o.npWarehouseRef}</p>}
+          {o.npWarehouseRef && (
+            <p>
+              {o.deliveryType === "address" ? "Адрес" : o.npPointRef ? "Выбрано из списка НП" : "Номер (написал сам)"}: {o.npWarehouseRef}
+            </p>
+          )}
+          {o.pickupWarehouse && <p>Магазин: {o.pickupWarehouse.name}</p>}
           {o.address && <p>Адрес: {o.address}</p>}
           <p>Оплата: <b>{PAY_MODE_RU[o.payMode] ?? o.payMode}</b></p>
           <p>

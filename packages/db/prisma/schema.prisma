@@ -325,7 +325,16 @@ model Warehouse {
   id        String      @id @default(cuid())
   name      String
   isDefault Boolean     @default(false)
+  // после 2.7: магазин/точка самовывоза (город, адрес, график), свой остаток товаров
+  cityUk    String      @default("")
+  cityRu    String      @default("")
+  addressUk String      @default("")
+  addressRu String      @default("")
+  schedule  Json? // WeekSchedule (packages/core, site/schedule.ts)
+  isPickup  Boolean     @default(false) // покупатель может забрать заказ здесь
+  sort      Int         @default(0)
   stockItems StockItem[]
+  pickupOrders Order[]
 }
 
 model StockItem {
@@ -492,7 +501,11 @@ model Order {
   delivery       DeliveryMethod
   city           String?
   address        String?
-  npWarehouseRef String?
+  npWarehouseRef String? // что выбрал покупатель: «Відділення №12: вул. …» / номер / адрес курьера НП
+  npCityRef      String? // код города в справочнике Новой Почты (для будущей ТТН)
+  npPointRef     String? // код отделения/почтомата в справочнике НП
+  pickupWarehouseId String? // самовывоз: из какого магазина
+  pickupWarehouse   Warehouse? @relation(fields: [pickupWarehouseId], references: [id])
   ttn            String?
   comment        String?
   keycrmId       String?
