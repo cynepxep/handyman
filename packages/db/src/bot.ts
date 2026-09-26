@@ -42,6 +42,7 @@ export async function handleUpdate(u: TgUpdate): Promise<void> {
   if (start.isStart) {
     if (client) await prisma.client.update({ where: { id: client.id }, data: { tgStartedAt: new Date() } });
     if (start.payload?.kind === "login") return onLogin(m, start.payload.code, t, lang, kb, client);
+    if (start.payload?.kind === "link") return onLink(m, start.payload.code, t, lang, kb);
     if (start.payload?.kind === "ref") {
       await prisma.setting.upsert({ where: { key: `bot.ref.${tgId}` }, update: { value: { code: start.payload.code } }, create: { key: `bot.ref.${tgId}`, value: { code: start.payload.code } } });
       await send(m.chat.id, t["bot.ref.ok"], kb(Boolean(client?.phone)));
@@ -126,6 +127,24 @@ async function onLogin(m: TgMessage, code: string, t: Record<string, string>, la
   const id = client?.id ?? (await prisma.client.create({ data: { tgId, name: displayName(m.from!) || null, username: m.from!.username ?? null, lang: lang === "ru" ? "RU" : "UK", tgStartedAt: new Date() } })).id;
   await prisma.tgLogin.update({ where: { code }, data: { clientId: id, confirmedAt: new Date() } });
   await send(m.chat.id, t["bot.login.ok"], kb(Boolean(client?.phone)));
+}
+
+/** Кабинет на сайте → «Подключить Telegram»: код привязывает этот Telegram к покупателю (по его телефону — со слиянием дубля). */
+async function onLink(m: TgMessage, code: string, t: Record<string, string>, lang: "uk" | "ru", kb: (hasPhone: boolean) => unknown) {
+  const row = await prisma.linkCode.findUnique({ where: { code }, include: { client: { select: { id: true, phone: true } } } });
+  if (!row || row.expiresAt < new Date()) {
+    await send(m.chat.id, t["bot.login.expired"], kb(false));
+    return;
+  }
+  const tgId = BigInt(m.from!.id);
+  await prisma.linkCode.delete({ where: { code } });
+  if (row.client.phone) {
+    await linkTelegramPhone({ tgId, phone: row.client.phone, name: displayName(m.from!) || null, username: m.from!.username ?? null, lang: lang === "ru" ? "RU" : "UK" });
+  } else {
+    const busy = await prisma.client.findUnique({ where: { tgId }, select: { id: true } });
+    if (!busy) await prisma.client.update({ where: { id: row.clientId }, data: { tgId, tgStartedAt: new Date(), username: m.from!.username ?? null } });
+  }
+  await send(m.chat.id, t["bot.login.ok"], kb(Boolean(row.client.phone)));
 }
 
 // ---------- долгий опрос (getUpdates) с «арендой» ----------

@@ -74,6 +74,7 @@
 единый клиент по телефону (`linkTelegramPhone`). Модули с `node:crypto` (`core/src/shop/telegram-logic.ts`, `core/src/totp.ts`) **не экспортировать из
 `@handyman/core/shop`** — его импортирует корзина в браузере; у них свои входы (`@handyman/core/telegram`, корень `@handyman/core` — только типы в клиенте).
 Старый прототип на том же боте одновременно не запускать (409).
+**5.2–5.3** вход покупателя (`db/src/client-auth.ts`, `lib/client-auth.ts`, кука `hm_client`): Telegram (код → бот → сайт), SMS (заглушка в dev, в production без провайдера скрыт), Mini App (`/api/client/miniapp`, `miniapp-bridge.tsx`); кабинет `/account`; `?ref=` → кука `hm_ref` в `proxy.ts`. Кэш контента витрины — ключ с версией реестра текстов.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.

@@ -2,12 +2,16 @@
 import "server-only";
 import { cache } from "react";
 import { loadSiteContent, type SiteContent } from "@handyman/db/site-content";
-import { EMPTY_CONTACTS, defaultTexts, fillText, shopHref, type ShopLang } from "@handyman/core/site";
+import { EMPTY_CONTACTS, TEXT_ENTRIES, defaultTexts, fillText, shopHref, type ShopLang } from "@handyman/core/site";
 import { defaultMenuConfig } from "@handyman/core/catalog";
 import { TAG_SHOP, cached } from "./cache";
 
-/** Контент из базы — в кэше между запросами (сбрасывается при сохранении в админке, страховка — час). */
-const loadCached = cached((lang: ShopLang) => loadSiteContent(lang), "site-content", [TAG_SHOP], 3600);
+/**
+ * Контент из базы — в кэше между запросами (сбрасывается при сохранении в админке, страховка — час).
+ * В ключ входит «версия» реестра текстов: обновление кода с новыми текстами сразу даёт свежий кэш (иначе час были бы видны ключи).
+ */
+const REGISTRY_VERSION = `${TEXT_ENTRIES.length}:${TEXT_ENTRIES.at(-1)?.key ?? ""}`;
+const loadCached = cached((lang: ShopLang) => loadSiteContent(lang), `site-content:${REGISTRY_VERSION}`, [TAG_SHOP], 3600);
 
 /** Текст по ключу с подстановкой {переменных}. */
 export type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -23,7 +27,7 @@ export const getShopContent = cache(async (lang: ShopLang): Promise<ShopContent>
     console.error("[shop] не удалось загрузить контент сайта", e);
     content = { texts: defaultTexts(lang), contacts: EMPTY_CONTACTS, menu: defaultMenuConfig(), pages: [] };
   }
-  const t: T = (key, vars) => fillText(content.texts[key] ?? key, vars);
+  const t: T = (key, vars) => fillText(content.texts[key] ?? defaultTexts(lang)[key] ?? key, vars); // нет в кэше — стандартный текст
   const pick = (uk: string, ru: string) => (lang === "uk" ? uk : ru || uk);
   return { ...content, lang, t, pick };
 });

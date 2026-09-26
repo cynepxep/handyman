@@ -132,3 +132,15 @@ test("несуществующая страница — понятная 404 с 
   expect(res?.status()).toBe(404);
   await expect(page.locator("h1")).toBeVisible();
 });
+
+test("кабинет: без входа — экран входа (Telegram и SMS), кнопки не меньше 44 px, без прокрутки вбок и ошибок", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/account");
+  await expect(page.locator("h1")).toHaveText(/Вхід у кабінет/);
+  const tg = page.getByRole("button", { name: /Telegram/ });
+  await expect(tg).toBeVisible();
+  expect((await tg.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(page.getByLabel("Номер телефону")).toBeVisible();
+  await noHorizontalScroll(page);
+  expect(errors).toEqual([]);
+});

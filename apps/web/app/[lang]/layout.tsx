@@ -11,6 +11,8 @@ import { ShopCartProvider } from "@/components/shop/cart/cart-context";
 import { cartUiLabels } from "@/lib/shop/cart-labels";
 import { TextEditor } from "@/components/shop/text-editor";
 import { getStaffSession } from "@/lib/auth";
+import { getClient } from "@/lib/client-auth";
+import { MiniAppBridge } from "@/components/shop/miniapp-bridge";
 import "@/components/shop/shop.css";
 
 // Переменные шрифты (все начертания в одном файле): вместо 10 файлов ~330 КБ — 4 (кириллица и латиница: цифры цен — в латинице).
@@ -47,7 +49,7 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 export default async function ShopRootLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
-  const [c, staff] = await Promise.all([getShopContent(lang), getStaffSession().catch(() => null)]);
+  const [c, staff, client] = await Promise.all([getShopContent(lang), getStaffSession().catch(() => null), getClient()]);
   // сотрудник с правом «Тексты» видит кнопку «✎ Редагувати тексти» (покупатели — нет)
   const canEditTexts = staff?.permissions.includes("texts.edit") ?? false;
   return (
@@ -63,6 +65,7 @@ export default async function ShopRootLayout({ children, params }: LayoutProps<"
           <BottomNav c={c} />
         </ShopCartProvider>
         {canEditTexts && <TextEditor lang={lang} />}
+        <MiniAppBridge loggedIn={Boolean(client)} />{/* Этап 5: вход в Telegram Mini App */}
       </body>
     </html>
   );

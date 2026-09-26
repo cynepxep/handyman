@@ -19,10 +19,15 @@ export function proxy(request: NextRequest) {
   }
 
   const route = routeStorefront(pathname);
-  if (route.kind === "pass") return NextResponse.next();
   const url = request.nextUrl.clone();
-  url.pathname = route.path;
-  return route.kind === "redirect" ? NextResponse.redirect(url, 308) : NextResponse.rewrite(url);
+  url.pathname = route.kind === "pass" ? pathname : route.path;
+  const res = route.kind === "pass" ? NextResponse.next() : route.kind === "redirect" ? NextResponse.redirect(url, 308) : NextResponse.rewrite(url);
+  // Этап 5: приглашение друга (…?ref=КОД) — запоминаем на 30 дней, засчитаем при входе или первом заказе
+  const ref = request.nextUrl.searchParams.get("ref");
+  if (ref && /^[A-Za-z0-9]{4,16}$/.test(ref) && !request.cookies.has("hm_ref")) {
+    res.cookies.set("hm_ref", ref.toUpperCase(), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 30 * 86400 });
+  }
+  return res;
 }
 
 export const config = {
