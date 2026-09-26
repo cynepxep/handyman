@@ -1,0 +1,21 @@
+{
+  "name": "Handyman — админка",
+  "short_name": "Handyman",
+  "description": "Заказы, клиенты, склад и отчёты магазина Handyman",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#1E2126",
+  "theme_color": "#1E2126",
+  "lang": "ru",
+  "icons": [
+    { "src": "/admin-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/admin-icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/admin-icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "shortcuts": [
+    { "name": "Заказы", "url": "/admin/orders?status=action" },
+    { "name": "Заказ по звонку", "url": "/admin/orders/new" },
+    { "name": "Задачи", "url": "/admin/tasks" }
+  ]
+}

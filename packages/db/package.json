@@ -24,7 +24,8 @@
     "./finance": "./src/finance.ts",
     "./service": "./src/service.ts",
     "./reports": "./src/reports.ts",
-    "./staff": "./src/staff.ts"
+    "./staff": "./src/staff.ts",
+    "./jobs": "./src/jobs.ts"
   },
   "scripts": {
     "generate": "prisma generate",

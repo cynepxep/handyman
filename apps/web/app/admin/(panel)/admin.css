@@ -202,3 +202,18 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-bar:first-child .adm-bar-tip { left: 0; transform: none; }
 .adm-bar:last-child .adm-bar-tip { left: auto; right: 0; transform: none; }
 .adm-bars-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--adm-muted); padding-top: 4px; }
+
+/* ---------- меню на телефоне: «☰ Разделы» по группам (шаг 4.8) ---------- */
+.adm-mnav { display: none; position: relative; flex: 1; }
+.adm-mnav > summary { list-style: none; padding: 10px 12px; min-height: 44px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; }
+.adm-mnav > summary::-webkit-details-marker { display: none; }
+.adm-mnav[open] > summary { background: var(--adm-soft); }
+.adm-mnav-list { position: absolute; left: 0; top: calc(100% + 4px); z-index: 50; width: min(92vw, 340px); max-height: 75vh; overflow: auto;
+  background: var(--background); border: 1px solid var(--adm-line); border-radius: 14px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18); padding: 6px; }
+.adm-mnav-group { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--adm-muted); padding: 10px 10px 4px; }
+.adm-mnav-list a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; }
+.adm-mnav-list a:hover, .adm-mnav-list a[aria-current="page"] { background: var(--adm-soft); font-weight: 600; }
+@media (max-width: 760px) {
+  .adm-nav { display: none; }
+  .adm-mnav { display: block; }
+}

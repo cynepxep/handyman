@@ -66,7 +66,10 @@
 **4.6** дашборд на `/admin` и «Отчёты» (`/admin/reports`, CSV `/admin/reports/export`; `db/src/reports.ts`). Суммы в отчётах — только при `finance.view`;
 **4.7** вход в 2 шага (пароль → код из приложения; `db/src/staff.ts`, `core/src/totp.ts`), «Мой аккаунт», «Сотрудники», «Журнал». `requireStaff()` при
 включённом «код обязателен» отправляет в `/admin/account` — страницы, доступные без кода, вызывают `requireStaff({ allowWithout2fa: true })`.
-Временная учётка `claude-test` при удалении чистит и свои записи в `AuditLog`.
+Временная учётка `claude-test` при удалении чистит и свои записи в `AuditLog`;
+**4.8** фоновые задачи (`instrumentation.ts` → `lib/worker.ts` → `db/src/jobs.ts`, раз в минуту; сводка 21:00, отчёт по понедельникам, напоминания, тревоги),
+«Уведомления» (`/admin/notifications`), меню на телефоне по группам (`nav.tsx`, `group` в `SECTIONS`), «установить как приложение» (`public/admin-manifest.json`).
+**Этап 4 завершён** — дальше Этап 5 (бот, Mini App, единый клиент, кабинет, витрина+). Файлы в `public/` с расширением длиннее 8 букв не отдаются (правило `proxy.ts`).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
