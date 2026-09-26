@@ -3,6 +3,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3100";
+// В облачном чате Claude Chrome нет — там путь к уже установленному Chromium (задаёт .claude/hooks/session-start.sh).
+const chromePath = process.env.E2E_CHROME_PATH;
+const browser = chromePath ? { launchOptions: { executablePath: chromePath } } : { channel: "chrome" };
 
 export default defineConfig({
   testDir: "./e2e",
@@ -14,12 +17,12 @@ export default defineConfig({
   reporter: [["list"]],
   use: {
     baseURL,
-    channel: "chrome",
+    ...browser,
     locale: "uk-UA",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  projects: [{ name: "phone", use: { ...devices["Pixel 7"], channel: "chrome" } }],
+  projects: [{ name: "phone", use: { ...devices["Pixel 7"], ...browser } }],
   // если сайт не запущен — запустить режим разработки
   webServer: {
     command: "pnpm dev --port 3100",
