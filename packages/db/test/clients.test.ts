@@ -113,3 +113,20 @@ test("список клиентов: поиск по части номера и 
   assert.equal(bySpent.rows[0].phone, "+380931112233");
   assert.equal(bySpent.rows[0]._count.orders, 3);
 });
+
+test("скидка в заказе: вошедший покупатель получает свою (личную или уровня), гость с тем же телефоном — нет; заказ — в кабинет вошедшего", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  await clients.saveLoyalty({ enabled: true, levels: [{ key: "MASTER", min: 1, pct: 3 }] }, "test");
+  const me = await prisma.client.create({ data: { name: "Коваль Іван", manualDiscountPct: 10 } }); // вошёл через Telegram, телефона ещё нет
+  const withMe = await orders.placeOrder(form("0935559900"), { lang: "uk", clientId: me.id });
+  assert.ok(withMe.ok);
+  const o = await prisma.order.findUniqueOrThrow({ where: { no: withMe.no }, include: { items: true } });
+  assert.equal(o.clientId, me.id);
+  assert.equal(o.discountPct, 10);
+  assert.equal(o.items[0].unitPrice.toNumber(), Math.round(price * 0.9 * 100) / 100);
+  assert.equal((await prisma.client.findUniqueOrThrow({ where: { id: me.id } })).phone, "+380935559900", "телефон из заказа запомнился");
+  const guest = await orders.placeOrder(form("0935559900"), { lang: "uk" });
+  assert.ok(guest.ok);
+  assert.equal((await prisma.order.findUniqueOrThrow({ where: { no: guest.no } })).discountPct, 0, "по одному телефону скидку не даём");
+  assert.equal(await orders.clientDiscountFor(me.id), 10);
+});

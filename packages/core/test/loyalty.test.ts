@@ -53,3 +53,14 @@ test("форма клиента в админке: телефон приводи
     assert.equal(r.ok, false, JSON.stringify(bad));
   }
 });
+
+test("итог заказа со скидкой покупателя: складывается со скидкой за полную оплату, не больше 50 %", async () => {
+  const { computeTotals, DEFAULT_CHECKOUT } = await import("../src/shop");
+  const s = { ...DEFAULT_CHECKOUT, prepayAmount: 200, fullPayDiscountPct: 2 };
+  const lines = [{ price: 1000, qty: 1 }];
+  assert.equal(computeTotals(lines, "prepay", s, 5).total, 950);
+  assert.equal(computeTotals(lines, "full", s, 5).discountPct, 7);
+  assert.equal(computeTotals(lines, "full", s, 5).total, 930);
+  assert.equal(computeTotals(lines, "full", s, 60).discountPct, 50);
+  assert.equal(computeTotals(lines, "prepay", s).total, 1000, "гость — без скидки уровня");
+});

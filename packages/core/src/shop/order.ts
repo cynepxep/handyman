@@ -59,9 +59,13 @@ export type Totals = {
   unitPrices: number[];
 };
 
-/** Расчёт как в старом магазине: скидка за полную оплату — для «повна оплата» и «на картку»; предоплата не больше итога. */
-export function computeTotals(lines: Array<{ price: number; qty: number }>, pay: PayChoice | "later", s: CheckoutSettings): Totals {
-  const discountPct = pay === "full" || pay === "card" ? s.fullPayDiscountPct : 0;
+/**
+ * Расчёт как в старом магазине: скидка за полную оплату — для «повна оплата» и «на картку»; предоплата не больше итога.
+ * Этап 5: `clientPct` — скидка покупателя (личная или по уровню; только для вошедшего в кабинет) складывается со скидкой за полную
+ * оплату (правило прототипа), всего не больше 50 %.
+ */
+export function computeTotals(lines: Array<{ price: number; qty: number }>, pay: PayChoice | "later", s: CheckoutSettings, clientPct = 0): Totals {
+  const discountPct = Math.min(50, round2((pay === "full" || pay === "card" ? s.fullPayDiscountPct : 0) + Math.max(0, clientPct)));
   const unitPrices = lines.map((l) => round2(l.price * (1 - discountPct / 100)));
   const subtotal = round2(lines.reduce((a, l) => a + l.price * l.qty, 0));
   const total = round2(lines.reduce((a, l, i) => a + unitPrices[i] * l.qty, 0));

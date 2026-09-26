@@ -53,16 +53,20 @@ function readSaved(): Saved {
   }
 }
 
-export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
+export function CheckoutForm({ lang, labels, options, catalogHref, pickups, initial, loginHint }: {
   lang: ShopLang; labels: CheckoutLabels; options: CheckoutOptions; catalogHref: string;
   /** точки самовывоза (магазины); если их несколько — покупатель выбирает */
   pickups: PickupPoint[];
+  /** Этап 5: вошёл в кабинет — имя и телефон из кабинета (данные прошлого заказа в этом браузере важнее) */
+  initial?: { firstName: string; lastName: string; phone: string };
+  /** Этап 5: гостю — «войдите, и скидка уровня учтётся» со ссылкой в кабинет */
+  loginHint?: { text: string; href: string };
 }) {
   const router = useRouter();
   const lines = useCart();
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [firstName, setFirstName] = useState(initial?.firstName ?? "");
+  const [lastName, setLastName] = useState(initial?.lastName ?? "");
+  const [phone, setPhone] = useState(initial?.phone ?? "");
   const [delivery, setDelivery] = useState<Delivery>(options.delivery[0]);
   const [npType, setNpType] = useState<NpType>("warehouse");
   const [city, setCity] = useState("");
@@ -173,6 +177,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups }: {
       <div className="hm-section">
         <section className="hm-panel" aria-labelledby="co-contacts">
           <h2 id="co-contacts">{labels.contacts}</h2>
+          {loginHint && <p className="hm-muted"><a className="hm-link" href={loginHint.href}>{loginHint.text}</a></p>}
           <div className="hm-fields2">
             <div className="hm-field">
               <label htmlFor="co-first">{labels.firstName}</label>

@@ -2,7 +2,8 @@
 // из админки «Сайт → Оформлення»; все подписи — «Сайт → Тексты» (группа «Оформление заказа»).
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { DELIVERY_CHOICES, PAY_CHOICES } from "@handyman/core/shop";
+import { DELIVERY_CHOICES, PAY_CHOICES, formatPhone } from "@handyman/core/shop";
+import { getClient } from "@/lib/client-auth";
 import { isShopLang, paths, shopHref } from "@handyman/core/site";
 import { loadCheckoutSettings } from "@handyman/db/orders";
 import { pickupPoints } from "@handyman/db/warehouses";
@@ -22,7 +23,10 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/checkout">
 export default async function CheckoutPage({ params }: PageProps<"/[lang]/checkout">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
-  const [c, s, pickups] = await Promise.all([getShopContent(lang), loadCheckoutSettings(), pickupPoints(lang).catch(() => [])]);
+  const [c, s, pickups, client] = await Promise.all([getShopContent(lang), loadCheckoutSettings(), pickupPoints(lang).catch(() => []), getClient()]);
+  // Этап 5: вошёл — имя («Прізвище Ім'я») и телефон из кабинета; гость — ссылка «войдите — скидка уровня учтётся»
+  const nameParts = client?.name?.trim().split(/\s+/) ?? [];
+  const initial = client ? { lastName: nameParts.length > 1 ? nameParts[0] : "", firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : nameParts[0] ?? "", phone: client.phone ? formatPhone(client.phone) : "" } : undefined;
   const { t, pick } = c;
   // самовывоз: адрес магазина (один — сразу в пояснении; несколько — покупатель выбирает ниже)
   const one = pickups.length === 1 ? pickups[0] : null;
@@ -66,6 +70,8 @@ export default async function CheckoutPage({ params }: PageProps<"/[lang]/checko
         labels={labels}
         options={{ pay: PAY_CHOICES.filter((k) => s.pay[k]), delivery: DELIVERY_CHOICES.filter((k) => s.delivery[k]) }}
         catalogHref={shopHref(lang, paths.catalog())}
+        initial={initial}
+        loginHint={client ? undefined : { text: t("account.guest.discount"), href: shopHref(lang, paths.account()) }}
         pickups={pickups}
       />
     </section>

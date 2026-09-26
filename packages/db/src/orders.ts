@@ -5,7 +5,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma, type Prisma, type OrderStatus } from "./client";
 import {
-  ACTION_STATUSES, CANCEL_REASON_RU, SELLER_SETTING_KEY, kyivDayStart, needsCancelReason, parseSeller,
+  ACTION_STATUSES, CANCEL_REASON_RU, SELLER_SETTING_KEY, clientDiscountPct, kyivDayStart, needsCancelReason, parseSeller, type TierKey,
   type ManualOrderInput, type OrderFilters, type SellerDetails,
 } from "@handyman/core/shop";
 import {
@@ -17,7 +17,7 @@ import { reindexProducts, reindexSafely } from "./catalog-search";
 import { notifyManagers } from "./notify";
 import { npPointByRef } from "./novaposhta";
 import { photoStyleOn, pickImage } from "./photo-choice";
-import { recalcClient } from "./clients";
+import { loadLoyalty, recalcClient } from "./clients";
 import { applyOrderStock, notifyLowStock, ownStockOf, reserveForOrder } from "./stock";
 
 // склад переехал в stock.ts (шаг 4.4); старые импорты из orders продолжают работать
@@ -93,7 +93,15 @@ const PAY_RU: Record<keyof typeof PAY_DB, string> = { prepay: "предопла�
 const NP_RU: Record<string, string> = { warehouse: "отделение", postomat: "почтомат", address: "адрес" };
 
 export type PlaceResult = { ok: true; no: string; accessKey: string; total: number; dueNow: number } | { ok: false; errors: CheckoutErrors };
-export type PlaceOptions = { lang: "uk" | "ru"; isTest?: boolean };
+/** `clientId` — покупатель вошёл в кабинет (Этап 5): заказ — ему, скидка — его (личная или по уровню). Гостю скидки уровня нет. */
+export type PlaceOptions = { lang: "uk" | "ru"; isTest?: boolean; clientId?: string | null };
+
+/** Скидка покупателя для заказа (Этап 5): личная или по уровню (если уровни включены). */
+export async function clientDiscountFor(clientId: string | null | undefined): Promise<number> {
+  if (!clientId) return 0;
+  const [c, s] = await Promise.all([prisma.client.findUnique({ where: { id: clientId }, select: { tier: true, manualDiscountPct: true } }), loadLoyalty()]);
+  return c ? clientDiscountPct({ tier: c.tier as TierKey, manualDiscountPct: c.manualDiscountPct }, s).pct : 0;
+}
 
 async function nextSeq(tx: Prisma.TransactionClient): Promise<number> {
   const [row] = await tx.$queryRaw<Array<{ n: number }>>`SELECT nextval(pg_get_serial_sequence('"Order"', 'seq'))::int AS n`;
@@ -131,11 +139,22 @@ async function createOrderRecord(p: {
   comment?: string | null;
   noCallback?: boolean;
   history: string;
+  sessionClientId?: string | null;
 }) {
-  const totals = computeTotals(p.lines, p.pay, p.settings);
+  const clientPct = await clientDiscountFor(p.sessionClientId);
+  const totals = computeTotals(p.lines, p.pay, p.settings, clientPct);
   const accessKey = randomBytes(12).toString("base64url");
   const created = await prisma.$transaction(async (tx) => {
-    const clientId = await upsertClient(tx, p.phone, p.name, p.lang);
+    // вошёл в кабинет — заказ его (телефон в заказе — получателя); если у него ещё нет телефона и этот свободен — запомним
+    let clientId: string;
+    if (p.sessionClientId && (await tx.client.findUnique({ where: { id: p.sessionClientId }, select: { id: true } }))) {
+      clientId = p.sessionClientId;
+      const me = await tx.client.findUniqueOrThrow({ where: { id: clientId }, select: { phone: true, name: true } });
+      if (!me.phone && !(await tx.client.findUnique({ where: { phone: p.phone }, select: { id: true } }))) await tx.client.update({ where: { id: clientId }, data: { phone: p.phone } });
+      if (!me.name?.trim() && p.name) await tx.client.update({ where: { id: clientId }, data: { name: p.name } });
+    } else {
+      clientId = await upsertClient(tx, p.phone, p.name, p.lang);
+    }
     const seq = await nextSeq(tx);
     // закупочная цена на момент заказа (шаг 4.5) — прибыль не «плывёт», если закупку потом поменяют
     const costs = new Map(
@@ -205,7 +224,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     npType: v.delivery === "np" ? v.npType : null, npPoint: v.delivery === "np" ? npPoint : null,
     npCityRef: v.delivery === "np" ? (v.npCityRef ?? null) : null, npPointRef,
     pickupWarehouseId: pickup?.id ?? null,
-    comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте",
+    comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте", sessionClientId: opts.clientId,
   });
   const delivery =
     v.delivery === "np" ? `Нова Пошта: ${v.city}, ${npPointRef ? npPoint : `${NP_RU[v.npType ?? "warehouse"]} ${npPoint}`}`
@@ -235,7 +254,7 @@ export async function placeOneClick(
   const settings = await loadCheckoutSettings();
   const { order } = await createOrderRecord({
     lines: quote.lines, pay: "later", delivery: "to_confirm", settings, phone, name, lang: opts.lang, isTest: opts.isTest ?? false,
-    source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату",
+    source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId,
   });
   const l = quote.lines[0];
   await notifyManagers(managerText(order, "⚡ Купить в 1 клик", [

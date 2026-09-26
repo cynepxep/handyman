@@ -5,9 +5,21 @@
 import { headers } from "next/headers";
 import { computeTotals, canSkipCall, type PayChoice, type StockLevel } from "@handyman/core/shop";
 import { isShopLang, paths, shopHref, type ShopLang } from "@handyman/core/site";
-import { loadCheckoutSettings, placeOneClick, placeOrder, quoteCart } from "@handyman/db/orders";
+import { clientDiscountFor, loadCheckoutSettings, placeOneClick, placeOrder, quoteCart } from "@handyman/db/orders";
+import { setReferrer } from "@handyman/db/clients";
+import { prisma } from "@handyman/db";
 import { getStaffSession } from "@/lib/auth";
 import { getShopContent } from "@/lib/shop/content";
+import { getClient, refCodeFromCookie } from "@/lib/client-auth";
+
+/** Этап 5: приглашение засчитываем, если это первый заказ покупателя (и его ещё никто не пригласил). */
+async function creditReferral(orderNo: string) {
+  const ref = await refCodeFromCookie();
+  if (!ref) return;
+  const o = await prisma.order.findUnique({ where: { no: orderNo }, select: { clientId: true } });
+  if (!o) return;
+  if ((await prisma.order.count({ where: { clientId: o.clientId, isTest: false } })) === 1) await setReferrer(o.clientId, ref).catch(() => false);
+}
 
 export type CartLineView = {
   sku: string; name: string; href: string; image: string | null; price: number; oldPrice: number | null; stock: StockLevel; qty: number;
@@ -34,9 +46,9 @@ export type CheckoutQuote = CartQuote & {
 
 /** Итог для страницы оформления при выбранном способе оплаты. */
 export async function checkoutQuoteAction(lang: unknown, items: unknown, pay: unknown): Promise<CheckoutQuote> {
-  const [quote, settings] = await Promise.all([quoteCartAction(lang, items), loadCheckoutSettings()]);
+  const [quote, settings, client] = await Promise.all([quoteCartAction(lang, items), loadCheckoutSettings(), getClient()]);
   const p: PayChoice = pay === "full" || pay === "card" ? pay : "prepay";
-  const t = computeTotals(quote.lines, p, settings);
+  const t = computeTotals(quote.lines, p, settings, await clientDiscountFor(client?.id)); // скидка вошедшего покупателя — та же, что при заказе
   return {
     ...quote,
     totals: { subtotal: t.subtotal, discountPct: t.discountPct, total: t.total, dueNow: t.dueNow, later: t.later },
@@ -80,8 +92,10 @@ export async function placeOrderAction(lang: unknown, form: Record<string, unkno
   if (typeof form?.website === "string" && form.website.trim()) return { ok: false, errors: {}, message: t("err.server") };
   if (await tooMany()) return { ok: false, errors: {}, message: t("err.tooMany") };
   try {
-    const r = await placeOrder(form, { lang: l, isTest: await isStaff() });
+    const client = await getClient();
+    const r = await placeOrder(form, { lang: l, isTest: await isStaff(), clientId: client?.id });
     if (!r.ok) return { ok: false, errors: Object.fromEntries(Object.entries(r.errors).map(([k, key]) => [k, t(key ?? "err.server")])) };
+    await creditReferral(r.no);
     return { ok: true, url: shopHref(l, paths.order(r.no, r.accessKey)) };
   } catch (e) {
     console.error("[checkout] заказ не создан", e);
@@ -96,7 +110,9 @@ export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?:
   if (typeof form?.website === "string" && form.website.trim()) return { ok: false as const, message: t("err.server") };
   if (await tooMany()) return { ok: false as const, message: t("err.tooMany") };
   try {
-    const r = await placeOneClick(form, { lang: l, isTest: await isStaff() });
+    const client = await getClient();
+    const r = await placeOneClick(form, { lang: l, isTest: await isStaff(), clientId: client?.id });
+    if (r.ok) await creditReferral(r.no);
     return r.ok ? { ok: true as const, message: t("oneClick.done", { no: r.no }) } : { ok: false as const, message: t(r.error) };
   } catch (e) {
     console.error("[one-click] заказ не создан", e);
