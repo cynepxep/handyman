@@ -21,6 +21,7 @@ export const PERMISSIONS = [
   "texts.edit",
   "ads.edit",
   "stock.edit",
+  "finance.view",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -45,6 +46,7 @@ export const PERMISSION_LABELS_RU: Record<Permission, string> = {
   "texts.edit": "Тексты и страницы сайта",
   "ads.edit": "Реклама и баннеры",
   "stock.edit": "Склад: приход, инвентаризация, остатки",
+  "finance.view": "Финансы: прибыль, закупка, маржа, расходы",
 };
 
 interface RoleSeed {
@@ -61,7 +63,8 @@ export const DEFAULT_ROLES: RoleSeed[] = [
     key: "admin",
     title: "Главный администратор",
     builtin: true,
-    permissions: PERMISSIONS.filter((p) => p !== "staff.manage" && p !== "settings.edit"),
+    // деньги и маржу по ТЗ видит только владелец — главному администратору финансы не даём (владелец может включить галочкой)
+    permissions: PERMISSIONS.filter((p) => p !== "staff.manage" && p !== "settings.edit" && p !== "finance.view"),
   },
   {
     key: "manager",

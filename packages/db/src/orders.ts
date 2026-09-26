@@ -137,6 +137,10 @@ async function createOrderRecord(p: {
   const created = await prisma.$transaction(async (tx) => {
     const clientId = await upsertClient(tx, p.phone, p.name, p.lang);
     const seq = await nextSeq(tx);
+    // закупочная цена на момент заказа (шаг 4.5) — прибыль не «плывёт», если закупку потом поменяют
+    const costs = new Map(
+      (await tx.product.findMany({ where: { id: { in: p.lines.map((l) => l.productId) } }, select: { id: true, purchasePrice: true } })).map((x) => [x.id, x.purchasePrice]),
+    );
     const order = await tx.order.create({
       data: {
         seq, no: orderNumber(seq), clientId, status: "NEW",
@@ -146,7 +150,7 @@ async function createOrderRecord(p: {
         npCityRef: p.npCityRef ?? null, npPointRef: p.npPointRef ?? null, pickupWarehouseId: p.pickupWarehouseId ?? null,
         comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest,
         recipientName: p.name, recipientPhone: p.phone, source: p.source, createdBy: p.createdBy ?? null, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
-        items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i] })) },
+        items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i], unitCost: costs.get(l.productId) ?? null })) },
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") } },
       },
     });
@@ -349,7 +353,9 @@ export async function setOrderStatus(orderId: string, status: OrderStatus, who: 
     if (!o) return null;
     const reasonChanged = reason !== null && reason !== o.cancelReason;
     if (o.status === status && !note && !reasonChanged) return { changed: [], low: [], isTest: o.isTest };
-    await tx.order.update({ where: { id: orderId }, data: { status, cancelReason: reason } });
+    // doneAt — месяц выручки для финансов (шаг 4.5): ставится при переходе в «Выполнен», стирается при уходе из него
+    const doneAt = status === "DONE" ? (o.status === "DONE" ? undefined : new Date()) : null;
+    await tx.order.update({ where: { id: orderId }, data: { status, cancelReason: reason, ...(doneAt !== undefined ? { doneAt } : {}) } });
     const head = o.status !== status ? `Статус: ${ORDER_STATUS_RU[status] ?? status}${reason ? ` (причина: ${CANCEL_REASON_RU[reason]})` : ""}` : reasonChanged ? `Причина: ${CANCEL_REASON_RU[reason!]}` : "Заметка";
     await tx.orderHistory.create({ data: { orderId, text: `${head} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
     await tx.auditLog.create({ data: { who, action: "order.status", target: orderId, details: json({ from: o.status, to: status }) } });

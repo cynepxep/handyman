@@ -20,7 +20,8 @@
     "./photo-choice": "./src/photo-choice.ts",
     "./banners": "./src/banners.ts",
     "./notify": "./src/notify.ts",
-    "./stock": "./src/stock.ts"
+    "./stock": "./src/stock.ts",
+    "./finance": "./src/finance.ts"
   },
   "scripts": {
     "generate": "prisma generate",

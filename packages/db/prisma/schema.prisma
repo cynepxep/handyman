@@ -588,6 +588,8 @@ model Order {
   accessKey      String? // ключ страницы «Дякуємо» (без него страница заказа не открывается)
   cancelReason   String? // шаг 4.3: причина отмены/возврата (ключ из CANCEL_REASONS)
   createdBy      String? // шаг 4.3: сотрудник, оформивший заказ по звонку (source = manual)
+  shopDeliveryCost Decimal      @default(0) @db.Decimal(10, 2) // шаг 4.5: доставка за счёт магазина (для прибыли)
+  doneAt         DateTime? // шаг 4.5: когда стал «Выполнен» (месяц выручки); при уходе из «Выполнен» — пусто
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -613,9 +615,23 @@ model OrderItem {
   qty        Int
   // Цена уже со скидкой — снимок на момент заказа. Источник истины — сервер, не клиент.
   unitPrice  Decimal  @db.Decimal(10, 2)
+  unitCost   Decimal? @db.Decimal(10, 2) // шаг 4.5: закупочная цена на момент заказа (если была вписана)
 
   @@index([orderId])
   @@index([productId])
+}
+
+// шаг 4.5: постоянные расходы магазина за месяц (аренда, зарплаты, сервисы…) — для чистой прибыли
+model Expense {
+  id        String   @id @default(cuid())
+  month     String // YYYY-MM
+  category  String
+  title     String
+  amount    Decimal  @db.Decimal(10, 2)
+  who       String
+  createdAt DateTime @default(now())
+
+  @@index([month])
 }
 
 model OrderHistory {

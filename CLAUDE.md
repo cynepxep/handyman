@@ -60,7 +60,8 @@
 Готово: **4.1** «Клиенты» (`/admin/clients`, уровни скидок `/admin/clients/levels`; `core/src/shop/loyalty.ts`, `db/src/clients.ts`); **4.2** «Шаблоны» (`/admin/templates`) и сообщения покупателю из заказа (`db/src/messages.ts`, `notifyClient`);
 **4.3** фильтры заказов, «Заказ по звонку» (`/admin/orders/new`), причина отмены, печать счёта/комплектовочного листа (`/admin/orders/<id>/print`), реквизиты (`/admin/orders/seller`);
 **4.4** склад (`/admin/stock`: приход, инвентаризация, журнал; `db/src/stock.ts`): **резерв под заказ**, списание при «Отправлен/Выполнен»; «доступно» = onHand − reserved —
-везде, где покупателю показывается наличие, считать через `availableQty` (не суммировать `onHand`).
+везде, где покупателю показывается наличие, считать через `availableQty` (не суммировать `onHand`);
+**4.5** финансы (`/admin/finance`, право `finance.view` только у владельца; `db/src/finance.ts`): прибыль по заказу/месяцу, расходы, деньги в пути.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.

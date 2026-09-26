@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ORDER_STATUSES, getOrderDetail } from "@handyman/db/orders";
 import { clientMessagesOf, templatesForOrder } from "@handyman/db/messages";
 import { orderReservations } from "@handyman/db/stock";
+import { orderProfitOf } from "@handyman/db/finance";
+import { orderDeliveryCostAction } from "../../finance/actions";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
@@ -32,7 +34,10 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   if (!o) notFound();
   const later = o.total.toNumber() - o.dueNow.toNumber();
   const canHistory = session.permissions.includes("orders.history");
-  const [tpl, clientMsgs, held] = await Promise.all([canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id)]);
+  const canFinance = session.permissions.includes("finance.view");
+  const [tpl, clientMsgs, held, profit] = await Promise.all([
+    canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id), canFinance ? orderProfitOf(o.id) : null,
+  ]);
 
   return (
     <>
@@ -117,6 +122,23 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           </table>
         </div>
       </section>
+
+      {profit && (
+        <section className="adm-card">
+          <h2 style={{ marginTop: 0 }}>Прибыль по заказу <span className="adm-muted" style={{ fontSize: 13, fontWeight: 400 }}>(видит только владелец)</span></h2>
+          <p style={{ margin: "0 0 8px" }}>
+            Выручка {money(profit.revenue)} − закупка {money(profit.cost)}{profit.estimated > 0 ? " (частично оценка)" : ""} − комиссия {money(profit.commission)}
+            {" "}− доставка за наш счёт {money(profit.delivery)} = <b className={profit.profit >= 0 ? "adm-ok" : "adm-bad"}>{money(profit.profit)}</b> ({profit.marginPct}%)
+          </p>
+          {profit.unknown > 0 && <p className="adm-chip warn">без закупочной цены: {profit.unknown} поз. — прибыль завышена</p>}
+          <form action={orderDeliveryCostAction} className="adm-row">
+            <input type="hidden" name="id" value={o.id} />
+            <label htmlFor="sdc">Доставка за счёт магазина, ₴</label>
+            <input id="sdc" name="shopDeliveryCost" className="adm-input" style={{ width: 110 }} inputMode="decimal" defaultValue={o.shopDeliveryCost.toNumber() || ""} placeholder="0" />
+            <SubmitButton pendingText="…">Сохранить</SubmitButton>
+          </form>
+        </section>
+      )}
 
       {canEdit && tpl && (
         <StatusForm
