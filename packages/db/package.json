@@ -25,7 +25,9 @@
     "./service": "./src/service.ts",
     "./reports": "./src/reports.ts",
     "./staff": "./src/staff.ts",
-    "./jobs": "./src/jobs.ts"
+    "./jobs": "./src/jobs.ts",
+    "./bot": "./src/bot.ts",
+    "./telegram": "./src/telegram.ts"
   },
   "scripts": {
     "generate": "prisma generate",

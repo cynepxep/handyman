@@ -70,6 +70,10 @@
 **4.8** фоновые задачи (`instrumentation.ts` → `lib/worker.ts` → `db/src/jobs.ts`, раз в минуту; сводка 21:00, отчёт по понедельникам, напоминания, тревоги),
 «Уведомления» (`/admin/notifications`), меню на телефоне по группам (`nav.tsx`, `group` в `SECTIONS`), «установить как приложение» (`public/admin-manifest.json`).
 **Этап 4 завершён** — дальше Этап 5 (бот, Mini App, единый клиент, кабинет, витрина+). Файлы в `public/` с расширением длиннее 8 букв не отдаются (правило `proxy.ts`).
+**5.1** бот без библиотек (`db/src/bot.ts`, `telegram.ts`; читается из `lib/worker.ts` долгим опросом с арендой в базе; вебхук `/api/telegram/webhook`),
+единый клиент по телефону (`linkTelegramPhone`). Модули с `node:crypto` (`core/src/shop/telegram-logic.ts`, `core/src/totp.ts`) **не экспортировать из
+`@handyman/core/shop`** — его импортирует корзина в браузере; у них свои входы (`@handyman/core/telegram`, корень `@handyman/core` — только типы в клиенте).
+Старый прототип на том же боте одновременно не запускать (409).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.

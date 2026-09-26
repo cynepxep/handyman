@@ -512,12 +512,17 @@ model Client {
   note              String?
   passwordHash      String?
   passwordSalt      String?
+  refCode           String?   @unique // Этап 5: код реферальной ссылки (…?ref=КОД, t.me/бот?start=ref_КОД)
+  referredById      String? // Этап 5: кто пригласил
+  tgStartedAt       DateTime? // Этап 5: когда покупатель запустил бота (можно писать в Telegram)
   createdAt         DateTime  @default(now())
 
   orders       Order[]
   sessions     ClientSession[]
   linkCodes    LinkCode[]
   auditEntries ClientAudit[]
+
+  @@index([referredById])
 }
 
 model ClientSession {
@@ -525,8 +530,34 @@ model ClientSession {
   clientId  String
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  createdAt DateTime @default(now()) // Этап 5
+  via       String? // Этап 5: telegram | miniapp | sms
 
   @@index([clientId])
+}
+
+// Этап 5: вход на сайт через Telegram — сайт показывает кнопку t.me/бот?start=login_КОД, покупатель жмёт «Start», бот подтверждает,
+// сайт (ожидая) получает сессию. Код живёт 10 минут.
+model TgLogin {
+  code        String    @id
+  expiresAt   DateTime
+  clientId    String? // заполняется, когда бот подтвердил
+  confirmedAt DateTime?
+  usedAt      DateTime? // сайт уже выдал сессию по этому коду
+  createdAt   DateTime  @default(now())
+}
+
+// Этап 5: вход по SMS-коду (провайдер SMS подключается в «Интеграциях»; без него — режим-заглушка, код в журнале сервера)
+model SmsCode {
+  id        String   @id @default(cuid())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
 }
 
 // Код для привязки веб-аккаунта к Telegram (t.me/bot?start=link_КОД).

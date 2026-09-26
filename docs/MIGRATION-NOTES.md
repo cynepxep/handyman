@@ -172,3 +172,9 @@
 Только добавления: `Staff.recoveryCodes` (хеши кодов восстановления), `failedLogins`, `lockedUntil` (защита от подбора), `StaffSession.createdAt`, `userAgent`
 («где я вошёл»), таблица `StaffLoginChallenge` (пароль верный — ждём код, 5 минут). `Staff.twoFactorSecret` был с Этапа 0 и теперь используется.
 Правила входа — `Setting["security"]` (`require2fa`). В старом проекте двухфакторного входа не было.
+
+## Миграция `20260926240000_client_login` (Этап 5)
+
+Только добавления: `Client.refCode` (уникальный код приглашения), `referredById` (кто пригласил), `tgStartedAt` (когда запустил бота), `ClientSession.createdAt`,
+`via` (telegram | miniapp | sms), таблицы `TgLogin` (вход на сайт через Telegram по коду, 10 минут) и `SmsCode` (коды входа по SMS, хешами).
+В старом проекте: вход в браузере по телефону/почте + паролю, привязка Telegram кодом (`/start link_КОД`), рефералов не было.

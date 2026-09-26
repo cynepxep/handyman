@@ -11,7 +11,8 @@
     "./site/routes": "./src/site/routes.ts",
     "./site/listing": "./src/site/listing.ts",
     "./shop": "./src/shop/index.ts",
-    "./shop/warehouse": "./src/shop/warehouse.ts"
+    "./shop/warehouse": "./src/shop/warehouse.ts",
+    "./telegram": "./src/shop/telegram-logic.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

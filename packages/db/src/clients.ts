@@ -163,3 +163,78 @@ export async function updateClient(id: string, v: ClientEditInput, who: string):
   ]);
   return { ok: true, changed: diffs.length };
 }
+
+// ---------- Telegram: единый клиент (Этап 5) ----------
+
+export type TgProfile = { tgId: bigint; name?: string | null; username?: string | null; lang?: "UK" | "RU" };
+
+/** Покупатель по Telegram (Mini App, бот): найти по tgId или создать (пока без телефона). */
+export async function ensureTgClient(p: TgProfile): Promise<{ id: string; phone: string | null }> {
+  const found = await prisma.client.findUnique({ where: { tgId: p.tgId }, select: { id: true, phone: true, username: true } });
+  if (found) {
+    if (p.username && p.username !== found.username) await prisma.client.update({ where: { id: found.id }, data: { username: p.username } });
+    return { id: found.id, phone: found.phone };
+  }
+  const c = await prisma.client.create({ data: { tgId: p.tgId, name: p.name || null, username: p.username || null, lang: p.lang ?? "UK" } });
+  return { id: c.id, phone: null };
+}
+
+/**
+ * Покупатель поделился номером в боте: привязать Telegram к клиенту с этим телефоном. Если это был отдельный «телеграм-клиент»
+ * (например, заказывал в Mini App без номера) — переносим его заказы, сессии и историю к клиенту по телефону и удаляем дубль.
+ */
+export async function linkTelegramPhone(p: TgProfile & { phone: string }): Promise<{ id: string; merged: boolean; created: boolean }> {
+  return prisma.$transaction(async (tx) => {
+    const byPhone = await tx.client.findUnique({ where: { phone: p.phone } });
+    const byTg = await tx.client.findUnique({ where: { tgId: p.tgId } });
+    if (byPhone && byTg && byPhone.id === byTg.id) return { id: byPhone.id, merged: false, created: false };
+    if (byPhone && byTg) {
+      for (const table of ["order", "clientSession", "linkCode", "clientAudit", "task", "serviceCase"] as const) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (tx[table] as any).updateMany({ where: { clientId: byTg.id }, data: { clientId: byPhone.id } });
+      }
+      await tx.client.update({ where: { id: byTg.id }, data: { tgId: null, refCode: null } });
+      await tx.client.delete({ where: { id: byTg.id } });
+      await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null, referredById: byPhone.referredById ?? byTg.referredById } });
+      await tx.clientAudit.create({ data: { clientId: byPhone.id, who: "Telegram", field: "Telegram", oldValue: null, newValue: p.username ? `@${p.username}` : String(p.tgId) } });
+      await recalcClient(tx, byPhone.id);
+      return { id: byPhone.id, merged: true, created: false };
+    }
+    if (byPhone) {
+      await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null } });
+      await tx.clientAudit.create({ data: { clientId: byPhone.id, who: "Telegram", field: "Telegram", oldValue: null, newValue: p.username ? `@${p.username}` : String(p.tgId) } });
+      return { id: byPhone.id, merged: false, created: false };
+    }
+    if (byTg) {
+      await tx.client.update({ where: { id: byTg.id }, data: { phone: p.phone, tgStartedAt: byTg.tgStartedAt ?? new Date() } });
+      return { id: byTg.id, merged: false, created: false };
+    }
+    const c = await tx.client.create({ data: { phone: p.phone, tgId: p.tgId, tgStartedAt: new Date(), name: p.name || null, username: p.username || null, lang: p.lang ?? "UK" } });
+    return { id: c.id, merged: false, created: true };
+  });
+}
+
+/** Реферальный код клиента (создаётся при первом запросе): 8 символов без похожих букв. */
+export async function ensureRefCode(clientId: string): Promise<string> {
+  const c = await prisma.client.findUnique({ where: { id: clientId }, select: { refCode: true } });
+  if (c?.refCode) return c.refCode;
+  const abc = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  for (let i = 0; i < 5; i++) {
+    const code = Array.from({ length: 8 }, () => abc[Math.floor(Math.random() * abc.length)]).join("");
+    try {
+      await prisma.client.update({ where: { id: clientId }, data: { refCode: code } });
+      return code;
+    } catch {
+      /* совпал с чужим — пробуем другой */
+    }
+  }
+  throw new Error("не удалось создать реферальный код");
+}
+
+/** Отметить, кто пригласил (один раз, себя пригласить нельзя). */
+export async function setReferrer(clientId: string, refCode: string): Promise<boolean> {
+  const ref = await prisma.client.findUnique({ where: { refCode: refCode.toUpperCase() }, select: { id: true } });
+  if (!ref || ref.id === clientId) return false;
+  const r = await prisma.client.updateMany({ where: { id: clientId, referredById: null }, data: { referredById: ref.id } });
+  return r.count > 0;
+}
