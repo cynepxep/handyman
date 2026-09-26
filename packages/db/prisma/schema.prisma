@@ -730,11 +730,26 @@ model Staff {
   passwordHash     String
   passwordSalt     String
   active           Boolean   @default(true)
-  twoFactorSecret  String? // задел под 2FA, логика — позже
+  twoFactorSecret  String? // шаг 4.7: ключ кода из приложения (base32); пусто — вход только по паролю
+  recoveryCodes    Json? // шаг 4.7: хеши одноразовых кодов восстановления (если телефон потерян)
+  failedLogins     Int       @default(0) // шаг 4.7: неудачные попытки подряд (защита от подбора)
+  lockedUntil      DateTime? // шаг 4.7: вход закрыт до этого времени после 5 неудач
   createdAt        DateTime  @default(now())
   lastLoginAt      DateTime?
 
-  sessions StaffSession[]
+  sessions   StaffSession[]
+  challenges StaffLoginChallenge[]
+}
+
+// шаг 4.7: пароль верный, ждём код из приложения (5 минут, до 5 попыток)
+model StaffLoginChallenge {
+  token     String   @id
+  staffId   String
+  staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  attempts  Int      @default(0)
+
+  @@index([staffId])
 }
 
 model Role {
@@ -759,6 +774,8 @@ model StaffSession {
   staffId   String
   staff     Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
   expiresAt DateTime
+  createdAt DateTime @default(now()) // шаг 4.7: когда вошли (список «где я вошёл»)
+  userAgent String? // шаг 4.7: браузер/устройство
 
   @@index([staffId])
 }

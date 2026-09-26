@@ -22,11 +22,14 @@ const SECTIONS: Array<{ href: string; label: string; permission?: Permission }> 
   { href: "/admin/warehouses", label: "Магазины", permission: "settings.edit" },
   { href: "/admin/media", label: "Фото товаров", permission: "import.run" },
   { href: "/admin/banners", label: "Реклама", permission: "ads.edit" },
+  { href: "/admin/staff", label: "Сотрудники", permission: "staff.manage" },
   { href: "/admin/roles", label: "Роли и права", permission: "staff.manage" },
+  { href: "/admin/audit", label: "Журнал", permission: "audit.view" },
 ];
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
-  const session = await requireStaff();
+  // общее меню — даже если нужно включить код из приложения (страницы сами отправят в «Мой аккаунт»)
+  const session = await requireStaff({ allowWithout2fa: true });
   const items: NavItem[] = SECTIONS.filter((s) => !s.permission || session.permissions.includes(s.permission)).map(
     ({ href, label }) => ({ href, label }),
   );
@@ -40,9 +43,9 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </Link>
           <AdminNav items={items} />
           <form action={logoutAction} className="adm-user">
-            <span>
-              {session.name} · {session.roleTitle}
-            </span>
+            <Link href="/admin/account" title="Мой аккаунт: пароль, код из приложения, где я вошёл">
+              <span>{session.name} · {session.roleTitle}</span> {session.hasTwoFactor ? "🔒" : "👤"}
+            </Link>
             <button type="submit" className="adm-btn">
               Выйти
             </button>

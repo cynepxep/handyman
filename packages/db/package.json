@@ -23,7 +23,8 @@
     "./stock": "./src/stock.ts",
     "./finance": "./src/finance.ts",
     "./service": "./src/service.ts",
-    "./reports": "./src/reports.ts"
+    "./reports": "./src/reports.ts",
+    "./staff": "./src/staff.ts"
   },
   "scripts": {
     "generate": "prisma generate",
