@@ -186,3 +186,5 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
   .adm, .adm-print { color: #000; background: #fff; font-size: 12pt; }
   .adm-print-table th, .adm-print-table td { border-color: #999; }
 }
+.adm-ok { color: var(--adm-ok); }
+.adm-bad { color: var(--adm-bad); }

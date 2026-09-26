@@ -18,47 +18,13 @@ import { notifyManagers } from "./notify";
 import { npPointByRef } from "./novaposhta";
 import { photoStyleOn, pickImage } from "./photo-choice";
 import { recalcClient } from "./clients";
+import { applyOrderStock, notifyLowStock, ownStockOf, reserveForOrder } from "./stock";
+
+// склад переехал в stock.ts (шаг 4.4); старые импорты из orders продолжают работать
+export { defaultWarehouseId, ownStockOf, setOwnStock } from "./stock";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const money = (n: number) => `${n.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} ₴`;
-
-// ---------- склад ----------
-
-/** Наш основной склад в Одессе (из сида; в тестовой базе создаётся при первом обращении). */
-export async function defaultWarehouseId(): Promise<string> {
-  const w = await prisma.warehouse.findFirst({ where: { isDefault: true }, select: { id: true } });
-  if (w) return w.id;
-  return (await prisma.warehouse.create({ data: { id: "default", name: "Одеса (основний склад)", isDefault: true } })).id;
-}
-
-/** Остаток на нашем складе, шт. (сумма по складам). */
-export async function ownStockOf(productIds: string[]): Promise<Map<string, number>> {
-  const rows = productIds.length ? await prisma.stockItem.groupBy({ by: ["productId"], where: { productId: { in: productIds } }, _sum: { onHand: true } }) : [];
-  return new Map(rows.map((r) => [r.productId, r._sum.onHand ?? 0]));
-}
-
-/**
- * Установить остаток на нашем складе (правка в админке). Изменение пишется в StockMovement, поиск обновляется.
- * `warehouseId` — какой магазин/склад (по умолчанию основной). Возвращает true, если остаток изменился.
- */
-export async function setOwnStock(productId: string, qty: number, who: string, warehouseId?: string, opts: { reindex?: boolean } = {}): Promise<boolean> {
-  const target = Math.max(0, Math.min(100_000, Math.floor(qty)));
-  warehouseId ??= await defaultWarehouseId();
-  const cur = await prisma.stockItem.findUnique({ where: { productId_warehouseId: { productId, warehouseId } } });
-  const delta = target - (cur?.onHand ?? 0);
-  if (delta === 0) return false;
-  await prisma.$transaction(async (tx) => {
-    const item = await tx.stockItem.upsert({
-      where: { productId_warehouseId: { productId, warehouseId } },
-      create: { productId, warehouseId, onHand: target },
-      update: { onHand: target },
-    });
-    await tx.stockMovement.create({ data: { stockItemId: item.id, delta, reason: "ADJUSTMENT", who } });
-    await tx.auditLog.create({ data: { who, action: "stock.set", target: productId, details: json({ onHand: target, delta, warehouseId }) } });
-  });
-  if (opts.reindex !== false) await reindexSafely(() => reindexProducts([productId]));
-  return true;
-}
 
 // ---------- настройки оформления ----------
 
@@ -144,26 +110,6 @@ async function upsertClient(tx: Prisma.TransactionClient, phone: string, name: s
   return (await tx.client.create({ data: { phone, name: name || null, lang: lang === "ru" ? "RU" : "UK" } })).id;
 }
 
-/** Списать свой склад под заказ (сколько есть, не больше). Возвращает товары, у которых изменился остаток. */
-async function takeOwnStock(tx: Prisma.TransactionClient, orderId: string, lines: QuoteLine[]): Promise<string[]> {
-  const changed: string[] = [];
-  for (const l of lines) {
-    if (l.stock !== "local") continue;
-    const items = await tx.stockItem.findMany({ where: { productId: l.productId, onHand: { gt: 0 } }, orderBy: { onHand: "desc" } });
-    let need = l.qty;
-    for (const it of items) {
-      if (need <= 0) break;
-      const take = Math.min(need, it.onHand);
-      const upd = await tx.stockItem.updateMany({ where: { id: it.id, onHand: { gte: take } }, data: { onHand: { decrement: take } } });
-      if (upd.count === 0) continue;
-      await tx.stockMovement.create({ data: { stockItemId: it.id, delta: -take, reason: "SALE", refOrderId: orderId } });
-      need -= take;
-      changed.push(l.productId);
-    }
-  }
-  return [...new Set(changed)];
-}
-
 async function createOrderRecord(p: {
   lines: QuoteLine[];
   pay: PayChoice | "later";
@@ -204,10 +150,12 @@ async function createOrderRecord(p: {
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") } },
       },
     });
-    const changed = await takeOwnStock(tx, order.id, p.lines);
-    return { order, changed };
+    // резерв на нашем складе (шаг 4.4): товар остаётся на полке, но покупателям его «доступно» меньше
+    const { changed, low } = await reserveForOrder(tx, order.id, p.lines.filter((l) => l.stock === "local"));
+    return { order, changed, low };
   });
   if (created.changed.length) await reindexSafely(() => reindexProducts(created.changed));
+  if (!p.isTest) await notifyLowStock(created.low);
   return { order: created.order, totals, accessKey };
 }
 
@@ -388,46 +336,29 @@ export const getOrderDetail = (id: string) =>
     },
   });
 
-/** Вернуть на склад то, что было списано под заказ (при отмене). Повторная отмена ничего не добавляет. */
-async function returnOwnStock(tx: Prisma.TransactionClient, orderId: string): Promise<string[]> {
-  const moves = await tx.stockMovement.findMany({ where: { refOrderId: orderId }, include: { stockItem: { select: { productId: true } } } });
-  const balance = new Map<string, { productId: string; qty: number }>();
-  for (const m of moves) {
-    const cur = balance.get(m.stockItemId) ?? { productId: m.stockItem.productId, qty: 0 };
-    cur.qty += m.reason === "SALE" ? -m.delta : m.reason === "RETURN" ? -m.delta : 0; // SALE: delta<0 → +, RETURN: delta>0 → −
-    balance.set(m.stockItemId, cur);
-  }
-  const changed: string[] = [];
-  for (const [stockItemId, { productId, qty }] of balance) {
-    if (qty <= 0) continue;
-    await tx.stockItem.update({ where: { id: stockItemId }, data: { onHand: { increment: qty } } });
-    await tx.stockMovement.create({ data: { stockItemId, delta: qty, reason: "RETURN", refOrderId: orderId } });
-    changed.push(productId);
-  }
-  return changed;
-}
-
 /**
  * Сменить статус (и/или добавить заметку). Для «Отменён» и «Возврат» — причина из CANCEL_REASONS (если не указана — «Другое»);
- * при уходе из отмены причина стирается.
+ * при уходе из отмены причина стирается. Склад (шаг 4.4): отмена снимает резерв и возвращает отправленное, «Отправлен»/«Выполнен»
+ * списывает резерв, возврат из отмены в работу резервирует снова.
  */
 export async function setOrderStatus(orderId: string, status: OrderStatus, who: string, note?: string, cancelReason?: string): Promise<{ ok: boolean; error?: string }> {
   if (!ORDER_STATUSES.includes(status)) return { ok: false, error: "Неизвестный статус." };
   const reason = needsCancelReason(status) ? (cancelReason && CANCEL_REASON_RU[cancelReason] ? cancelReason : "other") : null;
-  const changed = await prisma.$transaction(async (tx) => {
-    const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, clientId: true, cancelReason: true } });
+  const res = await prisma.$transaction(async (tx) => {
+    const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, clientId: true, cancelReason: true, isTest: true } });
     if (!o) return null;
     const reasonChanged = reason !== null && reason !== o.cancelReason;
-    if (o.status === status && !note && !reasonChanged) return [];
+    if (o.status === status && !note && !reasonChanged) return { changed: [], low: [], isTest: o.isTest };
     await tx.order.update({ where: { id: orderId }, data: { status, cancelReason: reason } });
     const head = o.status !== status ? `Статус: ${ORDER_STATUS_RU[status] ?? status}${reason ? ` (причина: ${CANCEL_REASON_RU[reason]})` : ""}` : reasonChanged ? `Причина: ${CANCEL_REASON_RU[reason!]}` : "Заметка";
     await tx.orderHistory.create({ data: { orderId, text: `${head} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
     await tx.auditLog.create({ data: { who, action: "order.status", target: orderId, details: json({ from: o.status, to: status }) } });
     if (o.status !== status && (o.status === "DONE" || status === "DONE")) await recalcClient(tx, o.clientId); // сумма покупок и уровень
-    return status === "CANCELLED" || status === "RETURNED" ? returnOwnStock(tx, orderId) : [];
+    return { ...(await applyOrderStock(tx, orderId, o.status, status, who)), isTest: o.isTest };
   });
-  if (changed === null) return { ok: false, error: "Заказ не найден." };
-  if (changed.length) await reindexSafely(() => reindexProducts(changed));
+  if (res === null) return { ok: false, error: "Заказ не найден." };
+  if (res.changed.length) await reindexSafely(() => reindexProducts(res.changed));
+  if (!res.isTest) await notifyLowStock(res.low);
   return { ok: true };
 }
 

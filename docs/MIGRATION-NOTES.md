@@ -147,3 +147,10 @@
 
 Только добавления: `Order.cancelReason` (ключ причины отмены/возврата, `CANCEL_REASONS` в `packages/core/src/shop/order-admin.ts`), `Order.createdBy`
 (сотрудник, оформивший заказ по звонку; `source = "manual"`). В старом проекте причин отмены и заказов по звонку не было.
+
+## Миграция `20260926160000_stock_docs` (шаг 4.4: склад)
+
+Только добавления: `StockMoveReason.RESERVE` / `UNRESERVE`, `Product.minStock` (0 — не следить), `StockMovement.docId` (+ связь с новой таблицей `StockDoc`,
+при удалении документа — `NULL`) и `unitCost`, индексы по `refOrderId` и `docId`, таблица `StockDoc` (приход/инвентаризация: номер, склад, поставщик,
+примечание, кто). Право `stock.edit` выдано ролям `owner`, `admin`, `manager` (если они есть). Смысл `StockItem.reserved` (был с Этапа 0, не использовался):
+отложено под заказы. В старом проекте остаток был один на товар и при заказе не уменьшался.

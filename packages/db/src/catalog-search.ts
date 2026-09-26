@@ -8,7 +8,7 @@ import { photoStyleOn, pickImage } from "./photo-choice";
 import {
   FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, menuRanks, sortFacetValues, synonymMap,
 } from "@handyman/core/catalog";
-import { STOCK_RANK, stockLevel, type StockLevel } from "@handyman/core/shop";
+import { STOCK_RANK, availableQty, stockLevel, type StockLevel } from "@handyman/core/shop";
 
 export class SearchUnavailableError extends Error {
   constructor(message = "Поиск временно недоступен. Попробуйте позже.") {
@@ -131,7 +131,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         brand: { select: { name: true } },
         images: { orderBy: { sort: "asc" }, take: 1, select: { url: true, localUrl: true, styledUrl: true } },
         attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
-        stockItems: { select: { onHand: true } },
+        stockItems: { select: { onHand: true, reserved: true } },
       },
     });
     if (!rows.length) break;
@@ -155,7 +155,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         price, oldPrice,
         hasDiscount: oldPrice != null && oldPrice > price,
         discountPct: oldPrice != null && oldPrice > price ? Math.round(((oldPrice - price) / oldPrice) * 100) : 0,
-        ...stockFields(r.stockItems.reduce((a, s) => a + s.onHand, 0), r.supplierAvailable),
+        ...stockFields(availableQty(r.stockItems), r.supplierAvailable), // свободно = на складе − в резерве (шаг 4.4)
         hit: r.isHit,
         isNew: r.isNew,
         menuRank: ranks.get(r.categoryId) ?? NO_RANK,

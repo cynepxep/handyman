@@ -19,7 +19,8 @@
     "./media": "./src/media.ts",
     "./photo-choice": "./src/photo-choice.ts",
     "./banners": "./src/banners.ts",
-    "./notify": "./src/notify.ts"
+    "./notify": "./src/notify.ts",
+    "./stock": "./src/stock.ts"
   },
   "scripts": {
     "generate": "prisma generate",

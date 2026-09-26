@@ -9,7 +9,7 @@ import {
   type MenuConfig, type MenuGroup, type Spec, type Task,
 } from "@handyman/core/catalog";
 import { paths, shopHref, type ShopLang } from "@handyman/core/site";
-import { stockLevel } from "@handyman/core/shop";
+import { availableQty, stockLevel } from "@handyman/core/shop";
 import { loadMenuConfig } from "@handyman/db/site-content";
 import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import type { CardData } from "@/components/shop/product-card";
@@ -162,7 +162,7 @@ export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[
   const styleOn = await photoStyleOn();
   const rows = await prisma.product.findMany({
     where: { visible: true, oldPrice: { not: null }, supplierAvailable: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} } },
-    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true } } },
+    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true, reserved: true } } },
   });
   const items: SearchItem[] = rows
     .map((r) => {
@@ -175,7 +175,7 @@ export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[
     .slice(0, limit)
     .map(({ r, price, old, pct }) => ({
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old, discountPct: pct, available: true,
-      stock: stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), true), hit: r.isHit, isNew: r.isNew,
+      stock: stockLevel(availableQty(r.stockItems), true), hit: r.isHit, isNew: r.isNew,
       image: r.images[0] ? pickImage(r.images[0], styleOn) : null, categoryId: r.categoryId,
     }));
   return toCards(items, lang);
@@ -201,7 +201,7 @@ export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<Sh
     where: { sku: { in: list }, visible: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS } },
     select: {
       id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, supplierAvailable: true, isHit: true, isNew: true,
-      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true } },
+      images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true, reserved: true } },
     },
   });
   const bySku = new Map(rows.map((r) => [r.sku, r]));
@@ -210,7 +210,7 @@ export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<Sh
     if (!r) return [];
     const price = r.price.toNumber();
     const old = r.oldPrice ? r.oldPrice.toNumber() : null;
-    const stock = stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), r.supplierAvailable);
+    const stock = stockLevel(availableQty(r.stockItems), r.supplierAvailable);
     return [{
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old && old > price ? old : null,
       discountPct: discountPct(price, old), available: stock !== "order", stock, hit: r.isHit, isNew: r.isNew, image: r.images[0] ? pickImage(r.images[0], styleOn) : null, categoryId: r.categoryId,

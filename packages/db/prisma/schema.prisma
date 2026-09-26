@@ -65,6 +65,8 @@ enum StockMoveReason {
   RETURN
   ADJUSTMENT
   RECEIVING
+  RESERVE // шаг 4.4: резерв под заказ (delta > 0 — сколько зарезервировано; onHand не меняется)
+  UNRESERVE // шаг 4.4: снятие резерва (delta < 0): отмена заказа или отгрузка
 }
 
 enum SyncJobKind {
@@ -177,6 +179,7 @@ model Product {
   visible        Boolean        @default(true)
   isHit          Boolean        @default(false) // «Хіт» — отмечает владелец (шаг 2.7), импорт не трогает
   isNew          Boolean        @default(false) // «Новинка» — отмечает владелец (шаг 2.7), импорт не трогает
+  minStock       Int            @default(0) // шаг 4.4: минимальный остаток на нашем складе (0 — не следить); ниже — «заканчивается»
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -391,9 +394,30 @@ model StockMovement {
   reason      StockMoveReason
   refOrderId  String?
   who         String?
+  docId       String? // шаг 4.4: документ «Приход» или «Инвентаризация»
+  doc         StockDoc?       @relation(fields: [docId], references: [id], onDelete: SetNull)
+  unitCost    Decimal?        @db.Decimal(10, 2) // шаг 4.4: закупочная цена за штуку (приход)
   createdAt   DateTime        @default(now())
 
   @@index([stockItemId])
+  @@index([refOrderId])
+  @@index([docId])
+}
+
+// шаг 4.4: складской документ — «Приход» (receiving) или «Инвентаризация» (inventory); строки — движения StockMovement с docId
+model StockDoc {
+  id          String          @id @default(cuid())
+  seq         Int             @default(autoincrement())
+  kind        String // receiving | inventory
+  warehouseId String
+  supplier    String? // от кого приход (свободный текст)
+  note        String?
+  who         String
+  createdAt   DateTime        @default(now())
+
+  movements StockMovement[]
+
+  @@index([createdAt])
 }
 
 // ---------- под будущее: маркетинг (не используется на Этапе 0) ----------

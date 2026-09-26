@@ -6,7 +6,7 @@ import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import { searchProducts, SearchUnavailableError } from "@handyman/db/catalog-search";
 import { HIDDEN_CATEGORY_IDS, menuPlaceOf, sanitizeHtml, type MenuConfig } from "@handyman/core/catalog";
 import type { ShopLang } from "@handyman/core/site";
-import { stockLevel } from "@handyman/core/shop";
+import { availableQty, stockLevel } from "@handyman/core/shop";
 import { getCategoryStats, toCards, type ShopCard } from "./catalog";
 
 /** Товар по артикулу. Скрытый или «Нераспределённый» — как будто его нет (страница 404). */
@@ -17,7 +17,7 @@ export const loadProduct = cache(async (sku: string) => {
       images: { orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } },
       attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
       brand: { select: { name: true } },
-      stockItems: { select: { onHand: true } },
+      stockItems: { select: { onHand: true, reserved: true } },
     },
   });
   if (!p || !p.visible || HIDDEN_CATEGORY_IDS.includes(p.categoryId)) return null;
@@ -36,7 +36,7 @@ export const loadProduct = cache(async (sku: string) => {
     discountPct: old && old > price ? Math.round((1 - price / old) * 100) : 0,
     available: p.supplierAvailable,
     /** наш склад в Одессе / у поставщика / под заказ */
-    stock: stockLevel(p.stockItems.reduce((a, x) => a + x.onHand, 0), p.supplierAvailable),
+    stock: stockLevel(availableQty(p.stockItems), p.supplierAvailable),
     brand: p.brand?.name ?? null,
     categoryId: p.categoryId,
     images: p.images.map((i) => pickImage(i, styleOn)), // фирменный стиль / своя копия / фото поставщика

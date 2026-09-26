@@ -4,7 +4,7 @@ import { getOrderDetail, loadSeller } from "@handyman/db/orders";
 import { loadContacts } from "@handyman/db/site-content";
 import { DELIVERY_RU, NP_TYPE_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
-import { ownStockOf } from "@handyman/db/orders";
+import { orderReservations, ownStockOf } from "@handyman/db/stock";
 import { PrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,9 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
   const doc = (await searchParams).doc === "packing" ? "packing" : "invoice";
   const o = await getOrderDetail(id);
   if (!o) notFound();
-  const [seller, contacts, own] = await Promise.all([loadSeller(), loadContacts(), ownStockOf(o.items.map((i) => i.productId).filter((x): x is string => Boolean(x)))]);
+  const [seller, contacts, own, held] = await Promise.all([
+    loadSeller(), loadContacts(), ownStockOf(o.items.map((i) => i.productId).filter((x): x is string => Boolean(x))), orderReservations(o.id),
+  ]);
   const total = o.total.toNumber();
   const due = Math.max(0, total - Math.max(o.dueNow.toNumber(), o.paidAmount.toNumber()));
 
@@ -91,11 +93,16 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
             <thead><tr><th>✓</th><th>Товар</th><th>Артикул</th><th className="num">Кол-во</th><th>Где взять</th></tr></thead>
             <tbody>
               {o.items.map((it) => {
-                const stock = it.productId ? own.get(it.productId) ?? 0 : 0;
+                const h = it.productId ? held.get(it.productId) : undefined;
+                const mine = (h?.reserved ?? 0) + (h?.sold ?? 0); // отложено/уже списано под ЭТОТ заказ
+                const free = it.productId ? own.get(it.productId) ?? 0 : 0;
+                const where = mine >= it.qty ? `наш склад (отложено ${mine})`
+                  : mine > 0 ? `наш склад ${mine} шт., остальное у поставщика`
+                  : free > 0 ? `наш склад (свободно ${free})` : "у поставщика";
                 return (
                   <tr key={it.id}>
                     <td className="adm-print-box">☐</td><td>{it.name}</td><td>{it.sku}</td><td className="num"><b>{it.qty}</b></td>
-                    <td>{stock > 0 ? `наш склад (ост. ${stock})` : "у поставщика"}</td>
+                    <td>{where}</td>
                   </tr>
                 );
               })}

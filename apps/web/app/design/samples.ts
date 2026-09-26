@@ -3,14 +3,14 @@ import "server-only";
 import { prisma } from "@handyman/db";
 import type { SearchItem } from "@handyman/db/catalog-search";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
-import { stockLevel } from "@handyman/core/shop";
+import { availableQty, stockLevel } from "@handyman/core/shop";
 import { toCards, type ShopCard } from "@/lib/shop/catalog";
 
 export async function loadSampleCards(): Promise<Array<{ label: string; card: ShopCard }>> {
   const rows = await prisma.product.findMany({
     where: { visible: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS } },
     select: {
-      id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, supplierAvailable: true, categoryId: true, stockItems: { select: { onHand: true } },
+      id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, supplierAvailable: true, categoryId: true, stockItems: { select: { onHand: true, reserved: true } },
       images: { take: 1, orderBy: { sort: "asc" }, select: { url: true } },
     },
   });
@@ -20,7 +20,7 @@ export async function loadSampleCards(): Promise<Array<{ label: string; card: Sh
     return {
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price,
       oldPrice: old && old > price ? old : null, discountPct: old && old > price ? Math.round((1 - price / old) * 100) : 0,
-      available: r.supplierAvailable, stock: stockLevel(r.stockItems.reduce((a, x) => a + x.onHand, 0), r.supplierAvailable), image: r.images[0]?.url ?? null, categoryId: r.categoryId,
+      available: r.supplierAvailable, stock: stockLevel(availableQty(r.stockItems), r.supplierAvailable), image: r.images[0]?.url ?? null, categoryId: r.categoryId,
     };
   });
   const withImg = items.filter((i) => i.image);

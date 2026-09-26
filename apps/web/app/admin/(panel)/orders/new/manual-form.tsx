@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useState } from "react";
 import { SubmitButton } from "../../import/client-bits";
+import { ProductPicker, type PickedProduct } from "../../product-picker";
 import type { ManualOrderState } from "../actions";
 
-type Hit = { sku: string; nameUk: string; price: number; stock?: string; available?: boolean };
-type Line = Hit & { qty: number };
+type Line = PickedProduct & { qty: number };
 
 const money = (n: number) => `${n.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} ₴`;
 
@@ -14,40 +14,11 @@ export function ManualOrderForm({ action }: { action: (prev: ManualOrderState, f
   const [state, formAction] = useActionState(action, {});
   const v = state.values ?? {};
   const error = state.error;
-  const [q, setQ] = useState("");
-  const [hits, setHits] = useState<Hit[]>([]);
   const [lines, setLines] = useState<Line[]>([]);
   const [delivery, setDelivery] = useState("to_confirm");
-  const [searchErr, setSearchErr] = useState("");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-
-  /** Поиск с паузой 250 мс после последней буквы (тот же поиск, что на сайте). */
-  const search = (text: string) => {
-    setQ(text);
-    if (timer.current) clearTimeout(timer.current);
-    if (text.trim().length < 2) {
-      setHits([]);
-      return;
-    }
-    timer.current = setTimeout(async () => {
-      try {
-        const r = await fetch(`/api/catalog/suggest?q=${encodeURIComponent(text.trim())}`);
-        const data = await r.json();
-        if (!r.ok) throw new Error(data?.error ?? "Поиск не отвечает");
-        setHits(data.items ?? []);
-        setSearchErr("");
-      } catch (e) {
-        setSearchErr(e instanceof Error ? e.message : "Поиск не отвечает");
-      }
-    }, 250);
-  };
-
-  const add = (h: Hit) => {
+  const add = (h: PickedProduct) =>
     setLines((ls) => (ls.some((l) => l.sku === h.sku) ? ls.map((l) => (l.sku === h.sku ? { ...l, qty: l.qty + 1 } : l)) : [...ls, { ...h, qty: 1 }]));
-    search("");
-  };
   const total = lines.reduce((s, l) => s + l.price * l.qty, 0);
 
   return (
@@ -64,23 +35,7 @@ export function ManualOrderForm({ action }: { action: (prev: ManualOrderState, f
 
       <section className="adm-card">
         <h2 style={{ marginTop: 0 }}>Товары</h2>
-        <div className="adm-field" style={{ position: "relative" }}>
-          <label htmlFor="m-search">Найти товар: название или артикул</label>
-          <input id="m-search" className="adm-input wide" value={q} onChange={(e) => search(e.target.value)} placeholder="например, круг 125 або 50117" autoComplete="off" />
-          {searchErr && <small className="adm-muted">{searchErr}</small>}
-          {hits.length > 0 && (
-            <ul className="adm-suggest" role="listbox" aria-label="Найденные товары">
-              {hits.map((h) => (
-                <li key={h.sku}>
-                  <button type="button" onClick={() => add(h)}>
-                    <span>{h.nameUk}<br /><small className="adm-muted">{h.sku}{h.available === false ? " · под заказ" : ""}</small></span>
-                    <b>{money(h.price)}</b>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <ProductPicker onPick={add} id="m-search" />
         {lines.length ? (
           <div className="adm-table-wrap">
             <table className="adm-table">

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ORDER_STATUSES, getOrderDetail } from "@handyman/db/orders";
 import { clientMessagesOf, templatesForOrder } from "@handyman/db/messages";
+import { orderReservations } from "@handyman/db/stock";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
@@ -31,7 +32,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   if (!o) notFound();
   const later = o.total.toNumber() - o.dueNow.toNumber();
   const canHistory = session.permissions.includes("orders.history");
-  const [tpl, clientMsgs] = await Promise.all([canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id)]);
+  const [tpl, clientMsgs, held] = await Promise.all([canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id)]);
 
   return (
     <>
@@ -104,6 +105,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
                   <td>
                     {it.product ? <Link className="adm-link" href={`/admin/products/${it.product.id}`}>{it.name}</Link> : it.name}
                     <div className="adm-muted">{it.sku}{it.product && !it.product.supplierAvailable ? " · сейчас под заказ у поставщика" : ""}</div>
+                    {it.productId && held.get(it.productId)?.reserved ? <span className="adm-chip ok">отложено на складе: {held.get(it.productId)!.reserved}</span> : null}
+                    {it.productId && held.get(it.productId)?.sold ? <span className="adm-chip">списано со склада: {held.get(it.productId)!.sold}</span> : null}
                   </td>
                   <td className="num">{money(it.unitPrice)}</td>
                   <td className="num">{it.qty}</td>

@@ -20,6 +20,7 @@ export const PERMISSIONS = [
   "suppliers.edit",
   "texts.edit",
   "ads.edit",
+  "stock.edit",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -43,6 +44,7 @@ export const PERMISSION_LABELS_RU: Record<Permission, string> = {
   "suppliers.edit": "Поставщики и бренды",
   "texts.edit": "Тексты и страницы сайта",
   "ads.edit": "Реклама и баннеры",
+  "stock.edit": "Склад: приход, инвентаризация, остатки",
 };
 
 interface RoleSeed {
@@ -65,7 +67,7 @@ export const DEFAULT_ROLES: RoleSeed[] = [
     key: "manager",
     title: "Менеджер",
     builtin: true,
-    permissions: ["orders.view", "orders.edit", "clients.view", "products.view"],
+    permissions: ["orders.view", "orders.edit", "clients.view", "products.view", "stock.edit"],
   },
   {
     key: "content",
