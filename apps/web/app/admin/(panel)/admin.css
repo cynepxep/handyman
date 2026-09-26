@@ -156,3 +156,11 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
   .adm-week-row > b { grid-column: 1 / -1; }
 }
 .adm-week .adm-check { display: inline-flex; gap: 6px; align-items: center; min-height: 40px; }
+
+/* ---------- сообщения покупателю (шаг 4.2) ---------- */
+.adm-msg-pick { display: flex; gap: 10px; align-items: flex-start; padding: 8px 10px; margin: 6px 0; border: 1px solid var(--adm-line); border-radius: 10px; cursor: pointer; }
+.adm-msg-pick:has(input:checked) { border-color: var(--adm-accent); background: color-mix(in srgb, var(--adm-accent) 6%, transparent); }
+.adm-msg-pick input { margin-top: 4px; width: 18px; height: 18px; flex: none; }
+.adm-msgs { list-style: none; margin: 0; padding: 0; }
+.adm-msgs > li { padding: 10px 0; border-top: 1px solid var(--adm-line); }
+.adm-msgs > li:first-child { border-top: 0; padding-top: 0; }

@@ -77,6 +77,7 @@ enum OutboxState {
   SENT
   DEV
   FAILED
+  NO_CHANNEL // сообщение покупателю: он ещё не подключил бота — менеджер копирует текст в Viber/SMS (шаг 4.2)
 }
 
 enum WebhookSource {
@@ -609,10 +610,13 @@ model OrderStatusTemplate {
   textUk   String
   textRu   String
   autoSend Boolean     @default(false)
+  sort     Int         @default(0) // шаг 4.2: порядок внутри статуса
 }
 
 model Outbox {
   id        String      @id @default(cuid())
+  audience  String      @default("manager") // шаг 4.2: manager — сотрудникам, client — покупателю
+  who       String? // кто отправил (для сообщений покупателю)
   chatId    String
   orderId   String?
   order     Order?      @relation(fields: [orderId], references: [id])

@@ -3,3 +3,4 @@ export * from "./checkout-settings";
 export * from "./order";
 export * from "./warehouse";
 export * from "./loyalty";
+export * from "./templates";

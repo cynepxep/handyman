@@ -12,6 +12,7 @@
     "./site-content": "./src/site-content.ts",
     "./orders": "./src/orders.ts",
     "./clients": "./src/clients.ts",
+    "./messages": "./src/messages.ts",
     "./search-stats": "./src/search-stats.ts",
     "./warehouses": "./src/warehouses.ts",
     "./novaposhta": "./src/novaposhta.ts",

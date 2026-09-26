@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ORDER_STATUSES, getOrderDetail } from "@handyman/db/orders";
+import { clientMessagesOf, templatesForOrder } from "@handyman/db/messages";
 import { DELIVERY_RU, NP_TYPE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
-import { setStatusAction, setTtnAction } from "../actions";
+import { retryMessageAction, setStatusAction, setTtnAction } from "../actions";
 import { statusChip } from "../status-chip";
+import { CopyButton, StatusForm } from "./status-form";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ const OUTBOX_RU: Record<string, string> = {
   SENT: "отправлено в Telegram",
   DEV: "не отправлено: в .env не задан BOT_TOKEN / ADMIN_CHAT_ID",
   FAILED: "ошибка отправки",
+  NO_CHANNEL: "покупатель ещё не подключил бота — скопируйте текст в Viber или SMS",
 };
 
 const when = (d: Date) => d.toLocaleString("ru-RU", { timeZone: "Europe/Kyiv", dateStyle: "short", timeStyle: "short" });
@@ -27,6 +30,8 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const o = await getOrderDetail(id);
   if (!o) notFound();
   const later = o.total.toNumber() - o.dueNow.toNumber();
+  const canHistory = session.permissions.includes("orders.history");
+  const [tpl, clientMsgs] = await Promise.all([canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id)]);
 
   return (
     <>
@@ -105,19 +110,40 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         </div>
       </section>
 
-      {canEdit && (
-        <form action={setStatusAction} className="adm-card">
-          <h2 style={{ marginTop: 0 }}>Статус</h2>
-          <input type="hidden" name="id" value={o.id} />
-          <div className="adm-row">
-            <select name="status" defaultValue={o.status} className="adm-select" aria-label="Статус заказа">
-              {ORDER_STATUSES.map((s) => <option key={s} value={s}>{ORDER_STATUS_RU[s]}</option>)}
-            </select>
-            <input name="note" className="adm-input" style={{ flex: "1 1 260px" }} placeholder="Заметка (необязательно): например, «перезвонить в 15:00»" maxLength={300} aria-label="Заметка" />
-            <SubmitButton primary pendingText="Сохраняю…">Сохранить</SubmitButton>
-          </div>
-          <p className="adm-muted" style={{ marginTop: 6 }}>«Отменён» и «Возврат» возвращают товар на наш склад (если он был списан при заказе). Покупателю сообщения пока не отправляются.</p>
-        </form>
+      {canEdit && tpl && (
+        <StatusForm
+          action={setStatusAction} orderId={o.id} current={o.status} statuses={ORDER_STATUSES} labels={ORDER_STATUS_RU}
+          templates={tpl.items} hasTelegram={tpl.hasTelegram} lang={tpl.lang}
+        />
+      )}
+
+      {clientMsgs.length > 0 && (
+        <section className="adm-card">
+          <h2 style={{ marginTop: 0 }}>Сообщения покупателю</h2>
+          <ul className="adm-msgs">
+            {clientMsgs.map((m) => (
+              <li key={m.id}>
+                <div className="adm-muted" style={{ fontSize: 13 }}>
+                  {when(m.createdAt)}{m.who ? ` · ${m.who}` : ""} · <span className={m.state === "SENT" ? "adm-chip ok" : m.state === "FAILED" ? "adm-chip bad" : "adm-chip warn"}>{OUTBOX_RU[m.state] ?? m.state}</span>
+                  {m.state === "FAILED" && m.error ? ` ${m.error}` : ""}
+                </div>
+                {canHistory ? (
+                  <div className="adm-row" style={{ alignItems: "flex-start", marginTop: 4 }}>
+                    <p style={{ margin: 0, flex: "1 1 260px", whiteSpace: "pre-wrap" }}>{m.text}</p>
+                    {m.state !== "SENT" && <CopyButton text={m.text} />}
+                    {m.state === "FAILED" && canEdit && (
+                      <form action={retryMessageAction}>
+                        <input type="hidden" name="id" value={o.id} />
+                        <input type="hidden" name="msg" value={m.id} />
+                        <SubmitButton pendingText="…">Повторить</SubmitButton>
+                      </form>
+                    )}
+                  </div>
+                ) : <p className="adm-muted" style={{ margin: "4px 0 0" }}>Текст виден сотрудникам с правом «Заказы: подробная история и переписка».</p>}
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
 
       <section className="adm-card">

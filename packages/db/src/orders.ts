@@ -331,7 +331,7 @@ export const getOrderDetail = (id: string) =>
     where: { id },
     include: {
       items: { include: { product: { select: { id: true, supplierAvailable: true } } } }, history: { orderBy: { ts: "asc" } }, client: true,
-      outboxEntries: { orderBy: { createdAt: "asc" } }, pickupWarehouse: { select: { name: true } },
+      outboxEntries: { where: { audience: "manager" }, orderBy: { createdAt: "asc" } }, pickupWarehouse: { select: { name: true } },
     },
   });
 
