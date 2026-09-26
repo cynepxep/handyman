@@ -5,6 +5,10 @@
 import { randomBytes } from "node:crypto";
 import { prisma, type Prisma, type OrderStatus } from "./client";
 import {
+  ACTION_STATUSES, CANCEL_REASON_RU, SELLER_SETTING_KEY, kyivDayStart, needsCancelReason, parseSeller,
+  type ManualOrderInput, type OrderFilters, type SellerDetails,
+} from "@handyman/core/shop";
+import {
   CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
   type CartLineInput, type CheckoutErrors, type CheckoutSettings, type DeliveryChoice, type PayChoice, type StockLevel,
 } from "@handyman/core/shop";
@@ -169,7 +173,8 @@ async function createOrderRecord(p: {
   name: string;
   lang: "uk" | "ru";
   isTest: boolean;
-  source: "site" | "one_click";
+  source: "site" | "one_click" | "manual";
+  createdBy?: string | null;
   city?: string | null;
   address?: string | null;
   npType?: string | null;
@@ -194,7 +199,7 @@ async function createOrderRecord(p: {
         city: p.city ?? null, address: p.address ?? null, npWarehouseRef: p.npPoint ?? null, deliveryType: p.npType ?? null,
         npCityRef: p.npCityRef ?? null, npPointRef: p.npPointRef ?? null, pickupWarehouseId: p.pickupWarehouseId ?? null,
         comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest,
-        recipientName: p.name, recipientPhone: p.phone, source: p.source, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
+        recipientName: p.name, recipientPhone: p.phone, source: p.source, createdBy: p.createdBy ?? null, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
         items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i] })) },
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") } },
       },
@@ -308,22 +313,70 @@ export async function orderForThanks(no: string, key: string) {
 
 export const ORDER_STATUSES: OrderStatus[] = ["NEW", "NO_ANSWER", "AWAITING_SUPPLIER", "PAID", "PACKED", "SHIPPED", "DONE", "CANCELLED", "RETURNED"];
 
-export async function listOrders(opts: { status?: string; q?: string; page?: number; perPage?: number } = {}) {
+export type ListOrdersOptions = Partial<Omit<OrderFilters, "page">> & { page?: number; perPage?: number };
+
+/** Список заказов с фильтрами (шаг 4.3): статус или «требуют действия», источник, оплата, доставка, даты (по Киеву), тестовые. */
+export async function listOrders(opts: ListOrdersOptions = {}) {
   const perPage = opts.perPage ?? 40;
   const page = Math.max(1, opts.page ?? 1);
   const q = opts.q?.trim() ?? "";
   const phone = q ? normalizePhone(q) : null;
+  const created: Prisma.DateTimeFilter = {
+    ...(opts.from ? { gte: kyivDayStart(opts.from) } : {}),
+    ...(opts.to ? { lt: kyivDayStart(opts.to, true) } : {}),
+  };
   const where: Prisma.OrderWhereInput = {
-    ...(opts.status && (ORDER_STATUSES as string[]).includes(opts.status) ? { status: opts.status as OrderStatus } : {}),
+    ...(opts.status === "action"
+      ? { status: { in: [...ACTION_STATUSES] } }
+      : opts.status && (ORDER_STATUSES as string[]).includes(opts.status) ? { status: opts.status as OrderStatus } : {}),
+    ...(opts.source ? { source: opts.source } : {}),
+    ...(opts.pay ? { payMode: opts.pay as Prisma.OrderWhereInput["payMode"] } : {}),
+    ...(opts.delivery ? { delivery: opts.delivery as Prisma.OrderWhereInput["delivery"] } : {}),
+    ...(opts.from || opts.to ? { createdAt: created } : {}),
+    ...(opts.test === "hide" ? { isTest: false } : opts.test === "only" ? { isTest: true } : {}),
     ...(q
       ? { OR: [{ no: { contains: q.toUpperCase() } }, { recipientName: { contains: q, mode: "insensitive" } }, ...(phone ? [{ recipientPhone: phone }] : [{ recipientPhone: { contains: q.replace(/\D/g, "") || q } }])] }
       : {}),
   };
-  const [total, rows] = await Promise.all([
+  const [total, rows, sum, action] = await Promise.all([
     prisma.order.count({ where }),
     prisma.order.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * perPage, take: perPage, include: { _count: { select: { items: true } } } }),
+    prisma.order.aggregate({ where: { ...where, isTest: false, status: { notIn: ["CANCELLED", "RETURNED"] } }, _sum: { total: true } }),
+    prisma.order.count({ where: { status: { in: [...ACTION_STATUSES] }, isTest: false } }),
   ]);
-  return { total, page, pages: Math.max(1, Math.ceil(total / perPage)), rows };
+  return { total, page, pages: Math.max(1, Math.ceil(total / perPage)), rows, sum: sum._sum.total?.toNumber() ?? 0, actionCount: action };
+}
+
+/** Заказ по звонку: менеджер вносит телефон, товары и доставку; цены — из базы (как на сайте). */
+export async function placeManualOrder(v: ManualOrderInput, who: string): Promise<{ ok: true; id: string; no: string } | { ok: false; error: string }> {
+  const quote = await quoteCart(v.items);
+  if (quote.missing.length) return { ok: false, error: `Товар не найден или скрыт: ${quote.missing.join(", ")}.` };
+  const settings = await loadCheckoutSettings();
+  const pickup = v.delivery === "pickup" ? await prisma.warehouse.findFirst({ where: { isPickup: true }, orderBy: [{ isDefault: "desc" }, { sort: "asc" }] }) : null;
+  const { order } = await createOrderRecord({
+    lines: quote.lines, pay: v.pay, delivery: v.delivery, settings, phone: v.phone, name: v.name, lang: "uk", isTest: v.isTest,
+    source: "manual", createdBy: who,
+    city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : pickup?.cityUk ?? null,
+    address: v.delivery === "courier" ? v.address : pickup?.addressUk ?? null,
+    npType: v.delivery === "np" ? "warehouse" : null, npPoint: v.delivery === "np" ? v.npPoint : null,
+    pickupWarehouseId: pickup?.id ?? null, comment: v.comment || null,
+    history: `Заказ создан менеджером по звонку (${who})`,
+  });
+  await prisma.auditLog.create({ data: { who, action: "order.manual", target: order.id, details: json({ no: order.no, items: v.items.length }) } });
+  return { ok: true, id: order.id, no: order.no };
+}
+
+// ---------- реквизиты продавца (счёт) ----------
+
+export async function loadSeller(): Promise<SellerDetails> {
+  return parseSeller((await prisma.setting.findUnique({ where: { key: SELLER_SETTING_KEY } }))?.value);
+}
+
+export async function saveSeller(v: SellerDetails, who: string): Promise<void> {
+  await prisma.$transaction([
+    prisma.setting.upsert({ where: { key: SELLER_SETTING_KEY }, update: { value: json(v) }, create: { key: SELLER_SETTING_KEY, value: json(v) } }),
+    prisma.auditLog.create({ data: { who, action: "shop.seller.edit" } }),
+  ]);
 }
 
 export const getOrderDetail = (id: string) =>
@@ -354,14 +407,21 @@ async function returnOwnStock(tx: Prisma.TransactionClient, orderId: string): Pr
   return changed;
 }
 
-export async function setOrderStatus(orderId: string, status: OrderStatus, who: string, note?: string): Promise<{ ok: boolean; error?: string }> {
+/**
+ * Сменить статус (и/или добавить заметку). Для «Отменён» и «Возврат» — причина из CANCEL_REASONS (если не указана — «Другое»);
+ * при уходе из отмены причина стирается.
+ */
+export async function setOrderStatus(orderId: string, status: OrderStatus, who: string, note?: string, cancelReason?: string): Promise<{ ok: boolean; error?: string }> {
   if (!ORDER_STATUSES.includes(status)) return { ok: false, error: "Неизвестный статус." };
+  const reason = needsCancelReason(status) ? (cancelReason && CANCEL_REASON_RU[cancelReason] ? cancelReason : "other") : null;
   const changed = await prisma.$transaction(async (tx) => {
-    const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, clientId: true } });
+    const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, clientId: true, cancelReason: true } });
     if (!o) return null;
-    if (o.status === status && !note) return [];
-    await tx.order.update({ where: { id: orderId }, data: { status } });
-    await tx.orderHistory.create({ data: { orderId, text: `${o.status !== status ? `Статус: ${ORDER_STATUS_RU[status] ?? status}` : "Заметка"} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
+    const reasonChanged = reason !== null && reason !== o.cancelReason;
+    if (o.status === status && !note && !reasonChanged) return [];
+    await tx.order.update({ where: { id: orderId }, data: { status, cancelReason: reason } });
+    const head = o.status !== status ? `Статус: ${ORDER_STATUS_RU[status] ?? status}${reason ? ` (причина: ${CANCEL_REASON_RU[reason]})` : ""}` : reasonChanged ? `Причина: ${CANCEL_REASON_RU[reason!]}` : "Заметка";
+    await tx.orderHistory.create({ data: { orderId, text: `${head} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
     await tx.auditLog.create({ data: { who, action: "order.status", target: orderId, details: json({ from: o.status, to: status }) } });
     if (o.status !== status && (o.status === "DONE" || status === "DONE")) await recalcClient(tx, o.clientId); // сумма покупок и уровень
     return status === "CANCELLED" || status === "RETURNED" ? returnOwnStock(tx, orderId) : [];

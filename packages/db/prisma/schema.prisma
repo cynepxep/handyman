@@ -562,6 +562,8 @@ model Order {
   source         String? // site | one_click
   lang           Locale?
   accessKey      String? // ключ страницы «Дякуємо» (без него страница заказа не открывается)
+  cancelReason   String? // шаг 4.3: причина отмены/возврата (ключ из CANCEL_REASONS)
+  createdBy      String? // шаг 4.3: сотрудник, оформивший заказ по звонку (source = manual)
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

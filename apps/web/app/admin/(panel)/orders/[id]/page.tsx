@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ORDER_STATUSES, getOrderDetail } from "@handyman/db/orders";
 import { clientMessagesOf, templatesForOrder } from "@handyman/db/messages";
-import { DELIVERY_RU, NP_TYPE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
+import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
@@ -40,9 +40,14 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         Заказ {o.no} <span className={statusChip(o.status)} style={{ fontSize: 14, verticalAlign: "middle" }}>{ORDER_STATUS_RU[o.status] ?? o.status}</span>
       </h1>
       <p className="adm-muted">
-        {when(o.createdAt)} · {o.source === "one_click" ? "«Купить в 1 клик»" : "оформлен на сайте"} · язык сайта: {o.lang === "RU" ? "русский" : "украинский"}
-        {o.isTest && <> · <span className="adm-chip">тестовый заказ сотрудника</span></>}
+        {when(o.createdAt)} · {ORDER_SOURCE_RU[o.source ?? "site"] ?? o.source}{o.createdBy ? ` (оформил ${o.createdBy})` : ""} · язык: {o.lang === "RU" ? "русский" : "украинский"}
+        {o.isTest && <> · <span className="adm-chip">тестовый заказ</span></>}
+        {o.cancelReason && <> · <span className="adm-chip bad">причина: {CANCEL_REASON_RU[o.cancelReason] ?? o.cancelReason}</span></>}
       </p>
+      <div className="adm-row" style={{ marginBottom: 8 }}>
+        <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=invoice`} target="_blank">🖨 Счёт</Link>
+        <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=packing`} target="_blank">🖨 Комплектовочный лист</Link>
+      </div>
       {error && <p className="adm-flash err" role="alert">{error}</p>}
       {ok && <p className="adm-flash ok">{ok}</p>}
 
@@ -113,7 +118,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       {canEdit && tpl && (
         <StatusForm
           action={setStatusAction} orderId={o.id} current={o.status} statuses={ORDER_STATUSES} labels={ORDER_STATUS_RU}
-          templates={tpl.items} hasTelegram={tpl.hasTelegram} lang={tpl.lang}
+          templates={tpl.items} hasTelegram={tpl.hasTelegram} lang={tpl.lang} reasons={CANCEL_REASONS} currentReason={o.cancelReason}
         />
       )}
 

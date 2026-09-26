@@ -10,7 +10,7 @@ type Tpl = { id: string; status: string; title: string; autoSend: boolean; text:
  * Шаблоны с «автоматически» отмечены заранее; менеджер сам решает, что отправить, и может дописать свой текст.
  */
 export function StatusForm({
-  action, orderId, current, statuses, labels, templates, hasTelegram, lang,
+  action, orderId, current, statuses, labels, templates, hasTelegram, lang, reasons, currentReason,
 }: {
   action: (fd: FormData) => Promise<void>;
   orderId: string;
@@ -20,9 +20,12 @@ export function StatusForm({
   templates: Tpl[];
   hasTelegram: boolean;
   lang: "uk" | "ru";
+  reasons: Array<{ key: string; ru: string }>;
+  currentReason: string | null;
 }) {
   const [status, setStatus] = useState(current);
   const list = templates.filter((t) => t.status === status);
+  const needReason = status === "CANCELLED" || status === "RETURNED";
   return (
     <form action={action} className="adm-card">
       <h2 style={{ marginTop: 0 }}>Статус и сообщение покупателю</h2>
@@ -31,6 +34,12 @@ export function StatusForm({
         <select name="status" value={status} onChange={(e) => setStatus(e.target.value)} className="adm-select" aria-label="Статус заказа">
           {statuses.map((s) => <option key={s} value={s}>{labels[s] ?? s}</option>)}
         </select>
+        {needReason && (
+          <select name="cancelReason" defaultValue={currentReason ?? ""} className="adm-select" aria-label="Причина" required>
+            <option value="" disabled>Причина…</option>
+            {reasons.map((r) => <option key={r.key} value={r.key}>{r.ru}</option>)}
+          </select>
+        )}
         <input name="note" className="adm-input" style={{ flex: "1 1 260px" }} placeholder="Заметка для сотрудников (необязательно): «перезвонить в 15:00»" maxLength={300} aria-label="Заметка" />
       </div>
       <div style={{ marginTop: 10 }}>

@@ -164,3 +164,25 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-msgs { list-style: none; margin: 0; padding: 0; }
 .adm-msgs > li { padding: 10px 0; border-top: 1px solid var(--adm-line); }
 .adm-msgs > li:first-child { border-top: 0; padding-top: 0; }
+
+/* ---------- заказ по звонку: подсказки поиска (шаг 4.3) ---------- */
+.adm-suggest { list-style: none; margin: 4px 0 0; padding: 4px; position: absolute; top: 100%; left: 0; right: 0; z-index: 20; background: var(--background); border: 1px solid var(--adm-line); border-radius: 10px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); max-height: 360px; overflow: auto; }
+.adm-suggest button { display: flex; width: 100%; justify-content: space-between; gap: 12px; text-align: left; padding: 8px 10px; min-height: 44px; border: 0; border-radius: 8px; background: none; color: inherit; font: inherit; cursor: pointer; }
+.adm-suggest button:hover, .adm-suggest button:focus-visible { background: var(--adm-soft); }
+
+/* ---------- печатные формы (шаг 4.3) ---------- */
+.adm-print { max-width: 800px; }
+.adm-print-meta { border-collapse: collapse; margin: 12px 0; }
+.adm-print-meta th { text-align: left; vertical-align: top; padding: 4px 16px 4px 0; font-weight: 600; white-space: nowrap; }
+.adm-print-meta td { padding: 4px 0; }
+.adm-print-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+.adm-print-table th, .adm-print-table td { border: 1px solid var(--adm-line); padding: 6px 8px; text-align: left; vertical-align: top; }
+.adm-print-table .num { text-align: right; white-space: nowrap; }
+.adm-print-table tfoot td { border: 0; }
+.adm-print-box { font-size: 18px; text-align: center; width: 32px; }
+@media print {
+  .adm-bar, .no-print { display: none !important; }
+  .adm-page { padding: 0; max-width: none; }
+  .adm, .adm-print { color: #000; background: #fff; font-size: 12pt; }
+  .adm-print-table th, .adm-print-table td { border-color: #999; }
+}

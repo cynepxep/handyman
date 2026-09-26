@@ -4,3 +4,4 @@ export * from "./order";
 export * from "./warehouse";
 export * from "./loyalty";
 export * from "./templates";
+export * from "./order-admin";
