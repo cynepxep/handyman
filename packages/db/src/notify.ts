@@ -46,7 +46,7 @@ export async function notifyManagers(text: string, orderId?: string, fetchImpl: 
  * Сообщение покупателю от имени магазина. `tgId` — его Telegram (появляется, когда покупатель подключил бота, Этап 5).
  * Нет tgId → NO_CHANNEL (текст виден в заказе, его можно скопировать); нет BOT_TOKEN → DEV.
  */
-export async function notifyClient(p: { orderId: string; tgId: bigint | null; text: string; who: string }, fetchImpl: typeof fetch = fetch): Promise<NotifyResult> {
+export async function notifyClient(p: { orderId: string | null; tgId: bigint | null; text: string; who: string }, fetchImpl: typeof fetch = fetch): Promise<NotifyResult> {
   const token = process.env.BOT_TOKEN?.trim();
   const chatId = p.tgId != null ? String(p.tgId) : "";
   const state = !chatId ? "NO_CHANNEL" : token ? "PENDING" : "DEV";

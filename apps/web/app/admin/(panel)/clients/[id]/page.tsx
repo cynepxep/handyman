@@ -8,6 +8,8 @@ import { SubmitButton } from "../../import/client-bits";
 import { statusChip } from "../../orders/status-chip";
 import { saveClientAction } from "../actions";
 import { tierChip } from "../tier-chip";
+import { listTasks } from "@handyman/db/service";
+import { TaskForm, TaskList } from "../../tasks/tasks-block";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +26,8 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
   if (!d) notFound();
   const { client: c, stats, discount, progress, loyalty } = d;
   const tier = c.tier as TierKey;
+  const tasks = await listTasks({ clientId: c.id });
+  const canTasks = session.permissions.includes("orders.edit");
 
   return (
     <>
@@ -115,6 +119,12 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           </table>
         </div>
         {stats.first && <p className="adm-muted">Первый заказ {day(stats.first)}{stats.last && stats.last !== stats.first ? `, последний ${day(stats.last)}` : ""}.</p>}
+      </section>
+
+      <section className="adm-card">
+        <h2 style={{ marginTop: 0 }}>Задачи по клиенту</h2>
+        <TaskList rows={tasks.rows} back={`/admin/clients/${c.id}`} canEdit={canTasks} showLinks />
+        {canTasks && <TaskForm back={`/admin/clients/${c.id}`} clientId={c.id} />}
       </section>
 
       {canHistory && (

@@ -7,3 +7,4 @@ export * from "./templates";
 export * from "./order-admin";
 export * from "./stock-ops";
 export * from "./finance";
+export * from "./service";

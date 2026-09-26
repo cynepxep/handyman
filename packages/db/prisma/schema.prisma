@@ -840,3 +840,58 @@ model SearchQueryDay {
   @@index([query])
 }
 
+
+// шаг 4.5б: задачи и напоминания сотрудникам («перезвонить в 18:00») — к заказу, клиенту или сами по себе
+model Task {
+  id        String    @id @default(cuid())
+  title     String
+  dueAt     DateTime? // когда напомнить (пусто — без срока)
+  assignee  String? // логин сотрудника (пусто — любой)
+  orderId   String?
+  clientId  String?
+  done      Boolean   @default(false)
+  doneAt    DateTime?
+  doneBy    String?
+  notifiedAt DateTime? // когда отправлено напоминание в Telegram (шаг 4.8)
+  who       String
+  createdAt DateTime  @default(now())
+
+  @@index([done, dueAt])
+  @@index([orderId])
+  @@index([clientId])
+}
+
+// шаг 4.5б: гарантийные обращения и обмены — приём, сервис Vitals, ремонт, выдача; история — ServiceEvent
+model ServiceCase {
+  id          String   @id @default(cuid())
+  seq         Int      @default(autoincrement())
+  status      String   @default("RECEIVED") // RECEIVED | SENT | IN_REPAIR | READY | CLOSED | REJECTED
+  resolution  String? // repaired | replaced | refunded | rejected
+  clientId    String?
+  orderId     String?
+  productId   String?
+  productName String
+  serial      String?
+  problem     String
+  phone       String?
+  name        String?
+  who         String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events ServiceEvent[]
+
+  @@index([status])
+  @@index([clientId])
+}
+
+model ServiceEvent {
+  id      String      @id @default(cuid())
+  caseId  String
+  case    ServiceCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  ts      DateTime    @default(now())
+  who     String
+  text    String
+
+  @@index([caseId])
+}

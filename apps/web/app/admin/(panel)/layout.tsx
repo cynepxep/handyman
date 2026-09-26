@@ -9,6 +9,8 @@ const SECTIONS: Array<{ href: string; label: string; permission?: Permission }> 
   { href: "/admin", label: "Главная" },
   { href: "/admin/orders", label: "Заказы", permission: "orders.view" },
   { href: "/admin/clients", label: "Клиенты", permission: "clients.view" },
+  { href: "/admin/tasks", label: "Задачи", permission: "orders.view" },
+  { href: "/admin/service", label: "Гарантия", permission: "orders.view" },
   { href: "/admin/templates", label: "Шаблоны", permission: "templates.edit" },
   { href: "/admin/stock", label: "Склад", permission: "stock.edit" },
   { href: "/admin/finance", label: "Финансы", permission: "finance.view" },

@@ -5,6 +5,8 @@ import { clientMessagesOf, templatesForOrder } from "@handyman/db/messages";
 import { orderReservations } from "@handyman/db/stock";
 import { orderProfitOf } from "@handyman/db/finance";
 import { orderDeliveryCostAction } from "../../finance/actions";
+import { listTasks } from "@handyman/db/service";
+import { TaskForm, TaskList } from "../../tasks/tasks-block";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
@@ -35,8 +37,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const later = o.total.toNumber() - o.dueNow.toNumber();
   const canHistory = session.permissions.includes("orders.history");
   const canFinance = session.permissions.includes("finance.view");
-  const [tpl, clientMsgs, held, profit] = await Promise.all([
+  const [tpl, clientMsgs, held, profit, tasks] = await Promise.all([
     canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id), canFinance ? orderProfitOf(o.id) : null,
+    listTasks({ orderId: o.id }),
   ]);
 
   return (
@@ -53,6 +56,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       <div className="adm-row" style={{ marginBottom: 8 }}>
         <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=invoice`} target="_blank">🖨 Счёт</Link>
         <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=packing`} target="_blank">🖨 Комплектовочный лист</Link>
+        {canEdit && <Link className="adm-btn" href={`/admin/service/new?order=${encodeURIComponent(o.no)}`}>🛠 Гарантийное обращение</Link>}
       </div>
       {error && <p className="adm-flash err" role="alert">{error}</p>}
       {ok && <p className="adm-flash ok">{ok}</p>}
@@ -121,6 +125,12 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="adm-card">
+        <h2 style={{ marginTop: 0 }}>Задачи по заказу{tasks.counts.overdue ? <> <span className="adm-chip bad">просрочено: {tasks.counts.overdue}</span></> : null}</h2>
+        <TaskList rows={tasks.rows} back={`/admin/orders/${o.id}`} canEdit={canEdit} />
+        {canEdit && <TaskForm back={`/admin/orders/${o.id}`} orderId={o.id} />}
       </section>
 
       {profit && (
