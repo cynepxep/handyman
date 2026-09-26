@@ -22,7 +22,8 @@
     "./notify": "./src/notify.ts",
     "./stock": "./src/stock.ts",
     "./finance": "./src/finance.ts",
-    "./service": "./src/service.ts"
+    "./service": "./src/service.ts",
+    "./reports": "./src/reports.ts"
   },
   "scripts": {
     "generate": "prisma generate",

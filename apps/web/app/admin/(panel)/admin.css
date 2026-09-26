@@ -188,3 +188,17 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 }
 .adm-ok { color: var(--adm-ok); }
 .adm-bad { color: var(--adm-bad); }
+
+/* ---------- отчёты: столбики одной серии (шаг 4.6) ---------- */
+.adm-chart { margin: 12px 0 20px; }
+.adm-chart figcaption { margin-bottom: 8px; }
+.adm-bars { display: flex; align-items: flex-end; gap: 2px; height: 140px; padding: 0 2px; border-bottom: 1px solid var(--adm-line); }
+.adm-bar { position: relative; flex: 1 1 0; height: 100%; display: flex; align-items: flex-end; min-width: 3px; outline: none; }
+.adm-bar > i { display: block; width: 100%; background: var(--adm-accent); border-radius: 4px 4px 0 0; opacity: .85; transition: opacity .15s; }
+.adm-bar:hover > i, .adm-bar:focus-visible > i { opacity: 1; }
+.adm-bar-tip { display: none; position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%); white-space: nowrap; z-index: 5;
+  background: var(--background); color: inherit; border: 1px solid var(--adm-line); border-radius: 8px; padding: 4px 8px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, .12); pointer-events: none; }
+.adm-bar:hover .adm-bar-tip, .adm-bar:focus-visible .adm-bar-tip { display: block; }
+.adm-bar:first-child .adm-bar-tip { left: 0; transform: none; }
+.adm-bar:last-child .adm-bar-tip { left: auto; right: 0; transform: none; }
+.adm-bars-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--adm-muted); padding-top: 4px; }

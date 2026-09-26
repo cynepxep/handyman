@@ -62,7 +62,8 @@
 **4.4** склад (`/admin/stock`: приход, инвентаризация, журнал; `db/src/stock.ts`): **резерв под заказ**, списание при «Отправлен/Выполнен»; «доступно» = onHand − reserved —
 везде, где покупателю показывается наличие, считать через `availableQty` (не суммировать `onHand`);
 **4.5** финансы (`/admin/finance`, право `finance.view` только у владельца; `db/src/finance.ts`): прибыль по заказу/месяцу, расходы, деньги в пути;
-**4.5б** задачи (`/admin/tasks`, блоки в заказе и клиенте) и гарантия (`/admin/service`; `db/src/service.ts`).
+**4.5б** задачи (`/admin/tasks`, блоки в заказе и клиенте) и гарантия (`/admin/service`; `db/src/service.ts`);
+**4.6** дашборд на `/admin` и «Отчёты» (`/admin/reports`, CSV `/admin/reports/export`; `db/src/reports.ts`). Суммы в отчётах — только при `finance.view`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
