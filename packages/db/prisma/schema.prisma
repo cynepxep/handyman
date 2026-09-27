@@ -672,6 +672,7 @@ model Order {
   pendingNotifs  PendingNotif[]
   payments       Payment[]
   invoices       PayInvoice[]
+  receipts       FiscalReceipt[]
   partnerRefs    PartnerReferral[]
 
   @@index([clientId])
@@ -790,6 +791,35 @@ model PayInvoice {
 
   @@index([orderId])
   @@index([checkUntil])
+}
+
+// Шаг 3.3: фискальный чек Checkbox — после оплаты картой (продажа), при возврате денег (возврат) или вручную из заказа.
+// id — наш UUID, он же id чека в Checkbox: повторная отправка того же чека не создаст второй. goods — что ушло в чек (снимок).
+// Статусы: queued → sending → sent (Checkbox принял) → done (есть фискальный номер) | error (после 8 попыток — тревога менеджерам).
+model FiscalReceipt {
+  id             String    @id
+  orderId        String
+  order          Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  invoiceId      String? // счёт monobank, оплата/возврат по которому пробиты
+  kind           String // sell | return
+  payType        String // CASHLESS | CASH
+  amount         Decimal   @db.Decimal(10, 2)
+  goods          Json
+  relatedId      String? // возврат: чек продажи
+  status         String    @default("queued")
+  stub           Boolean   @default(false) // тестовый чек (Checkbox не подключён, не production) — в налоговую не уходит
+  fiscalCode     String?
+  url            String? // страница чека для покупателя
+  error          String?
+  attempts       Int       @default(0)
+  nextTryAt      DateTime?
+  sentToClientAt DateTime? // ссылка отправлена покупателю
+  createdBy      String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([status, nextTryAt])
 }
 
 model Recommendation {

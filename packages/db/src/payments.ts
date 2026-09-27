@@ -4,6 +4,7 @@
 // Без токена mono: на компьютере разработки — тестовые счета («заглушка», оплата кнопкой «Тест: імітувати оплату»),
 // в production — онлайн-оплаты нет, как до шага 3.2 (ссылку присылает менеджер).
 // Правила (суммы, разбор ответов) — @handyman/core/shop (payments.ts); ключ — только через secret("mono.token").
+// Шаг 3.3: каждое изменение оплаты ставит кассовый чек Checkbox (продажа / возврат) — receipts.ts.
 
 import { createPublicKey, randomBytes, verify as verifySignature } from "node:crypto";
 import { prisma, Prisma } from "./client";
@@ -17,6 +18,7 @@ import { loadTextOverrides } from "./site-content";
 import { notifyManagers } from "./notify";
 import { setOrderStatus } from "./orders";
 import { sendAutoMessages, sendOrderMessages } from "./messages";
+import { queuePaymentReceiptTx, receiptMode, sendReceipt } from "./receipts";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -212,7 +214,7 @@ export async function createManagerInvoice(orderId: string, amount: number, who:
 
 // ---------- статус оплаты ----------
 
-type Applied = { orderId: string; no: string; delta: number; paid: number; total: number; status: string; isTest: boolean; kind: string } | null;
+type Applied = { orderId: string; no: string; delta: number; paid: number; total: number; status: string; isTest: boolean; kind: string; receiptId?: string | null } | null;
 
 /**
  * Применить состояние счёта от mono (уведомление, опрос, «перевірити») или тестовой оплаты. Строка счёта блокируется —
@@ -221,12 +223,13 @@ type Applied = { orderId: string; no: string; delta: number; paid: number; total
  */
 export async function applyInvoiceState(d: MonoInvoiceData, source: string): Promise<Applied> {
   const now = new Date();
+  const rmode = await receiptMode();
   const res = await prisma.$transaction(async (tx): Promise<Applied> => {
     const locked = await tx.$queryRaw<Array<{ id: string }>>`SELECT id FROM "PayInvoice" WHERE id = ${d.invoiceId} FOR UPDATE`;
     if (!locked.length) return null;
     const inv = await tx.payInvoice.findUniqueOrThrow({
       where: { id: d.invoiceId },
-      include: { order: { select: { id: true, no: true, total: true, status: true, isTest: true } } },
+      include: { order: { select: { id: true, no: true, total: true, status: true, isTest: true, items: { select: { name: true, sku: true, qty: true, unitPrice: true } } } } },
     });
     if (isStale(inv.modifiedAt, d.modifiedAt)) return { orderId: inv.orderId, no: inv.order.no, delta: 0, paid: 0, total: 0, status: inv.order.status, isTest: inv.order.isTest, kind: inv.kind };
     const paid = creditedOf(d);
@@ -252,9 +255,15 @@ export async function applyInvoiceState(d: MonoInvoiceData, source: string): Pro
         ? `Счёт ${tail(inv.id)} на ${money(inv.amount.toNumber())}: ${d.status === "failure" ? `оплата не прошла${d.failureReason ? ` (${d.failureReason})` : ""}` : "срок ссылки истёк"}`
         : "";
     if (note) await tx.orderHistory.create({ data: { orderId: inv.orderId, text: `${note} — ${source}` } });
-    return { orderId: inv.orderId, no: inv.order.no, delta, paid: orderPaid, total, status: inv.order.status, isTest: inv.order.isTest, kind: inv.kind };
+    // шаг 3.3: кассовый чек Checkbox на эту оплату/возврат — в той же транзакции (ровно один чек на одно изменение оплаты)
+    const receiptId = await queuePaymentReceiptTx(tx, {
+      mode: rmode, orderId: inv.orderId, no: inv.order.no, invoiceId: inv.id, invoiceKind: inv.kind, stubInvoice: inv.stub, delta,
+      items: inv.order.items.map((i) => ({ name: i.name, sku: i.sku, qty: i.qty, unitPrice: i.unitPrice.toNumber() })),
+    });
+    return { orderId: inv.orderId, no: inv.order.no, delta, paid: orderPaid, total, status: inv.order.status, isTest: inv.order.isTest, kind: inv.kind, receiptId };
   });
   if (!res || res.delta === 0) return res;
+  if (res.receiptId) await sendReceipt(res.receiptId).catch((e) => console.error("[payments] чек не отправлен (повторит фоновая задача)", e));
   const test = res.isTest ? "🧪 ТЕСТ · " : "";
   if (res.delta > 0) {
     if (res.status === "NEW" || res.status === "NO_ANSWER") {

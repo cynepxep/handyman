@@ -13,3 +13,4 @@ export * from "./notify-rules";
 export * from "./cabinet";
 export * from "./storefront-plus";
 export * from "./payments";
+export * from "./receipts";

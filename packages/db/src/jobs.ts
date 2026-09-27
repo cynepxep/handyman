@@ -1,16 +1,18 @@
 // Фоновые задачи (шаг 4.8): раз в минуту `runJobs()` смотрит, что пора сделать — ежедневная сводка, отчёт по понедельникам,
-// напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений, опрос оплат monobank (шаг 3.2). Запускается вместе с сайтом
+// напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений, опрос оплат monobank (шаг 3.2),
+// кассовые чеки Checkbox и закрытие смены в 23:00 (шаг 3.3). Запускается вместе с сайтом
 // (apps/web/instrumentation.ts). «Один раз» гарантирует база: отметка `job:<ключ>` в Setting — даже при нескольких копиях сайта.
 
 import { prisma, Prisma } from "./client";
 import {
-  NOTIFY_SETTING_KEY, dailyDue, deltaText, kyivClock, normalizeNotify, periodRange, salesDropped, weeklyDue, type NotifySettings,
+  NOTIFY_SETTING_KEY, dailyDue, deltaText, kyivClock, normalizeNotify, periodRange, salesDropped, shiftCloseDue, weeklyDue, type NotifySettings,
 } from "@handyman/core/shop";
 import { notifyManagers, retryOutbox } from "./notify";
 import { salesReport, productsReport } from "./reports";
 import { lowStockList } from "./stock";
 import { runWatches } from "./storefront-plus";
 import { pollInvoices } from "./payments";
+import { closeShift, processReceipts, receiptMode } from "./receipts";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -87,11 +89,13 @@ export async function weeklyReportText(s: NotifySettings, now = new Date()): Pro
 
 // ---------- запуск ----------
 
-export type JobsReport = { daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number; payments: number };
+export type JobsReport = {
+  daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number; payments: number; receipts: number; shiftClosed: boolean;
+};
 
 /** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0 };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
@@ -158,6 +162,16 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
   await step("payments", async () => {
     // шаг 3.2: спросить monobank о счетах, по которым ждём оплату или возврат (пока у сайта нет https-адреса — это единственный путь)
     rep.payments = await pollInvoices(now);
+  });
+
+  await step("receipts", async () => {
+    // шаг 3.3: кассовые чеки Checkbox — отправить из очереди (повторы после сбоев), спросить о принятых
+    rep.receipts = await processReceipts(now);
+  });
+
+  await step("shift", async () => {
+    // шаг 3.3: смена кассира не может длиться больше суток — закрываем в 23:00 по Киеву (раз в день)
+    if (shiftCloseDue(c.hour) && (await receiptMode()) === "live" && (await claimOnce(`checkbox-close:${c.ymd}`))) rep.shiftClosed = await closeShift();
   });
 
   await step("retry", async () => {

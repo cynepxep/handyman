@@ -524,6 +524,8 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-pay p { margin: 0; }
 .hm-pay-actions { display: grid; gap: 8px; }
 @media (min-width: 560px) { .hm-pay-actions { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }
+.hm-receipts { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.hm-receipts a { display: inline-flex; align-items: center; min-height: var(--tap); }
 @media (min-width: 700px) {
   .hm-fields2 { grid-template-columns: 1fr 1fr; }
   .hm-cart-page { padding: 22px 26px; }

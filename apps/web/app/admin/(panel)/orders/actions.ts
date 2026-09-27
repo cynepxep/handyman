@@ -5,8 +5,9 @@ import type { OrderStatus } from "@handyman/db";
 import { ORDER_STATUSES, placeManualOrder, saveSeller, setOrderStatus, setOrderTtn } from "@handyman/db/orders";
 import { sendOrderMessages } from "@handyman/db/messages";
 import { retryOutbox } from "@handyman/db/notify";
-import { MONO_PENDING, unpaidOf, validateInvoiceAmount, validateManualOrder, validateRefund, validateSeller } from "@handyman/core/shop";
+import { MONO_PENDING, unpaidOf, validateInvoiceAmount, validateManualOrder, validateManualReceipt, validateRefund, validateSeller } from "@handyman/core/shop";
 import { PaymentError, cancelInvoiceLink, createManagerInvoice, orderInvoices, refreshInvoice, refundInvoice } from "@handyman/db/payments";
+import { ReceiptError, createManualReceipt, receiptableOf, retryReceipt, sendReceiptToClient } from "@handyman/db/receipts";
 import { prisma } from "@handyman/db";
 import { requirePermission } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
@@ -136,4 +137,50 @@ export async function refundAction(formData: FormData): Promise<void> {
     redirect(back(id, "error", payError(e)));
   }
   redirect(back(id, "ok", text));
+}
+
+// ---------- кассовые чеки Checkbox (шаг 3.3) ----------
+
+const receiptErr = (e: unknown) => (e instanceof ReceiptError ? e.message : "Не получилось — попробуйте ещё раз.");
+const RECEIPT_DONE: Record<string, string> = { done: "готов", sent: "принят Checkbox, номер появится через минуту", queued: "не отправился — сайт повторит сам", error: "не создан" };
+
+/** Чек вручную: оплата наличными/картой при самовывозе или по звонку. */
+export async function manualReceiptAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("orders.edit");
+  const id = String(formData.get("id") ?? "");
+  const check = validateManualReceipt(String(formData.get("amount") ?? ""), String(formData.get("payType") ?? ""), await receiptableOf(id));
+  if (!check.ok) redirect(back(id, "error", check.error));
+  let st: string | null;
+  try {
+    st = (await createManualReceipt(id, check.amount, check.payType, session.name || session.username)).status;
+  } catch (e) {
+    redirect(back(id, "error", receiptErr(e)));
+  }
+  redirect(back(id, st === "error" ? "error" : "ok", `Чек на ${check.amount} ₴: ${RECEIPT_DONE[st ?? "queued"] ?? st}.`));
+}
+
+/** «Повторить» чек со статусом «не создан». */
+export async function retryReceiptAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("orders.edit");
+  const id = String(formData.get("id") ?? "");
+  let st: string | null;
+  try {
+    st = await retryReceipt(String(formData.get("receipt") ?? ""), session.name || session.username);
+  } catch (e) {
+    redirect(back(id, "error", receiptErr(e)));
+  }
+  redirect(back(id, st === "error" ? "error" : "ok", `Чек: ${RECEIPT_DONE[st ?? "queued"] ?? st}.`));
+}
+
+/** Отправить покупателю ссылку на чек ещё раз. */
+export async function sendReceiptAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("orders.edit");
+  const id = String(formData.get("id") ?? "");
+  let text: string;
+  try {
+    text = await sendReceiptToClient(String(formData.get("receipt") ?? ""), session.name || session.username);
+  } catch (e) {
+    redirect(back(id, "error", receiptErr(e)));
+  }
+  redirect(back(id, "ok", `Чек: ${text}.`));
 }
