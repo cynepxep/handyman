@@ -83,4 +83,8 @@ export const paths = {
   /** Страница «Дякуємо» после заказа: без ключа доступа не открывается. */
   order: (no: string, key: string) => `/order/${encodeURIComponent(no)}?k=${encodeURIComponent(key)}`,
   account: () => "/account",
+  /** «Обране» (шаг 5.5): у гостя — из браузера, у вошедшего — из кабинета. */
+  favorites: () => "/favorites",
+  /** шаг 5.6: сравнение товаров (список — в браузере покупателя) */
+  compare: () => "/compare",
 };

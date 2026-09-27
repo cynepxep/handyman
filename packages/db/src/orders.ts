@@ -9,7 +9,7 @@ import {
   type ManualOrderInput, type OrderFilters, type SellerDetails,
 } from "@handyman/core/shop";
 import {
-  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
+  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, qtyPrices, unitPriceAt, type QtyPrice, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
   type CartLineInput, type CheckoutErrors, type CheckoutSettings, type DeliveryChoice, type PayChoice, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
@@ -47,15 +47,44 @@ export type QuoteLine = {
   sku: string;
   nameUk: string;
   nameRu: string;
+  /** цена за штуку при этом количестве (с оптом/упаковкой, шаг 5.6) */
   price: number;
+  /** обычная цена за штуку (без опта) */
+  basePrice: number;
+  /** лестница цен от количества (опт, упаковки) — для подсказки «від 10 шт. — по 85 ₴» */
+  tiers: QtyPrice[];
   oldPrice: number | null;
   image: string | null;
   stock: StockLevel;
   qty: number;
 };
 
-/** Корзина по данным базы: актуальные цены и наличие. Товары, которых больше нет (скрыты, удалены), — в `missing`. */
-export async function quoteCart(rawItems: unknown): Promise<{ lines: QuoteLine[]; missing: string[] }> {
+/** Уровень покупателя для оптовых цен «только для уровня …» (по кабинету или по телефону в заказе по звонку). */
+async function clientTierOf(opts: { clientId?: string | null; phone?: string | null }): Promise<TierKey | null> {
+  const where = opts.clientId ? { id: opts.clientId } : opts.phone ? { phone: opts.phone } : null;
+  if (!where) return null;
+  const c = await prisma.client.findUnique({ where, select: { tier: true } });
+  return (c?.tier as TierKey | undefined) ?? null;
+}
+
+/** Опт и упаковки товаров (шаг 5.6): productId → строки. */
+export async function loadQtyRules(productIds: string[]) {
+  const [breaks, packs] = await Promise.all([
+    prisma.priceBreak.findMany({ where: { productId: { in: productIds } }, select: { productId: true, minQty: true, pricePerUnit: true, clientTier: true } }),
+    prisma.productPackaging.findMany({ where: { productId: { in: productIds } }, select: { productId: true, unitLabel: true, unitsPerPack: true, packPrice: true } }),
+  ]);
+  const by = new Map<string, { breaks: Array<{ minQty: number; pricePerUnit: number; clientTier: TierKey | null }>; packs: Array<{ unitLabel: string; unitsPerPack: number; packPrice: number }> }>();
+  const get = (id: string) => by.get(id) ?? by.set(id, { breaks: [], packs: [] }).get(id)!;
+  for (const b of breaks) get(b.productId).breaks.push({ minQty: b.minQty, pricePerUnit: b.pricePerUnit.toNumber(), clientTier: (b.clientTier as TierKey | null) ?? null });
+  for (const p of packs) get(p.productId).packs.push({ unitLabel: p.unitLabel, unitsPerPack: p.unitsPerPack, packPrice: p.packPrice.toNumber() });
+  return by;
+}
+
+/**
+ * Корзина по данным базы: актуальные цены и наличие. Товары, которых больше нет (скрыты, удалены), — в `missing`.
+ * Шаг 5.6: цена за штуку зависит от количества (опт, упаковка); `clientId`/`phone` — для оптовых цен уровня покупателя.
+ */
+export async function quoteCart(rawItems: unknown, opts: { clientId?: string | null; phone?: string | null } = {}): Promise<{ lines: QuoteLine[]; missing: string[] }> {
   const items = cleanCart(rawItems);
   if (!items.length) return { lines: [], missing: [] };
   const rows = await prisma.product.findMany({
@@ -66,7 +95,7 @@ export async function quoteCart(rawItems: unknown): Promise<{ lines: QuoteLine[]
     },
   });
   const bySku = new Map(rows.map((r) => [r.sku, r]));
-  const [own, styleOn] = await Promise.all([ownStockOf(rows.map((r) => r.id)), photoStyleOn()]);
+  const [own, styleOn, rules, tier] = await Promise.all([ownStockOf(rows.map((r) => r.id)), photoStyleOn(), loadQtyRules(rows.map((r) => r.id)), clientTierOf(opts)]);
   const lines: QuoteLine[] = [];
   const missing: string[] = [];
   for (const it of items) {
@@ -75,10 +104,13 @@ export async function quoteCart(rawItems: unknown): Promise<{ lines: QuoteLine[]
       missing.push(it.sku);
       continue;
     }
-    const price = r.price.toNumber();
+    const basePrice = r.price.toNumber();
     const old = r.oldPrice?.toNumber() ?? null;
+    const rule = rules.get(r.id);
+    const tiers = rule ? qtyPrices(basePrice, rule.breaks, rule.packs, tier) : [];
     lines.push({
-      productId: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, price, oldPrice: old && old > price ? old : null,
+      productId: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, price: unitPriceAt(basePrice, tiers, it.qty), basePrice, tiers,
+      oldPrice: old && old > basePrice ? old : null,
       image: r.images[0] ? pickImage(r.images[0], styleOn) : null, stock: stockLevel(own.get(r.id) ?? 0, r.supplierAvailable), qty: it.qty,
     });
   }
@@ -189,14 +221,17 @@ function managerText(o: { no: string; isTest: boolean }, head: string, body: str
 /** Оформление заказа с сайта. Ошибки — ключи текстов витрины. */
 export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOptions): Promise<PlaceResult> {
   const settings = await loadCheckoutSettings();
-  const quote = await quoteCart(raw.items);
+  const quote = await quoteCart(raw.items, { clientId: opts.clientId });
   if (quote.missing.length) return { ok: false, errors: { items: "err.itemsGone" } };
   const check = validateCheckout(raw, settings, quote.lines.map((l) => l.stock));
   if (!check.ok) return check;
   const v = check.value;
   // количество — как в корзине после очистки (cleanCart), цены — из базы
   const qtyBySku = new Map(v.items.map((i) => [i.sku, i.qty]));
-  const lines = quote.lines.map((l) => ({ ...l, qty: qtyBySku.get(l.sku) ?? l.qty }));
+  const lines = quote.lines.map((l) => {
+    const qty = qtyBySku.get(l.sku) ?? l.qty;
+    return { ...l, qty, price: unitPriceAt(l.basePrice, l.tiers, qty) };
+  });
   const name = `${v.lastName} ${v.firstName}`.trim();
 
   // самовывоз: точка из списка магазинов (одна — выбирается сама)
@@ -234,7 +269,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     `${name}, ${formatPhone(v.phone)}${v.noCallback ? " (просит не звонить)" : ""}`,
     delivery,
     `Оплата: ${PAY_RU[v.pay]}. Сумма ${money(totals.total)}, сейчас ${money(totals.dueNow)}`,
-    ...lines.map((l) => `• ${l.nameUk} × ${l.qty}${l.stock === "order" ? " — ПОД ЗАКАЗ" : l.stock === "local" ? " — со склада" : ""}`),
+    ...lines.map((l) => `• ${l.nameUk} × ${l.qty}${l.price < l.basePrice ? ` (опт: ${money(l.price)}/шт.)` : ""}${l.stock === "order" ? " — ПОД ЗАКАЗ" : l.stock === "local" ? " — со склада" : ""}`),
     v.comment ? `Комментарий: ${v.comment}` : "",
   ]), order.id).catch((e) => console.error("[orders] уведомление не сохранено", e));
   return { ok: true, no: order.no, accessKey, total: totals.total, dueNow: totals.dueNow };
@@ -248,7 +283,7 @@ export async function placeOneClick(
   const phone = normalizePhone(String(raw.phone ?? ""));
   if (!phone) return { ok: false, error: "errPhone" };
   const items: CartLineInput[] = cleanCart([{ sku: raw.sku, qty: raw.qty ?? 1 }]);
-  const quote = await quoteCart(items);
+  const quote = await quoteCart(items, { clientId: opts.clientId });
   if (!quote.lines.length) return { ok: false, error: "err.itemsGone" };
   const name = String(raw.name ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
   const settings = await loadCheckoutSettings();
@@ -320,7 +355,7 @@ export async function listOrders(opts: ListOrdersOptions = {}) {
 
 /** Заказ по звонку: менеджер вносит телефон, товары и доставку; цены — из базы (как на сайте). */
 export async function placeManualOrder(v: ManualOrderInput, who: string): Promise<{ ok: true; id: string; no: string } | { ok: false; error: string }> {
-  const quote = await quoteCart(v.items);
+  const quote = await quoteCart(v.items, { phone: v.phone });
   if (quote.missing.length) return { ok: false, error: `Товар не найден или скрыт: ${quote.missing.join(", ")}.` };
   const settings = await loadCheckoutSettings();
   const pickup = v.delivery === "pickup" ? await prisma.warehouse.findFirst({ where: { isPickup: true }, orderBy: [{ isDefault: "desc" }, { sort: "asc" }] }) : null;

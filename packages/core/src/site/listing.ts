@@ -1,4 +1,5 @@
 // Параметры списка товаров в адресе: ?f.diameter=125&f.diameter=180&avail=1&fast=1&sale=1&hit=1&new=1&min=100&max=500&sort=price_asc&page=2
+// Шаг 5.6 (совместимость): &fit=<группа> — расходники к инструменту группы, &tool=<группа> — инструменты группы, &mine=1 — «До мого інструменту».
 // Одно место для страниц разделов, поиска, API и кнопок фильтров (разбор и сборка адреса). Без зависимостей: работает и в браузере.
 
 export const LISTING_SORTS = ["relevance", "price_asc", "price_desc", "new", "name"] as const;
@@ -16,6 +17,11 @@ export type ListingState = {
   isNew?: boolean;
   /** часть подраздела — код одной категории (чипы «Викрутки · Біти · …»); проверяет сервер */
   part?: string;
+  /** шаг 5.6: код группы совместимости — расходники к ней / инструменты этой группы */
+  fit?: string;
+  tool?: string;
+  /** шаг 5.6: «До мого інструменту» (покупатель вошёл, инструмент — из его заказов) */
+  mine?: boolean;
   min?: number;
   max?: number;
   sort?: ListingSort;
@@ -57,6 +63,9 @@ export function parseListing(raw: Raw, facetKeys: readonly string[]): ListingSta
     ...(first(raw, "hit") === "1" ? { hit: true } : {}),
     ...(first(raw, "new") === "1" ? { isNew: true } : {}),
     ...(/^[\w-]{1,80}$/.test(first(raw, "part") ?? "") ? { part: first(raw, "part") } : {}),
+    ...(/^[\w-]{1,60}$/.test(first(raw, "fit") ?? "") ? { fit: first(raw, "fit") } : {}),
+    ...(/^[\w-]{1,60}$/.test(first(raw, "tool") ?? "") ? { tool: first(raw, "tool") } : {}),
+    ...(first(raw, "mine") === "1" ? { mine: true } : {}),
     ...(min != null ? { min } : {}),
     ...(max != null ? { max } : {}),
     ...(sort && (LISTING_SORTS as readonly string[]).includes(sort) ? { sort: sort as ListingSort } : {}),
@@ -75,6 +84,9 @@ export function listingQuery(state: ListingState, q?: string): string {
   if (state.hit) qs.set("hit", "1");
   if (state.isNew) qs.set("new", "1");
   if (state.part) qs.set("part", state.part);
+  if (state.fit) qs.set("fit", state.fit);
+  if (state.tool) qs.set("tool", state.tool);
+  if (state.mine) qs.set("mine", "1");
   if (state.min != null) qs.set("min", String(state.min));
   if (state.max != null) qs.set("max", String(state.max));
   if (state.sort) qs.set("sort", state.sort);
@@ -95,13 +107,16 @@ export function toggleFacet(state: ListingState, key: string, value: string, sin
 }
 
 /** Есть ли выбранные фильтры (для кнопки «Скинути»). Сортировка фильтром не считается. */
-export const hasFilters = (s: ListingState) => Object.keys(s.facets).length > 0 || s.available || s.local || s.sale || !!s.hit || !!s.isNew || s.min != null || s.max != null;
+export const hasFilters = (s: ListingState) =>
+  Object.keys(s.facets).length > 0 || s.available || s.local || s.sale || !!s.hit || !!s.isNew || s.min != null || s.max != null || !!s.mine;
 
-/** Сбросить все фильтры, оставив сортировку и выбранную часть подраздела (это не фильтр, а место в каталоге). */
+/** Сбросить все фильтры, оставив сортировку, выбранную часть подраздела и группу совместимости (это не фильтр, а место в каталоге). */
 export const clearFilters = (s: ListingState): ListingState => ({
   facets: {}, available: false, local: false, sale: false, page: 1, ...(s.sort ? { sort: s.sort } : {}), ...(s.part ? { part: s.part } : {}),
+  ...(s.fit ? { fit: s.fit } : {}), ...(s.tool ? { tool: s.tool } : {}),
 });
 
 /** Сколько фильтров выбрано (число на кнопке «Фільтри»). */
 export const filterCount = (s: ListingState) =>
-  Object.values(s.facets).reduce((a, v) => a + v.length, 0) + Number(s.available) + Number(s.local) + Number(s.sale) + Number(!!s.hit) + Number(!!s.isNew) + Number(s.min != null || s.max != null);
+  Object.values(s.facets).reduce((a, v) => a + v.length, 0) + Number(s.available) + Number(s.local) + Number(s.sale) + Number(!!s.hit) + Number(!!s.isNew) + Number(s.min != null || s.max != null)
+  + Number(!!s.mine);

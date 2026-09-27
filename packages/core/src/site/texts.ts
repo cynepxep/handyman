@@ -7,6 +7,7 @@
 import { LEGACY_RU, LEGACY_UK } from "./texts-data";
 import { BOT_TEXTS } from "./texts-bot";
 import { ACCOUNT_TEXTS } from "./texts-account";
+import { PLUS_TEXTS } from "./texts-plus";
 
 export type Lang = "uk" | "ru";
 export type DbLocale = "UK" | "RU";
@@ -36,6 +37,12 @@ export const TEXT_GROUPS = [
   "Страница товара",
   "Оформление заказа",
   "Купить в 1 клик",
+  "Опт и упаковка",
+  "Совместимость",
+  "Отзывы и вопросы",
+  "Сообщить о цене и наличии",
+  "Сравнение",
+  "Перезвоните мне",
   "Страница «не найдено» и ошибки",
   "Каталог и фильтры",
   "Карточка товара",
@@ -45,6 +52,7 @@ export const TEXT_GROUPS = [
   "Данные покупателя",
   "После заказа",
   "Профиль и уровни",
+  "Избранное и мой инструмент",
   "Вход и регистрация",
   "Ошибки и подсказки",
   "Бот в Telegram",
@@ -311,7 +319,7 @@ const legacy = (): TextEntry[] =>
   Object.keys(LEGACY_UK).map((key) => ({ key, group: legacyGroup(key), uk: LEGACY_UK[key], ru: LEGACY_RU[key] ?? LEGACY_UK[key] }));
 
 /** Все тексты: сначала новые (витрина), потом перенесённые из прототипа. */
-export const TEXT_ENTRIES: TextEntry[] = [...NEW_TEXTS, ...BOT_TEXTS, ...ACCOUNT_TEXTS, ...legacy()];
+export const TEXT_ENTRIES: TextEntry[] = [...NEW_TEXTS, ...BOT_TEXTS, ...ACCOUNT_TEXTS, ...PLUS_TEXTS, ...legacy()];
 export const TEXT_BY_KEY: ReadonlyMap<string, TextEntry> = new Map(TEXT_ENTRIES.map((e) => [e.key, e]));
 export const isKnownTextKey = (key: string) => TEXT_BY_KEY.has(key);
 

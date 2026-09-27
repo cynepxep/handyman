@@ -2,6 +2,8 @@
 
 // Корзина в браузере: только артикулы и количество (localStorage «hm.cart»), одинаково во всех вкладках.
 // Цены, наличие и суммы корзина всегда берёт с сервера (quoteCartAction) — браузеру не доверяем.
+// Шаг 5.5: у вошедшего покупателя корзина ещё и хранится в кабинете (общая для сайта и Mini App) — см. cart-sync.tsx.
+// «hm.cart.sync» помнит версию корзины на сервере, которую браузер видел последней, и менял ли он корзину после этого.
 import { useSyncExternalStore } from "react";
 import { cleanCart, MAX_QTY, type CartLineInput } from "@handyman/core/shop";
 
@@ -31,7 +33,36 @@ function read(): CartLineInput[] {
   return lines;
 }
 
-function write(lines: CartLineInput[]) {
+const SYNC_KEY = "hm.cart.sync";
+export type CartSyncMeta = { v: number; dirty: boolean };
+let memoryMeta: CartSyncMeta = { v: 0, dirty: false };
+/** Растёт при каждом изменении корзины в этой вкладке (синхронизация понимает, что корзину поменяли, пока ждали ответ). */
+let localEdits = 0;
+
+function readMeta(): CartSyncMeta {
+  try {
+    const m = JSON.parse(localStorage.getItem(SYNC_KEY) ?? "null");
+    if (m && Number.isInteger(m.v) && typeof m.dirty === "boolean") return { v: m.v, dirty: m.dirty };
+  } catch {
+    /* приватный режим */
+  }
+  return memoryMeta;
+}
+
+function writeMeta(m: CartSyncMeta) {
+  memoryMeta = m;
+  try {
+    localStorage.setItem(SYNC_KEY, JSON.stringify(m));
+  } catch {
+    /* приватный режим */
+  }
+}
+
+function write(lines: CartLineInput[], fromSync = false) {
+  if (!fromSync) {
+    localEdits++;
+    writeMeta({ ...readMeta(), dirty: true });
+  }
   const raw = JSON.stringify(lines);
   if (!memoryOnly) {
     try {
@@ -75,6 +106,16 @@ export const cartStore = {
   },
   clear() {
     write([]);
+  },
+  /** Для синхронизации с кабинетом. */
+  syncMeta: readMeta,
+  setSyncMeta: writeMeta,
+  edits: () => localEdits,
+  /** Корзина пришла из кабинета: записать без отметки «менял браузер». */
+  applySynced(lines: CartLineInput[], version: number) {
+    writeMeta({ v: version, dirty: false });
+    const cur = read();
+    if (JSON.stringify(cur) !== JSON.stringify(lines)) write(lines, true);
   },
 };
 

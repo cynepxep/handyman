@@ -3,13 +3,19 @@
 
 import { createHmac, timingSafeEqual } from "node:crypto";
 
-export type StartPayload = { kind: "login" | "ref" | "link"; code: string } | null;
+export type StartPayload =
+  | { kind: "login" | "ref" | "link"; code: string }
+  /** шаг 5.6: «Повідомити про зниження ціни» (wp_<товар>) / «про надходження» (ws_<товар>) */
+  | { kind: "watch"; watch: "PRICE" | "STOCK"; code: string }
+  | null;
 
 /** «/start login_ABC» → { kind: "login", code: "ABC" }. Параметр /start у Telegram — до 64 символов [A-Za-z0-9_-]. */
 export function parseStart(text: string): { isStart: boolean; payload: StartPayload } {
   const m = String(text ?? "").trim().match(/^\/start(?:@\w+)?(?:\s+(\S+))?$/);
   if (!m) return { isStart: false, payload: null };
   const p = m[1] ?? "";
+  const wm = p.match(/^(wp|ws)_([A-Za-z0-9]{8,40})$/);
+  if (wm) return { isStart: true, payload: { kind: "watch", watch: wm[1] === "wp" ? "PRICE" : "STOCK", code: wm[2] } };
   const pm = p.match(/^(login|ref|link)_([A-Za-z0-9_-]{4,60})$/);
   return { isStart: true, payload: pm ? { kind: pm[1] as "login" | "ref" | "link", code: pm[2] } : null };
 }

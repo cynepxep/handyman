@@ -28,7 +28,9 @@
     "./jobs": "./src/jobs.ts",
     "./bot": "./src/bot.ts",
     "./telegram": "./src/telegram.ts",
-    "./client-auth": "./src/client-auth.ts"
+    "./client-auth": "./src/client-auth.ts",
+    "./cabinet": "./src/cabinet.ts",
+    "./storefront-plus": "./src/storefront-plus.ts"
   },
   "scripts": {
     "generate": "prisma generate",

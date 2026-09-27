@@ -9,7 +9,8 @@ import {
   type MenuConfig, type MenuGroup, type Spec, type Task,
 } from "@handyman/core/catalog";
 import { paths, shopHref, type ShopLang } from "@handyman/core/site";
-import { availableQty, stockLevel } from "@handyman/core/shop";
+import { availableQty, qtyPrices, stockLevel } from "@handyman/core/shop";
+import { loadQtyRules } from "@handyman/db/orders";
 import { loadMenuConfig } from "@handyman/db/site-content";
 import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import type { CardData } from "@/components/shop/product-card";
@@ -97,10 +98,16 @@ const loadCardSpecPlan = cached(
 /** Карточки для списка: название на языке сайта и до трёх самых нужных характеристик («18 В · 900 Вт · Безщітковий»). */
 export async function toCards(items: SearchItem[], lang: ShopLang): Promise<ShopCard[]> {
   const ids = items.map((i) => i.id);
-  const [plan, rows] = await Promise.all([
+  const [plan, rows, rules] = await Promise.all([
     loadCardSpecPlan().catch(() => ({}) as Record<string, string[]>),
     ids.length ? prisma.productAttribute.findMany({ where: { productId: { in: ids } }, select: { productId: true, key: true, value: true }, orderBy: { sort: "asc" } }) : [],
+    ids.length ? loadQtyRules(ids) : new Map<string, never>(),
   ]);
+  // шаг 5.6: «Дешевше від N шт.» — первая ступенька опта/упаковки (общие цены, без цен уровня)
+  const optFrom = (id: string, price: number) => {
+    const r = rules.get(id);
+    return r ? (qtyPrices(price, r.breaks, r.packs, null)[0]?.minQty ?? null) : null;
+  };
   const params = new Map<string, { name: string; value: string }[]>();
   for (const r of rows) (params.get(r.productId) ?? params.set(r.productId, []).get(r.productId)!).push({ name: r.key, value: r.value });
   return items.map((i) => ({
@@ -117,6 +124,7 @@ export async function toCards(items: SearchItem[], lang: ShopLang): Promise<Shop
     hit: i.hit === true,
     isNew: i.isNew === true,
     image: i.image,
+    optFrom: optFrom(i.id, i.price),
     specs: cardSpecTexts(readCardSpecs(params.get(i.id) ?? [], i.nameUk), plan[i.categoryId] ?? [], lang),
   }));
 }
@@ -193,8 +201,8 @@ export async function getFlaggedCards(lang: ShopLang, flag: "hit" | "isNew", lim
 }
 
 /** Карточки по списку артикулов в том же порядке («Ви переглядали»). Скрытые и снятые с продажи пропускаются. */
-export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<ShopCard[]> {
-  const list = [...new Set(skus.filter((s) => typeof s === "string" && s.length > 0 && s.length <= 40))].slice(0, 12);
+export async function getCardsBySkus(lang: ShopLang, skus: string[], limit = 12): Promise<ShopCard[]> {
+  const list = [...new Set(skus.filter((s) => typeof s === "string" && s.length > 0 && s.length <= 40))].slice(0, Math.min(limit, 60));
   if (!list.length) return [];
   const styleOn = await photoStyleOn();
   const rows = await prisma.product.findMany({
