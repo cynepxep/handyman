@@ -3,6 +3,7 @@
 // Сумма покупок = выполненные (DONE) НЕтестовые заказы; пересчитывается при смене статуса заказа.
 
 import { prisma, type Prisma, type ClientTier } from "./client";
+import { moveCabinet } from "./cabinet";
 import {
   TIER_KEYS, TIER_RU, clientDiscountPct, nextStoredTier, normalizeLoyalty, normalizePhone, tierProgress,
   type ClientEditInput, type LoyaltySettings, type TierKey,
@@ -193,6 +194,7 @@ export async function linkTelegramPhone(p: TgProfile & { phone: string }): Promi
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (tx[table] as any).updateMany({ where: { clientId: byTg.id }, data: { clientId: byPhone.id } });
       }
+      await moveCabinet(tx, byTg.id, byPhone.id); // избранное, «Мій інструмент», корзина (шаг 5.5)
       await tx.client.update({ where: { id: byTg.id }, data: { tgId: null, refCode: null } });
       await tx.client.delete({ where: { id: byTg.id } });
       await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null, referredById: byPhone.referredById ?? byTg.referredById } });

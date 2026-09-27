@@ -193,8 +193,8 @@ export async function getFlaggedCards(lang: ShopLang, flag: "hit" | "isNew", lim
 }
 
 /** Карточки по списку артикулов в том же порядке («Ви переглядали»). Скрытые и снятые с продажи пропускаются. */
-export async function getCardsBySkus(lang: ShopLang, skus: string[]): Promise<ShopCard[]> {
-  const list = [...new Set(skus.filter((s) => typeof s === "string" && s.length > 0 && s.length <= 40))].slice(0, 12);
+export async function getCardsBySkus(lang: ShopLang, skus: string[], limit = 12): Promise<ShopCard[]> {
+  const list = [...new Set(skus.filter((s) => typeof s === "string" && s.length > 0 && s.length <= 40))].slice(0, Math.min(limit, 60));
   if (!list.length) return [];
   const styleOn = await photoStyleOn();
   const rows = await prisma.product.findMany({

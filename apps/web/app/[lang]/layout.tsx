@@ -13,6 +13,8 @@ import { TextEditor } from "@/components/shop/text-editor";
 import { getStaffSession } from "@/lib/auth";
 import { getClient } from "@/lib/client-auth";
 import { MiniAppBridge } from "@/components/shop/miniapp-bridge";
+import { CartSync } from "@/components/shop/cart/cart-sync";
+import { FavSync } from "@/components/shop/fav-store";
 import "@/components/shop/shop.css";
 
 // Переменные шрифты (все начертания в одном файле): вместо 10 файлов ~330 КБ — 4 (кириллица и латиница: цифры цен — в латинице).
@@ -66,6 +68,8 @@ export default async function ShopRootLayout({ children, params }: LayoutProps<"
         </ShopCartProvider>
         {canEditTexts && <TextEditor lang={lang} />}
         <MiniAppBridge loggedIn={Boolean(client)} />{/* Этап 5: вход в Telegram Mini App */}
+        <CartSync loggedIn={Boolean(client)} />{/* шаг 5.5: общая корзина сайт ↔ Mini App */}
+        <FavSync loggedIn={Boolean(client)} />
       </body>
     </html>
   );

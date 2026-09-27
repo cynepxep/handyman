@@ -22,6 +22,8 @@ const PATHS: Record<string, React.ReactNode> = {
   back: (<><path d="M4 12a8 8 0 108-8H7" /><path d="M9 1L6.5 4 9 7" /></>),
   truck: (<><path d="M3 6h11v10H3zM14 9h4l3 3v4h-7" /><circle cx="7" cy="18" r="1.6" /><circle cx="17" cy="18" r="1.6" /></>),
   bolt: (<path d="M13 2L5 13h6l-1 9 8-11h-6z" />),
+  heart: (<path d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.3 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z" />),
+  heartFill: (<path fill="currentColor" d="M12 20s-7.5-4.6-7.5-10A4.3 4.3 0 0112 7.3 4.3 4.3 0 0119.5 10c0 5.4-7.5 10-7.5 10z" />),
 };
 
 export function Icon({ name, size = 24 }: { name: string; size?: number }) {

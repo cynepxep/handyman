@@ -74,6 +74,9 @@
 единый клиент по телефону (`linkTelegramPhone`). Модули с `node:crypto` (`core/src/shop/telegram-logic.ts`, `core/src/totp.ts`) **не экспортировать из
 `@handyman/core/shop`** — его импортирует корзина в браузере; у них свои входы (`@handyman/core/telegram`, корень `@handyman/core` — только типы в клиенте).
 Старый прототип на том же боте одновременно не запускать (409).
+**5.5** кабинет: «Обране» (`/favorites`, сердечки — `components/shop/fav-store.tsx`), «Мій інструмент» и подсказки расходников (`core/src/shop/cabinet.ts`,
+`lib/shop/cabinet.ts`), общая корзина сайт ↔ Mini App (`cart/cart-sync.tsx`, `Client.cart/cartVersion`; `db/src/cabinet.ts`). При слиянии карточек клиента —
+`moveCabinet`. Дальше — **5.6** «Витрина+».
 **5.2–5.3** вход покупателя (`db/src/client-auth.ts`, `lib/client-auth.ts`, кука `hm_client`): Telegram (код → бот → сайт), SMS (заглушка в dev, в production без провайдера скрыт), Mini App (`/api/client/miniapp`, `miniapp-bridge.tsx`); кабинет `/account`; `?ref=` → кука `hm_ref` в `proxy.ts`. Кэш контента витрины — ключ с версией реестра текстов.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
@@ -124,8 +127,8 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 12 сценариев витрины (в т. ч. Нова Пошта пальцем); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 164 проверки (core 113 + интеграционные db 51). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 14 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
+| `pnpm test` | 251 проверка (core 159 + интеграционные db 92). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

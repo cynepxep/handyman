@@ -144,3 +144,23 @@ test("кабинет: без входа — экран входа (Telegram и S
   await noHorizontalScroll(page);
   expect(errors).toEqual([]);
 });
+
+test("обране: сердечко на карточке → число в шапке → страница «Обране», убрать — пусто (гость, без входа)", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/search?q=vitals");
+  const card = page.locator(".hm-card").first();
+  const name = (await card.locator(".hm-card-title").innerText()).trim();
+  const heart = card.locator("[data-action=favorite]");
+  await expect(heart).toHaveAttribute("aria-pressed", "false");
+  expect((await heart.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await heart.click();
+  await expect(heart).toHaveAttribute("aria-pressed", "true");
+  await expect(page.locator(".hm-headfav .hm-cart-count")).toHaveText("1");
+  await page.locator(".hm-headfav").click();
+  await expect(page).toHaveURL(/\/favorites$/);
+  await expect(page.locator(".hm-card-title")).toHaveText([name]);
+  await page.locator(".hm-card [data-action=favorite]").click();
+  await expect(page.locator(".hm-fav-empty")).toBeVisible();
+  await noHorizontalScroll(page);
+  expect(errors).toEqual([]);
+});

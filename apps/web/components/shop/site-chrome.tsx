@@ -10,6 +10,7 @@ import { SearchBox, type SearchLabels } from "./search-box";
 import { stockLabels } from "./product-card";
 import { btn } from "./ui";
 import { BottomCart, HeaderCart } from "./cart/cart-buttons";
+import { HeaderFav } from "./fav-store";
 
 /** Ссылка на мессенджер или звонок: снаружи сайта — в новой вкладке. */
 function ContactPill({ href, icon, label }: { href: string; icon: string; label: string }) {
@@ -66,7 +67,10 @@ export async function SiteHeader({ c }: { c: ShopContent }) {
           {t("header.catalog")}
         </Link>
         <SearchBox lang={lang} labels={labels} popular={popular} />
-        <HeaderCart />
+        <span className="hm-head-icons">
+          <HeaderFav href={shopHref(lang, paths.favorites())} label={t("fav.header")} />
+          <HeaderCart />
+        </span>
       </div>
       {links.length > 0 && (
         <div className="hm-contacts">
