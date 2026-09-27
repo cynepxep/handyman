@@ -1,5 +1,7 @@
-// Запросы к Telegram Bot API (Этап 5) — без библиотек, через fetch. Токен берётся из BOT_TOKEN и никуда не пишется.
+// Запросы к Telegram Bot API (Этап 5) — без библиотек, через fetch. Токен — из «Интеграций» (или BOT_TOKEN в .env) и никуда не пишется.
 // В тестах подменяется через setTelegramFetch.
+
+import { secret } from "./integrations";
 
 let fetchImpl: typeof fetch = (...a) => fetch(...a);
 export const setTelegramFetch = (f: typeof fetch) => {
@@ -14,8 +16,8 @@ export class TelegramError extends Error {
 
 /** Вызов метода Bot API. Ошибка Telegram — TelegramError с кодом (409 — бота уже читает другая программа). */
 export async function tg<T = unknown>(method: string, body: Record<string, unknown> = {}, timeoutMs = 10_000): Promise<T> {
-  const token = process.env.BOT_TOKEN?.trim();
-  if (!token) throw new TelegramError(0, "бот не настроен (нет BOT_TOKEN)");
+  const token = await secret("telegram.botToken");
+  if (!token) throw new TelegramError(0, "бот не настроен (нет токена бота)");
   const res = await fetchImpl(`https://api.telegram.org/bot${token}/${method}`, {
     method: "POST",
     headers: { "content-type": "application/json" },

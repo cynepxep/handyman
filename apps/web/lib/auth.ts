@@ -78,6 +78,13 @@ export async function requirePermission(permission: Permission): Promise<StaffSe
   return session;
 }
 
+/** Только владелец (не право, которое можно выдать роли): раздел «Интеграции» с ключами сервисов (шаг 3.1). */
+export async function requireOwner(): Promise<StaffSessionInfo> {
+  const session = await requireStaff();
+  if (session.roleKey !== "owner") redirect("/admin?error=forbidden");
+  return session;
+}
+
 async function setSessionCookie(token: string) {
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: STAFF_SESSION_TTL_MS / 1000 });

@@ -1,4 +1,5 @@
 import { dailySummaryText, loadNotify } from "@handyman/db/jobs";
+import { secret } from "@handyman/db/integrations";
 import { requirePermission } from "@/lib/auth";
 import { SubmitButton } from "../import/client-bits";
 import { saveNotifyAction, sendNowAction } from "./actions";
@@ -13,7 +14,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const s = await loadNotify();
   const preview = await dailySummaryText(s);
   // только «есть/нет» — сами ключи никогда не показываем
-  const botReady = Boolean(process.env.BOT_TOKEN?.trim() && process.env.ADMIN_CHAT_ID?.trim());
+  const botReady = Boolean((await secret("telegram.botToken")) && (await secret("telegram.adminChatId")));
   const check = (name: keyof typeof s, label: string, hint?: string) => (
     <label style={{ display: "flex", gap: 8, alignItems: "flex-start", minHeight: 40, padding: "4px 0" }}>
       <input type="checkbox" name={name} defaultChecked={Boolean(s[name])} style={{ marginTop: 4 }} />
@@ -28,7 +29,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
         Бот пишет в чат менеджеров: о новых заказах (сразу), вечерняя сводка, отчёт за неделю, напоминания по задачам и тревоги. Работает, пока
         запущен сайт — проверка раз в минуту.
       </p>
-      <p>Бот: {botReady ? <span className="adm-chip ok">настроен</span> : <span className="adm-chip warn">не настроен — сообщения сохраняются, но не уходят (BOT_TOKEN и ADMIN_CHAT_ID в .env)</span>}</p>
+      <p>Бот: {botReady ? <span className="adm-chip ok">настроен</span> : <span className="adm-chip warn">не настроен — сообщения сохраняются, но не уходят (токен бота и чат менеджеров — в разделе «Интеграции», его открывает владелец)</span>}</p>
       {sp.error && <p className="adm-flash err" role="alert">{sp.error}</p>}
       {sp.ok && <p className="adm-flash ok">{sp.ok}</p>}
 

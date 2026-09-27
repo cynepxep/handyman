@@ -1,10 +1,11 @@
 // Сообщения в Telegram: менеджерам (новый заказ, «купити в 1 клік») и покупателям (по шаблонам статусов, шаг 4.2).
 // Каждое сообщение сначала пишется в Outbox — так видно, что и когда отправлялось.
-// Менеджерам: без BOT_TOKEN и ADMIN_CHAT_ID в .env — режим-заглушка: сообщение сохраняется со статусом DEV и никуда не уходит.
+// Менеджерам: без токена бота и чата менеджеров («Интеграции» или .env) — режим-заглушка: сообщение сохраняется со статусом DEV и никуда не уходит.
 // Покупателю: если он ещё не подключил бота (нет tgId) — статус NO_CHANNEL, менеджер копирует текст в Viber/SMS.
 // Токен в журналы не пишется.
 
 import { prisma } from "./client";
+import { secret } from "./integrations";
 
 export type NotifyResult = "SENT" | "DEV" | "FAILED" | "NO_CHANNEL";
 
@@ -31,12 +32,12 @@ async function deliver(rowId: string, token: string, chatId: string, text: strin
 }
 
 export async function notifyManagers(text: string, orderId?: string, fetchImpl: typeof fetch = fetch): Promise<NotifyResult> {
-  const token = process.env.BOT_TOKEN?.trim();
-  const chat = process.env.ADMIN_CHAT_ID?.trim();
+  const token = await secret("telegram.botToken");
+  const chat = await secret("telegram.adminChatId");
   const live = Boolean(token && chat);
   const row = await prisma.outbox.create({ data: { chatId: chat || "dev", orderId: orderId ?? null, text, state: live ? "PENDING" : "DEV" } });
   if (!live) {
-    console.info(`[notify] режим-заглушка (нет BOT_TOKEN или ADMIN_CHAT_ID): сообщение сохранено, не отправлено`);
+    console.info(`[notify] режим-заглушка (нет токена бота или чата менеджеров): сообщение сохранено, не отправлено`);
     return "DEV";
   }
   return deliver(row.id, token!, chat!, text, fetchImpl);
@@ -47,7 +48,7 @@ export async function notifyManagers(text: string, orderId?: string, fetchImpl: 
  * Нет tgId → NO_CHANNEL (текст виден в заказе, его можно скопировать); нет BOT_TOKEN → DEV.
  */
 export async function notifyClient(p: { orderId: string | null; tgId: bigint | null; text: string; who: string }, fetchImpl: typeof fetch = fetch): Promise<NotifyResult> {
-  const token = process.env.BOT_TOKEN?.trim();
+  const token = await secret("telegram.botToken");
   const chatId = p.tgId != null ? String(p.tgId) : "";
   const state = !chatId ? "NO_CHANNEL" : token ? "PENDING" : "DEV";
   const row = await prisma.outbox.create({ data: { audience: "client", who: p.who, chatId: chatId || "none", orderId: p.orderId, text: p.text, state } });
@@ -58,7 +59,7 @@ export async function notifyClient(p: { orderId: string | null; tgId: bigint | n
 /** Повторить неудачную отправку (кнопка в заказе). */
 export async function retryOutbox(id: string, fetchImpl: typeof fetch = fetch): Promise<NotifyResult | null> {
   const row = await prisma.outbox.findUnique({ where: { id } });
-  const token = process.env.BOT_TOKEN?.trim();
+  const token = await secret("telegram.botToken");
   if (!row || row.state !== "FAILED" || !token) return null;
   return deliver(row.id, token, row.chatId, row.text, fetchImpl);
 }

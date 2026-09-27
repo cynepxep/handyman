@@ -30,7 +30,8 @@
     "./telegram": "./src/telegram.ts",
     "./client-auth": "./src/client-auth.ts",
     "./cabinet": "./src/cabinet.ts",
-    "./storefront-plus": "./src/storefront-plus.ts"
+    "./storefront-plus": "./src/storefront-plus.ts",
+    "./integrations": "./src/integrations.ts"
   },
   "scripts": {
     "generate": "prisma generate",

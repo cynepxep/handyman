@@ -9,6 +9,7 @@ import { normalizePhone } from "@handyman/core/shop";
 import { verifyInitData } from "@handyman/core/telegram";
 import { ensureTgClient, setReferrer } from "./clients";
 import { tg } from "./telegram";
+import { secret } from "./integrations";
 
 const TG_LOGIN_MS = 10 * 60_000;
 const SMS_TTL_MS = 5 * 60_000;
@@ -83,7 +84,7 @@ export async function finishTgLogin(code: string): Promise<{ status: "wait" | "e
 
 /** Вход в Mini App: проверяем подпись Telegram (initData) и выдаём сессию «телеграм-клиенту». */
 export async function miniAppLogin(initData: string): Promise<{ ok: true; token: string; clientId: string } | { ok: false; error: string }> {
-  const token = process.env.BOT_TOKEN?.trim();
+  const token = await secret("telegram.botToken");
   if (!token) return { ok: false, error: "бот не настроен" };
   const v = verifyInitData(initData, token);
   if (!v.ok) return v;

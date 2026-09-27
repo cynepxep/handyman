@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 const OUTBOX_RU: Record<string, string> = {
   PENDING: "ждёт отправки",
   SENT: "отправлено в Telegram",
-  DEV: "не отправлено: в .env не задан BOT_TOKEN / ADMIN_CHAT_ID",
+  DEV: "не отправлено: бот не настроен (раздел «Интеграции»)",
   FAILED: "ошибка отправки",
   NO_CHANNEL: "покупатель ещё не подключил бота — скопируйте текст в Viber или SMS",
 };
