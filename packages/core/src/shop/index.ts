@@ -10,3 +10,4 @@ export * from "./finance";
 export * from "./service";
 export * from "./reports";
 export * from "./notify-rules";
+export * from "./cabinet";

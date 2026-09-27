@@ -15,6 +15,12 @@ import { formatPrice } from "@/components/shop/format";
 import { btn } from "@/components/shop/ui";
 import { LoginPanel } from "@/components/shop/account/login-panel";
 import { ConnectTelegramButton, CopyLinkButton, LogoutButton, RepeatOrderButton } from "@/components/shop/account/account-bits";
+import { RemoveToolButton } from "@/components/shop/account/tool-button";
+import { AccountFavorites } from "@/components/shop/fav-store";
+import { listTools } from "@handyman/db/cabinet";
+import { fitLinks } from "@/lib/shop/cabinet";
+import Image from "next/image";
+import { optimizable } from "@/lib/image-hosts";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +45,7 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
   const client = await getClient();
   if (!client) return <LoginPanel lang={lang} t={pickTexts(c.texts, LOGIN_KEYS)} smsOn={smsLoginAvailable()} />;
 
-  const [loyalty, orders, invited, refCode] = await Promise.all([
+  const [loyalty, orders, invited, refCode, tools] = await Promise.all([
     loadLoyalty(),
     prisma.order.findMany({
       where: { clientId: client.id, isTest: false }, orderBy: { createdAt: "desc" }, take: 30,
@@ -47,6 +53,7 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
     }),
     prisma.client.count({ where: { referredById: client.id } }),
     client.refCode ? client.refCode : ensureRefCode(client.id).catch(() => null),
+    listTools(client.id),
   ]);
   const tier = client.tier as TierKey;
   const spent = client.spent.toNumber();
@@ -114,6 +121,44 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
             <div><Link className={btn("primary")} href={shopHref(lang, paths.catalog())}>{t("thanks.home")}</Link></div>
           </>
         )}
+      </div>
+
+      <div className="hm-panel">
+        <h2>{t("account.tools")}</h2>
+        <p className="hm-muted">{t("account.tools.lead")}</p>
+        {tools.length ? (
+          <ul className="hm-tools">
+            {tools.map((tool) => {
+              const fits = fitLinks(c, { categoryId: tool.categoryId, name: tool.nameUk, facets: tool.facets });
+              return (
+                <li key={tool.sku} className="hm-tool">
+                  <span className="hm-tool-img">
+                    {tool.image && <Image src={tool.image} alt="" fill sizes="64px" unoptimized={!optimizable(tool.image)} />}
+                  </span>
+                  <div>
+                    <Link className="hm-tool-name" href={shopHref(lang, paths.product(tool.sku, tool.nameUk))}>{c.pick(tool.nameUk, tool.nameRu)}</Link>
+                    <div className="hm-tool-meta">
+                      {tool.source === "order" && <span className="hm-muted">{t("account.tools.bought")}</span>}
+                      <RemoveToolButton sku={tool.sku} label={t("account.tools.remove")} />
+                    </div>
+                    {fits.length > 0 && (
+                      <div className="hm-tool-fits">
+                        {fits.map((f) => <Link key={f.key} className="hm-chip" href={f.href}>{f.label}</Link>)}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p>{t("account.tools.none")}</p>
+        )}
+      </div>
+
+      <div className="hm-panel">
+        <h2>{t("account.fav")}</h2>
+        <AccountFavorites href={shopHref(lang, paths.favorites())} count={t("account.fav.count", { n: "{n}" })} none={t("account.fav.none")} open={t("account.fav.open")} />
       </div>
 
       {refUrl && (

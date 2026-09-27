@@ -194,6 +194,8 @@ model Product {
   orderItems     OrderItem[]
   recommendedBy  Recommendation[] @relation("RecommendedProduct")
   recommends     Recommendation[] @relation("SourceProduct")
+  favoritedBy    ClientFavorite[]
+  ownedBy        ClientTool[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -515,14 +517,47 @@ model Client {
   refCode           String?   @unique // Этап 5: код реферальной ссылки (…?ref=КОД, t.me/бот?start=ref_КОД)
   referredById      String? // Этап 5: кто пригласил
   tgStartedAt       DateTime? // Этап 5: когда покупатель запустил бота (можно писать в Telegram)
+  cart              Json? // Этап 5.5: общая корзина сайт ↔ Mini App ([{ sku, qty }]), только у вошедших
+  cartVersion       Int       @default(0) // растёт при каждой записи корзины (браузер помнит, какую версию видел)
+  cartUpdatedAt     DateTime?
   createdAt         DateTime  @default(now())
 
   orders       Order[]
   sessions     ClientSession[]
   linkCodes    LinkCode[]
   auditEntries ClientAudit[]
+  favorites    ClientFavorite[]
+  tools        ClientTool[]
 
   @@index([referredById])
+}
+
+// Этап 5.5: «Обране» вошедшего покупателя (у гостя — только в браузере, при входе переносится сюда).
+model ClientFavorite {
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([clientId, productId])
+  @@index([productId])
+}
+
+// Этап 5.5: «Мій інструмент» — инструмент покупателя (для подбора расходников). source: manual — отметил сам, order — куплен у нас.
+// hidden: покупатель убрал инструмент из списка (купленный больше не добавляется автоматически).
+model ClientTool {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  source    String   @default("manual")
+  hidden    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([clientId, productId])
+  @@index([productId])
 }
 
 model ClientSession {

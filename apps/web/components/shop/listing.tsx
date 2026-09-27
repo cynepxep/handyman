@@ -1,6 +1,7 @@
 // Список товаров (раздел, подраздел, задача, поиск): заголовок, подразделы, быстрый выбор размера, фильтры, выбранные фильтры,
 // сортировка, карточки, «Показати ще» и номера страниц. Серверный компонент; интерактивные части — в listing-client.tsx.
 import { Fragment } from "react";
+import { FACET_DEFS } from "@handyman/core/catalog";
 import Link from "next/link";
 import { clearFilters, countWord, hasFilters, listingQuery, listingSlots, shopHref, toggleFacet, type ListingState } from "@handyman/core/site";
 import { bannersFor } from "@/lib/shop/banners";
@@ -86,7 +87,8 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
   ];
 
   // выбранные фильтры чипами: нажатие убирает фильтр
-  const labelOf = (key: string) => result.facets.attrs.find((a) => a.key === key)?.label.split(",")[0] ?? key;
+  // фильтра нет среди найденных (например, пришли по ссылке «Акумулятори M-Type 18», а таких сейчас нет) — название из общего списка
+  const labelOf = (key: string) => (result.facets.attrs.find((a) => a.key === key)?.label ?? FACET_DEFS.find((d) => d.key === key)?.label ?? key).split(",")[0];
   const chips: Array<{ text: string; href: string }> = [];
   for (const [key, values] of Object.entries(state.facets)) for (const v of values) chips.push({ text: `${labelOf(key)}: ${v}`, href: href(toggleFacet(state, key, v)) });
   if (state.available) chips.push({ text: t("inStockOnly"), href: href({ ...state, available: false, page: 1 }) });
