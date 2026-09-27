@@ -89,6 +89,10 @@
 вход `@handyman/core/integrations`; `db/src/integrations.ts`). **Ключи внешних сервисов читать только через `await secret("telegram.botToken")`**
 (база → .env → пусто = заглушка), не через `process.env`; новый ключ — поле в `INTEGRATIONS` (+ переменная в `.env.example`). Ключ шифрования — `SECRETS_KEY`
 или `.data/secrets.key`. В тестах сеть — `setIntegrationsFetch`.
+**3.2** оплата monobank (`core/src/shop/payments.ts`, `db/src/payments.ts`, таблица `PayInvoice`): кнопка «Сплатити» на странице заказа (`components/shop/pay-block.tsx`,
+`app/[lang]/pay-actions.ts`), уведомление `/api/pay/mono` (подпись X-Sign), опрос mono в `runJobs`, блок «Оплата картой» в заказе админки, возврат — право `payments.refund`.
+Сумму счёта — только `sitePayTarget`/`unpaidOf` на сервере; `Order.paidAmount` = сумма `PayInvoice.paid` (менять только через `applyInvoiceState`). Без токена и не в production —
+тестовые счета (`monoMode() === "stub"`). В тестах сеть — `setPaymentsFetch`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -139,7 +143,7 @@
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 272 проверки (core 171 + интеграционные db 101). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 282 проверки (core 177 + интеграционные db 105). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

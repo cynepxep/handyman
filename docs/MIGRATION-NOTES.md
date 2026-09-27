@@ -40,7 +40,7 @@
 | `pages` | `Page` | без изменений |
 | `texts` | `TextOverride` | переименовано |
 | `brands` | `Brand` | без изменений |
-| `payments` | `Payment` | без изменений |
+| `payments` | `Payment` | без изменений (не используется: с шага 3.2 счета mono — таблица `PayInvoice`) |
 | `webhook_log` | `WebhookLog` | добавлено поле `source` (раньше было только под KeyCRM) |
 | — | `ProductPackaging`, `PriceBreak` | новое: упаковки и опт (ТЗ) |
 | — | `CompatibilityGroup`, `ProductCompatibility` | новое: «подходит к моему инструменту» (ТЗ) |
@@ -199,3 +199,12 @@
 Только добавления: таблица `IntegrationSecret` (`key` вида «telegram.botToken» → `sealed` — значение, зашифрованное AES-256-GCM; `updatedAt`, `updatedBy`).
 Ключ шифрования в базе не хранится: `SECRETS_KEY` из окружения или файл `.data/secrets.key` (создаётся сам). Результат последней проверки подключения —
 `Setting` «integrations.checks». В старом проекте ключи были только в `.env`; они и сейчас работают как запасной вариант, если в базе поле пустое.
+
+## Миграция `20260928140000_pay_invoices` (шаг 3.2, оплата monobank)
+
+Только добавления: таблица `PayInvoice` — счёт на оплату картой (`id` = invoiceId mono, у тестового счёта — «stub_…»; заказ, вид «prepay / full / rest /
+manual», сумма, **зачтено** `paid` и возвращено `refunded`, статус как в mono, ссылка на оплату, кто выставил, `modifiedAt` из mono — чтобы старое уведомление
+не перезаписало новое, `checkUntil`/`checkedAt` — до какого времени и когда спрашивали mono). `Order.paidAmount` теперь заполняется: сумма `paid` всех счетов
+заказа; `Order.monoInvoiceId` — последний счёт. Уведомления mono пишутся в `WebhookLog` (source `MONO`). Таблица `Payment` прототипа (только invoiceId и сумма)
+не используется: повторное зачисление исключает блокировка строки `PayInvoice`. В старом проекте счёт mono хранился в `Order.monoInvoiceId`, оплата — в `Payment`.
+Новое право `payments.refund` («Оплата: возврат денег покупателю») — только у владельца (у него все права всегда), миграция ролей не нужна.

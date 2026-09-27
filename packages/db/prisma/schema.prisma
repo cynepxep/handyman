@@ -671,6 +671,7 @@ model Order {
   outboxEntries  Outbox[]
   pendingNotifs  PendingNotif[]
   payments       Payment[]
+  invoices       PayInvoice[]
   partnerRefs    PartnerReferral[]
 
   @@index([clientId])
@@ -763,6 +764,32 @@ model Payment {
   order     Order    @relation(fields: [orderId], references: [id])
   amount    Decimal  @db.Decimal(10, 2)
   createdAt DateTime @default(now())
+}
+
+// Шаг 3.2: счёт на оплату картой через monobank (или тестовый счёт-заглушка, пока нет токена — только не в production).
+// paid — сколько по счёту зачтено сейчас (после частичного возврата — меньше); Order.paidAmount = сумма paid всех счетов заказа.
+// Статус узнаём из уведомления mono (нужен https-адрес сайта) и опросом, пока checkUntil в будущем. Таблица Payment (прототип) не используется.
+model PayInvoice {
+  id            String    @id // invoiceId mono; у заглушки — «stub_…»
+  orderId       String
+  order         Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  kind          String // prepay | full | rest | manual
+  amount        Decimal   @db.Decimal(10, 2)
+  paid          Decimal   @default(0) @db.Decimal(10, 2)
+  refunded      Decimal   @default(0) @db.Decimal(10, 2)
+  status        String    @default("created") // created | processing | hold | success | failure | reversed | expired (как в mono)
+  pageUrl       String
+  stub          Boolean   @default(false)
+  failureReason String?
+  modifiedAt    DateTime? // modifiedDate из mono: уведомления могут прийти не по порядку
+  checkUntil    DateTime? // до какого времени спрашивать mono о счёте (ждём оплату или возврат); null — счёт закрыт
+  checkedAt     DateTime?
+  createdBy     String // «сайт» или имя сотрудника
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([checkUntil])
 }
 
 model Recommendation {

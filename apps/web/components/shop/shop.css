@@ -520,6 +520,10 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-small { font-size: .82rem; color: var(--c-muted); }
 .hm-thanks { max-width: 720px; display: grid; gap: 16px; }
 .hm-thanks-no { font-family: var(--font-head); font-size: 2rem; font-weight: 700; background: var(--c-primary); color: var(--c-on-primary); display: inline-block; padding: 4px 14px; border-radius: var(--radius-sm); }
+.hm-pay { display: grid; gap: 10px; }
+.hm-pay p { margin: 0; }
+.hm-pay-actions { display: grid; gap: 8px; }
+@media (min-width: 560px) { .hm-pay-actions { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); } }
 @media (min-width: 700px) {
   .hm-fields2 { grid-template-columns: 1fr 1fr; }
   .hm-cart-page { padding: 22px 26px; }

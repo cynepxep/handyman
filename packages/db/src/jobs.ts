@@ -1,5 +1,5 @@
 // Фоновые задачи (шаг 4.8): раз в минуту `runJobs()` смотрит, что пора сделать — ежедневная сводка, отчёт по понедельникам,
-// напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений. Запускается вместе с сайтом
+// напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений, опрос оплат monobank (шаг 3.2). Запускается вместе с сайтом
 // (apps/web/instrumentation.ts). «Один раз» гарантирует база: отметка `job:<ключ>` в Setting — даже при нескольких копиях сайта.
 
 import { prisma, Prisma } from "./client";
@@ -10,6 +10,7 @@ import { notifyManagers, retryOutbox } from "./notify";
 import { salesReport, productsReport } from "./reports";
 import { lowStockList } from "./stock";
 import { runWatches } from "./storefront-plus";
+import { pollInvoices } from "./payments";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -86,11 +87,11 @@ export async function weeklyReportText(s: NotifySettings, now = new Date()): Pro
 
 // ---------- запуск ----------
 
-export type JobsReport = { daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number };
+export type JobsReport = { daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number; payments: number };
 
 /** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0 };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0 };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
@@ -152,6 +153,11 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
   await step("watches", async () => {
     // шаг 5.6: «Повідомити про зниження ціни / надходження» — покупателю в Telegram
     rep.watches = await runWatches(now);
+  });
+
+  await step("payments", async () => {
+    // шаг 3.2: спросить monobank о счетах, по которым ждём оплату или возврат (пока у сайта нет https-адреса — это единственный путь)
+    rep.payments = await pollInvoices(now);
   });
 
   await step("retry", async () => {
