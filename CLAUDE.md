@@ -18,7 +18,9 @@
    правила магазина для интерфейса, открытые вопросы, порядок работы и Figma/Git).
 3. Для каждого нового этапа: сначала план (режим планирования), затем — с
    подтверждения владельца — код. Так и в самом ТЗ написано.
-4. Перед работой: `pnpm infra:up` (Postgres/Redis/Meilisearch), затем `pnpm test` и `pnpm typecheck` должны быть зелёными.
+4. Перед работой: `pnpm infra:up` (Postgres/Redis/Meilisearch). **Полный `pnpm test` перед началом шага НЕ запускать** (решение владельца 2026-09-28: долго) —
+   последний коммит в `main` уже проверен. Во время работы — только тесты затронутых файлов (`npx tsx --test test/<файл>.test.ts`);
+   полный `pnpm test` + `pnpm typecheck` — **один раз**, перед коммитом шага.
 
 ## Статус Этапа 2 (обновлено 2026-09-25)
 
@@ -89,6 +91,13 @@
 вход `@handyman/core/integrations`; `db/src/integrations.ts`). **Ключи внешних сервисов читать только через `await secret("telegram.botToken")`**
 (база → .env → пусто = заглушка), не через `process.env`; новый ключ — поле в `INTEGRATIONS` (+ переменная в `.env.example`). Ключ шифрования — `SECRETS_KEY`
 или `.data/secrets.key`. В тестах сеть — `setIntegrationsFetch`.
+**3.2** оплата monobank (`core/src/shop/payments.ts`, `db/src/payments.ts`, таблица `PayInvoice`): кнопка «Сплатити» на странице заказа (`components/shop/pay-block.tsx`,
+`app/[lang]/pay-actions.ts`), уведомление `/api/pay/mono` (подпись X-Sign), опрос mono в `runJobs`, блок «Оплата картой» в заказе админки, возврат — право `payments.refund`.
+Сумму счёта — только `sitePayTarget`/`unpaidOf` на сервере; `Order.paidAmount` = сумма `PayInvoice.paid` (менять только через `applyInvoiceState`). Без токена и не в production —
+тестовые счета (`monoMode() === "stub"`). В тестах сеть — `setPaymentsFetch`.
+**3.3** чеки Checkbox (`core/src/shop/receipts.ts`, `db/src/receipts.ts`, таблица `FiscalReceipt`): чек ставится в очередь внутри транзакции `applyInvoiceState`
+(`queuePaymentReceiptTx`) и отправляется сразу, повторы и закрытие смены в 23:00 — `runJobs`; блок «Кассовые чеки» в заказе, ручной чек, ссылки на странице заказа.
+Id чека в Checkbox = наш UUID (повтор не задвоит). Без ключей и не в production — тестовые чеки (`receiptMode() === "stub"`). В тестах сеть — `setReceiptsFetch`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -96,7 +105,7 @@
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
 1. Прочитай этот файл, `docs/CHANGELOG.md`, **`docs/stage2/README.md`** и память проекта. Проверь `git status` и `git log --oneline -5` (репозиторий уже есть, см. «Git»).
-2. Убедись, что окружение поднято (`docker ps`; при необходимости `pnpm infra:up`), `pnpm test` зелёный. Порт 3100 свободен.
+2. Убедись, что окружение поднято (`docker ps`; при необходимости `pnpm infra:up`). Порт 3100 свободен. Тесты заранее не гонять (см. п. 4 выше).
 3. **Код не пиши.** Сначала дизайн: спроси владельца (простым языком), **кто рисует дизайн** (человек в Figma / Claude в коде на живых данных / гибрид — `docs/stage2/07-WORKFLOW.md`) и какие из вопросов В1–В15 (`docs/stage2/06-OPEN-QUESTIONS.md`) уже решены. Если выбран Figma — проверь, подключён ли коннектор Figma (`mcp__mcp-registry__list_connectors`); если нет — объясни, как подключить (раздел коннекторов в приложении Claude, вход в аккаунт Figma; пароль не просить).
 4. Дальше по правилам проекта: режим планирования → план → одобрение владельца → маленькие шаги → проверка вживую → коммит.
 5. Витрина использует готовые данные и поиск Этапа 1 (`/api/catalog/search|suggest`); категорию `unsorted` покупателям не показывать; русского контента у товаров пока нет.
@@ -139,7 +148,7 @@
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 272 проверки (core 171 + интеграционные db 101). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 292 проверки (core 182 + интеграционные db 110). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

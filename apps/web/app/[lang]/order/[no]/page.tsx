@@ -1,14 +1,20 @@
 // Страница «Дякуємо» после заказа: /order/HM-1001?k=<ключ>. Без правильного ключа — 404 (чужой заказ по номеру не открыть).
 // Личных данных покупателя здесь нет: номер, сумма, что будет дальше и как оплатить.
+// Шаг 3.2: предоплата и полная оплата — кнопка «Сплатити» (monobank); сюда же банк возвращает покупателя после оплаты.
+// Шаг 3.3: ссылки на готовые кассовые чеки Checkbox.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isShopLang, paths, shopHref } from "@handyman/core/site";
 import { orderForThanks } from "@handyman/db/orders";
+import { orderPayState, refreshOrderPayments } from "@handyman/db/payments";
+import { orderReceiptLinks } from "@handyman/db/receipts";
+import { MONO_PENDING, payViewOf } from "@handyman/core/shop";
 import { getShopContent } from "@/lib/shop/content";
 import { formatPrice } from "@/components/shop/format";
 import { Icon } from "@/components/shop/icons";
 import { btn } from "@/components/shop/ui";
+import { PayBlock } from "@/components/shop/pay-block";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/order/[no]">): Promise<Metadata> {
   const { lang, no } = await params;
@@ -21,10 +27,21 @@ export default async function ThanksPage({ params, searchParams }: PageProps<"/[
   const { lang, no } = await params;
   if (!isShopLang(lang)) notFound();
   const k = (await searchParams).k;
-  const o = await orderForThanks(decodeURIComponent(no), typeof k === "string" ? k : "");
+  const key = typeof k === "string" ? k : "";
+  const o = await orderForThanks(decodeURIComponent(no), key);
   if (!o) notFound();
   const c = await getShopContent(lang);
   const { t } = c;
+  // оплата картой: вернулись из банка — сразу спросим mono (не дожидаясь фоновой проверки)
+  let pay = await orderPayState(o.no, key);
+  if (pay?.last && !pay.last.stub && (MONO_PENDING as string[]).includes(pay.last.status)) {
+    await refreshOrderPayments(o.no, key).catch(() => undefined);
+    pay = await orderPayState(o.no, key);
+  }
+  const receipts = await orderReceiptLinks(o.no, key);
+  const online = pay != null && pay.mode !== "off";
+  const view = pay ? payViewOf(pay.order, pay.last) : "none";
+  const paid = pay?.order.paidAmount ?? 0;
 
   const payLine =
     o.payMode === "PREPAY" ? t("thanks.pay.prepay", { sum: formatPrice(o.dueNow) })
@@ -48,7 +65,31 @@ export default async function ThanksPage({ params, searchParams }: PageProps<"/[
             </>
           )}
         </div>
-        <p className="hm-alert">{payLine}</p>
+        {paid > 0 && <p className="hm-alert hm-alert-ok">{view === "paid" ? `${t("paidT")} ${t("pay.paid.sum", { sum: formatPrice(paid) })}` : t("pay.paid.sum", { sum: formatPrice(paid) })}</p>}
+        {receipts.length > 0 && (
+          <ul className="hm-receipts">
+            {receipts.map((r) => (
+              <li key={r.url}>
+                <a className="hm-link" href={r.url} target="_blank" rel="noopener">
+                  {t(r.kind === "return" ? "pay.receipt.return" : "pay.receipt", { sum: formatPrice(r.amount) })}
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+        {online && pay?.target && view !== "none" && view !== "paid" ? (
+          <PayBlock
+            lang={lang} no={o.no} k={key} view={view} stub={pay.mode === "stub"}
+            labels={{
+              btn: t("pay.btn", { sum: formatPrice(pay.target.amount) }),
+              lead: t(pay.target.kind === "prepay" ? "pay.lead.prepay" : pay.target.kind === "rest" ? "pay.lead.rest" : "pay.lead.full", { sum: formatPrice(pay.target.amount) }),
+              later: t("pay.later"), pending: t("pay.pending"), notYet: t("pay.notYet"), failed: t("pay.failed"), retry: t("retry"),
+              checkPay: t("checkPay"), devPay: t("devPay"), stub: t("pay.stub"), noPay: t("noPay"),
+            }}
+          />
+        ) : (
+          view !== "paid" && <p className="hm-alert">{payLine}</p>
+        )}
         {o.payMode === "CARD" && (
           <div>
             <p><b>{t("cardInfoT")}</b></p>

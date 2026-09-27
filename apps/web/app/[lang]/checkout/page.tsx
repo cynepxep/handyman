@@ -7,6 +7,7 @@ import { getClient } from "@/lib/client-auth";
 import { isShopLang, paths, shopHref } from "@handyman/core/site";
 import { loadCheckoutSettings } from "@handyman/db/orders";
 import { pickupPoints } from "@handyman/db/warehouses";
+import { monoMode } from "@handyman/db/payments";
 import { getShopContent } from "@/lib/shop/content";
 import { formatPrice } from "@/components/shop/format";
 import { stockLabels } from "@/components/shop/product-card";
@@ -23,7 +24,8 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/checkout">
 export default async function CheckoutPage({ params }: PageProps<"/[lang]/checkout">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
-  const [c, s, pickups, client] = await Promise.all([getShopContent(lang), loadCheckoutSettings(), pickupPoints(lang).catch(() => []), getClient()]);
+  const [c, s, pickups, client, mono] = await Promise.all([getShopContent(lang), loadCheckoutSettings(), pickupPoints(lang).catch(() => []), getClient(), monoMode()]);
+  const online = mono !== "off"; // шаг 3.2: оплата картой на странице заказа сразу после оформления
   // Этап 5: вошёл — имя («Прізвище Ім'я») и телефон из кабинета; гость — ссылка «войдите — скидка уровня учтётся»
   const nameParts = client?.name?.trim().split(/\s+/) ?? [];
   const initial = client ? { lastName: nameParts.length > 1 ? nameParts[0] : "", firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : nameParts[0] ?? "", phone: client.phone ? formatPhone(client.phone) : "" } : undefined;
@@ -35,7 +37,7 @@ export default async function CheckoutPage({ params }: PageProps<"/[lang]/checko
     : pickups.length > 1
       ? pickups.map((p) => p.city).filter((x, i, a) => a.indexOf(x) === i).join(", ")
       : pick(c.contacts.addressUk, c.contacts.addressRu) || t("footer.unknown");
-  const fullHint = [t("pay.full.hint"), s.fullPayDiscountPct > 0 ? t("fullS", { p: s.fullPayDiscountPct }) : ""].filter(Boolean).join(". ");
+  const fullHint = [t(online ? "pay.full.hint.online" : "pay.full.hint"), s.fullPayDiscountPct > 0 ? t("fullS", { p: s.fullPayDiscountPct }) : ""].filter(Boolean).join(". ");
   const cardHint = [t("cardS"), s.fullPayDiscountPct > 0 ? t("fullS", { p: s.fullPayDiscountPct }) : ""].filter(Boolean).join(". ");
 
   const labels: CheckoutLabels = {
@@ -49,7 +51,7 @@ export default async function CheckoutPage({ params }: PageProps<"/[lang]/checko
     courier: t("delivery.courier"), courierHint: t("delivery.courier.hint"), courierAddr: t("checkout.courierAddr"),
     pay: t("pay"),
     payTitles: { prepay: t("pre"), full: t("full"), card: t("card") },
-    payHints: { prepay: t("pay.prepay.hint", { sum: formatPrice(s.prepayAmount) }), full: fullHint, card: cardHint },
+    payHints: { prepay: t(online ? "pay.prepay.hint.online" : "pay.prepay.hint", { sum: formatPrice(s.prepayAmount) }), full: fullHint, card: cardHint },
     comment: t("comment"), noCall: t("noCall"), noCallOff: t("checkout.noCall.off"),
     summary: t("checkout.summary"), subtotal: t("sub"), discount: t("fd"), shipping: t("dl"), shippingTariff: t("tarif"), shippingFree: t("free"),
     total: t("tot"), payNow: t("payNow"), later: t("later"), payLater: t("checkout.payLater"),

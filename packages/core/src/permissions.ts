@@ -23,6 +23,7 @@ export const PERMISSIONS = [
   "stock.edit",
   "finance.view",
   "reviews.moderate",
+  "payments.refund",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -49,6 +50,7 @@ export const PERMISSION_LABELS_RU: Record<Permission, string> = {
   "stock.edit": "Склад: приход, инвентаризация, остатки",
   "finance.view": "Финансы: прибыль, закупка, маржа, расходы",
   "reviews.moderate": "Отзывы и вопросы: проверка, ответы",
+  "payments.refund": "Оплата: возврат денег покупателю (monobank)",
 };
 
 interface RoleSeed {
@@ -65,8 +67,8 @@ export const DEFAULT_ROLES: RoleSeed[] = [
     key: "admin",
     title: "Главный администратор",
     builtin: true,
-    // деньги и маржу по ТЗ видит только владелец — главному администратору финансы не даём (владелец может включить галочкой)
-    permissions: PERMISSIONS.filter((p) => p !== "staff.manage" && p !== "settings.edit" && p !== "finance.view"),
+    // деньги и маржу по ТЗ видит только владелец — главному администратору финансы и возврат денег не даём (владелец может включить галочкой)
+    permissions: PERMISSIONS.filter((p) => p !== "staff.manage" && p !== "settings.edit" && p !== "finance.view" && p !== "payments.refund"),
   },
   {
     key: "manager",

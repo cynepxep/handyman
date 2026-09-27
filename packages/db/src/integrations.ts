@@ -243,7 +243,8 @@ async function runCheck(id: IntegrationId): Promise<CheckResult> {
       return readMonoCheck(r.status, r.body);
     }
     case "checkbox": {
-      const r = await call("https://api.checkbox.ua/api/v1/cashier/signin", {
+      const base = (process.env.CHECKBOX_BASE?.trim() || "https://api.checkbox.in.ua").replace(/\/+$/, "");
+      const r = await call(`${base}/api/v1/cashier/signin`, {
         method: "POST",
         headers: { "X-License-Key": await v("licenseKey"), "X-Client-Name": "Handyman", "X-Client-Version": "1.0" },
         body: { login: await v("login"), password: await v("password") },

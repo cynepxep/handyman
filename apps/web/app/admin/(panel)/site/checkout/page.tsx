@@ -9,8 +9,8 @@ import { saveCheckoutAction } from "./actions";
 export const dynamic = "force-dynamic";
 
 const PAY = [
-  { key: "prepay", label: "Предоплата", hint: "покупатель платит сумму предоплаты, остальное — при получении" },
-  { key: "full", label: "Полная оплата на сайте", hint: "пока без онлайн-оплаты: ссылку на оплату присылает менеджер (онлайн-оплата — Этап 3)" },
+  { key: "prepay", label: "Предоплата", hint: "покупатель платит сумму предоплаты картой на странице заказа (monobank), остальное — при получении" },
+  { key: "full", label: "Полная оплата на сайте", hint: "вся сумма картой на странице заказа (monobank). Без токена mono ссылку на оплату присылает менеджер" },
   { key: "card", label: "Оплата по реквизитам", hint: "перевод на карту/счёт магазина, реквизиты — ниже" },
 ] as const;
 const DELIVERY = [
@@ -68,6 +68,17 @@ export default async function CheckoutSettingsPage({ searchParams }: { searchPar
           </label>
         ))}
         <p className="adm-muted">Хотя бы один способ доставки и один способ оплаты должен остаться включённым.</p>
+        <label className="adm-check" style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8, opacity: 0.6 }}>
+          <input type="checkbox" disabled />
+          <span>
+            <b>«Покупка частинами» monobank / «Оплата частинами» ПриватБанка</b>{" "}
+            <span className="adm-muted">— появится, когда будет договор с банком (нужны условия и ключи; вопрос Д43 в списке вопросов).</span>
+          </span>
+        </label>
+        <p className="adm-muted">
+          Онлайн-оплата картой работает, когда в <Link href="/admin/integrations">«Интеграциях»</Link> вписан токен monobank (видит владелец).
+          Оплата отмечается сама: заказ становится «Оплачен», покупателю уходит сообщение статуса (если в «Шаблонах» у «Оплачен» стоит «автоматически»).
+        </p>
 
         <h2>Реквизиты для оплаты по реквизитам</h2>
         <p className="adm-muted">

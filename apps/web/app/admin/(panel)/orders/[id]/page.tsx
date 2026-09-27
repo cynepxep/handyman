@@ -6,6 +6,8 @@ import { orderReservations } from "@handyman/db/stock";
 import { orderProfitOf } from "@handyman/db/finance";
 import { orderDeliveryCostAction } from "../../finance/actions";
 import { listTasks } from "@handyman/db/service";
+import { monoMode, orderInvoices } from "@handyman/db/payments";
+import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
@@ -14,6 +16,8 @@ import { SubmitButton } from "../../import/client-bits";
 import { retryMessageAction, setStatusAction, setTtnAction } from "../actions";
 import { statusChip } from "../status-chip";
 import { CopyButton, StatusForm } from "./status-form";
+import { PaymentsBlock } from "./payments-block";
+import { ReceiptsBlock } from "./receipts-block";
 
 export const dynamic = "force-dynamic";
 
@@ -37,9 +41,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const later = o.total.toNumber() - o.dueNow.toNumber();
   const canHistory = session.permissions.includes("orders.history");
   const canFinance = session.permissions.includes("finance.view");
-  const [tpl, clientMsgs, held, profit, tasks] = await Promise.all([
+  const [tpl, clientMsgs, held, profit, tasks, invoices, mono, receipts, rmode, receiptable] = await Promise.all([
     canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id), canFinance ? orderProfitOf(o.id) : null,
-    listTasks({ orderId: o.id }),
+    listTasks({ orderId: o.id }), orderInvoices(o.id), monoMode(), orderReceipts(o.id), receiptMode(), receiptableOf(o.id),
   ]);
 
   return (
@@ -92,6 +96,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
             {o.discountPct > 0 && <> (скидка {o.discountPct}%)</>}
             {o.dueNow.toNumber() > 0 && later > 0.005 && <> · сейчас {money(o.dueNow)}, при получении {money(later)}</>}
           </p>
+          {o.paidAmount.toNumber() > 0 && <p><span className="adm-chip ok">оплачено картой {money(o.paidAmount)}</span></p>}
           <form action={setTtnAction} className="adm-row" style={{ marginTop: 8 }}>
             <input type="hidden" name="id" value={o.id} />
             <label htmlFor="ttn">ТТН</label>
@@ -100,6 +105,11 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           </form>
         </section>
       </div>
+
+      <PaymentsBlock
+        order={o} invoices={invoices} mode={mono} canEdit={canEdit} canRefund={session.permissions.includes("payments.refund")} isOwner={session.roleKey === "owner"}
+      />
+      <ReceiptsBlock orderId={o.id} receipts={receipts} mode={rmode} receiptable={receiptable} canEdit={canEdit} isOwner={session.roleKey === "owner"} />
 
       <section className="adm-card">
         <h2 style={{ marginTop: 0 }}>Товары</h2>

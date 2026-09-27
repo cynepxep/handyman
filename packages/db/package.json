@@ -31,7 +31,9 @@
     "./client-auth": "./src/client-auth.ts",
     "./cabinet": "./src/cabinet.ts",
     "./storefront-plus": "./src/storefront-plus.ts",
-    "./integrations": "./src/integrations.ts"
+    "./integrations": "./src/integrations.ts",
+    "./payments": "./src/payments.ts",
+    "./receipts": "./src/receipts.ts"
   },
   "scripts": {
     "generate": "prisma generate",
