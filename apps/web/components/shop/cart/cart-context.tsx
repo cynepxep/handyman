@@ -45,6 +45,8 @@ export type CartUiLabels = {
   /** «Кошик: {n}» */ openCart: string;
   stock: StockLabels;
   oneClickTitle: string; oneClickLead: string; phone: string; oneClickName: string; oneClickSubmit: string; sending: string;
+  /** шаг 5.6: «Ціна від кількості: {price} / шт.», «Ще {n} шт. — і по {price} / шт.» */
+  qtyApplied: string; qtyHint: string;
 };
 
 type Ctx = {
@@ -53,8 +55,8 @@ type Ctx = {
   checkoutHref: string;
   cartHref: string;
   openCart: () => void;
-  /** Положить товар: первый раз за визит — открыть мини-корзину, дальше — «полёт» фото в круглую кнопку корзины. */
-  addToCart: (sku: string, from?: Element | null) => void;
+  /** Положить товар: первый раз за визит — открыть мини-корзину, дальше — «полёт» фото в круглую кнопку корзины. `qty` — упаковка (шаг 5.6). */
+  addToCart: (sku: string, from?: Element | null, qty?: number) => void;
   openOneClick: (sku: string, name: string) => void;
 };
 
@@ -80,8 +82,8 @@ export function ShopCartProvider({ lang, labels, checkoutHref, cartHref, childre
       drawer.current?.showModal();
       setDrawerOpen(true);
     },
-    addToCart: (sku, from) => {
-      cartStore.add(sku, 1);
+    addToCart: (sku, from, qty = 1) => {
+      cartStore.add(sku, qty);
       let shown = false;
       try {
         shown = sessionStorage.getItem(SHOWN_KEY) === "1";

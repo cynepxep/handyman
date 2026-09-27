@@ -75,6 +75,11 @@
 `@handyman/core/shop`** — его импортирует корзина в браузере; у них свои входы (`@handyman/core/telegram`, корень `@handyman/core` — только типы в клиенте).
 Старый прототип на том же боте одновременно не запускать (409).
 **5.2–5.3** вход покупателя (`db/src/client-auth.ts`, `lib/client-auth.ts`, кука `hm_client`): Telegram (код → бот → сайт), SMS (заглушка в dev, в production без провайдера скрыт), Mini App (`/api/client/miniapp`, `miniapp-bridge.tsx`); кабинет `/account`; `?ref=` → кука `hm_ref` в `proxy.ts`. Кэш контента витрины — ключ с версией реестра текстов.
+**5.6** «Витрина+» (`core/src/shop/storefront-plus.ts`, `db/src/storefront-plus.ts`, тексты `core/src/site/texts-plus.ts`): опт/упаковка — `quoteCart` отдаёт
+`price` (с учётом количества), `basePrice` и `tiers`; при пересчёте количества цену брать `unitPriceAt(basePrice, tiers, qty)`, не `price`. Совместимость —
+поля индекса `fits`/`tools`, адрес `?fit=`/`?tool=` (место, не фильтр) и `?mine=1`; после правки связей — `reindexProducts`. Отзывы (`/admin/reviews`, право
+`reviews.moderate`), фото — `/media/rv/…`; подписки `ProductWatch` проверяет `runJobs`; «Передзвоніть мені» — `Task` с `who: "сайт"`; сравнение — `/compare`,
+список в `localStorage` «hm.compare». Шаг 5.5 (избранное, «Мой инструмент», общая корзина) ещё не сделан — «мой инструмент» пока только из заказов (`myToolGroups`).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -124,8 +129,8 @@
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 12 сценариев витрины (в т. ч. Нова Пошта пальцем); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 164 проверки (core 113 + интеграционные db 51). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 14 сценариев витрины (в т. ч. Нова Пошта пальцем, «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
+| `pnpm test` | 255 проверок (core 162 + интеграционные db 93). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

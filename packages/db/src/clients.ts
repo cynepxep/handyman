@@ -189,7 +189,10 @@ export async function linkTelegramPhone(p: TgProfile & { phone: string }): Promi
     const byTg = await tx.client.findUnique({ where: { tgId: p.tgId } });
     if (byPhone && byTg && byPhone.id === byTg.id) return { id: byPhone.id, merged: false, created: false };
     if (byPhone && byTg) {
-      for (const table of ["order", "clientSession", "linkCode", "clientAudit", "task", "serviceCase"] as const) {
+      // подписки «повідомити» (шаг 5.6): одинаковые у обоих — оставляем одну
+      const mine = await tx.productWatch.findMany({ where: { clientId: byPhone.id }, select: { productId: true, kind: true } });
+      for (const w of mine) await tx.productWatch.deleteMany({ where: { clientId: byTg.id, productId: w.productId, kind: w.kind } });
+      for (const table of ["order", "clientSession", "linkCode", "clientAudit", "task", "serviceCase", "productWatch", "review"] as const) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (tx[table] as any).updateMany({ where: { clientId: byTg.id }, data: { clientId: byPhone.id } });
       }

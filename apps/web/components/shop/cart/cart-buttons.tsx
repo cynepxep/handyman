@@ -7,8 +7,8 @@ import { Icon } from "../icons";
 import { CartCount, useShopCart } from "./cart-context";
 import { useCart } from "./store";
 
-export function AddToCartButton({ sku, label, block, variant = "primary", className }: {
-  sku: string; label: string; block?: boolean; variant?: "primary" | "secondary"; className?: string;
+export function AddToCartButton({ sku, label, block, variant = "primary", className, qty }: {
+  sku: string; label: string; block?: boolean; variant?: "primary" | "secondary" | "ghost"; className?: string; qty?: number;
 }) {
   const { addToCart } = useShopCart();
   return (
@@ -17,7 +17,8 @@ export function AddToCartButton({ sku, label, block, variant = "primary", classN
       className={`${btn(variant, { block })}${className ? ` ${className}` : ""}`}
       data-action="add-to-cart"
       data-sku={sku}
-      onClick={(e) => addToCart(sku, e.currentTarget)}
+      data-qty={qty}
+      onClick={(e) => addToCart(sku, e.currentTarget, qty)}
     >
       {label}
     </button>

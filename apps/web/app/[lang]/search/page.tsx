@@ -9,6 +9,17 @@ import { logSearchSafely } from "@/lib/shop/search-log";
 import { FACET_KEYS, resolveListing, runListing } from "@/lib/shop/listing";
 import { ProductListing } from "@/components/shop/listing";
 import { Breadcrumbs } from "@/components/shop/ui";
+import { prisma } from "@handyman/db";
+
+/** Шаг 5.6: заголовок списка «Підходить: Диск 125 мм» / «Інструмент: …» (?fit= / ?tool= — ссылки «Усі» со страницы товара). */
+async function compatTitle(state: { fit?: string; tool?: string }, t: (k: string, v?: Record<string, string | number>) => string, lang: string) {
+  const key = state.fit ?? state.tool;
+  if (!key) return "";
+  const g = await prisma.compatibilityGroup.findUnique({ where: { key }, select: { label: true, labelRu: true } });
+  if (!g) return "";
+  const name = lang === "ru" && g.labelRu ? g.labelRu : g.label;
+  return t(state.fit ? "compat.fitTitle" : "compat.toolsTitle", { name });
+}
 
 const one = (v: string | string[] | undefined) => ((Array.isArray(v) ? v[0] : v) ?? "").trim().slice(0, 100);
 
@@ -32,7 +43,8 @@ export default async function SearchPage({ params, searchParams }: PageProps<"/[
   const home = { href: shopHref(lang, paths.home()), label: t("crumbs.home") };
   const state = parseListing(sp, FACET_KEYS);
   // «Усі хіти» / «Усі новинки» / все акции (ссылки с главной и баннера) — список без текста поиска
-  const flagTitle = state.hit ? t("home.hits.title") : state.isNew ? t("home.new.title") : state.sale ? t("home.sale.title") : hasFilters(state) ? t("search.title") : "";
+  const fitTitle = await compatTitle(state, t, lang);
+  const flagTitle = fitTitle || (state.hit ? t("home.hits.title") : state.isNew ? t("home.new.title") : state.sale ? t("home.sale.title") : hasFilters(state) ? t("search.title") : "");
 
   if (!q && !flagTitle) {
     const hints = await getSearchHints(c);

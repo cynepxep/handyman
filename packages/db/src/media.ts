@@ -40,8 +40,8 @@ export function localUrlFor(sourceUrl: string): string {
   return `${PUBLIC_PREFIX}${h.slice(0, 2)}/${h}.webp`;
 }
 
-/** /media/ab/<sha1>.webp — своя копия; /media/s1/ab/<sha1>.webp — она же в фирменном стиле (версия 1). */
-const SAFE = /^\/media\/(?:(s\d{1,3})\/)?([0-9a-f]{2})\/([0-9a-f]{40})\.webp$/;
+/** /media/ab/<sha1>.webp — своя копия; /media/s1/ab/<sha1>.webp — она же в фирменном стиле (версия 1); /media/rv/ab/<sha1>.webp — фото из отзыва (шаг 5.6). */
+const SAFE = /^\/media\/(?:(s\d{1,3}|rv)\/)?([0-9a-f]{2})\/([0-9a-f]{40})\.webp$/;
 /** Путь к файлу на диске по адресу /media/…; чужой или кривой адрес — null (защита от «../»). */
 export function mediaFilePath(localUrl: string): string | null {
   const m = SAFE.exec(localUrl);

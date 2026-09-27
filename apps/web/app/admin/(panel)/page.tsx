@@ -3,6 +3,7 @@ import { prisma } from "@handyman/db";
 import { UNSORTED_ID } from "@handyman/core/catalog";
 import { isSearchStale, searchStats } from "@handyman/db/catalog-search";
 import { dashboard } from "@handyman/db/reports";
+import { pendingReviewsCount } from "@handyman/db/storefront-plus";
 import { ORDER_STATUS_RU, periodRange } from "@handyman/core/shop";
 import { requireStaff } from "@/lib/auth";
 import { money } from "@/lib/catalog";
@@ -22,6 +23,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
   const session = await requireStaff();
   const sp = await searchParams;
   const can = (p: string) => (session.permissions as string[]).includes(p);
+  // шаг 5.6: отзывы и вопросы, ждущие проверки
+  const pendingReviews = can("reviews.moderate") ? await pendingReviewsCount() : 0;
   const fin = can("finance.view");
   const p = periodRange({ period: sp.period === "today" || sp.period === "30d" ? sp.period : sp.period === "7d" ? "7d" : "today" });
 
@@ -92,6 +95,7 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
                 </ul>
               ) : <p className="adm-muted" style={{ margin: 0 }}>Ничего не заканчивается (или минимальные остатки не заданы в «Склад»).</p>}
               {dash.overdueTasks > 0 && <p style={{ marginBottom: 0 }}><Link className="adm-link" href="/admin/tasks?tab=all"><span className="adm-chip bad">просроченных задач: {dash.overdueTasks}</span></Link></p>}
+              {pendingReviews > 0 && <p style={{ marginBottom: 0 }}><Link className="adm-link" href="/admin/reviews"><span className="adm-chip warn">отзывов и вопросов ждут проверки: {pendingReviews}</span></Link></p>}
             </section>
           </div>
         </>

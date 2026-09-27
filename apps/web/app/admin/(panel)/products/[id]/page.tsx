@@ -6,7 +6,11 @@ import { loadCategories, money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { Gallery } from "./gallery";
 import { stockByWarehouse } from "@handyman/db/warehouses";
-import { acceptPriceAction, saveProductAction, setFlagsAction, setOwnStockAction, unlockFieldAction } from "../actions";
+import {
+  acceptPriceAction, addCompatAction, addQtyPriceAction, deleteQtyPriceAction, removeCompatAction, saveProductAction, setFlagsAction, setOwnStockAction, unlockFieldAction,
+} from "../actions";
+import { compatOfProduct, listCompatGroups, qtyRulesOf } from "@handyman/db/storefront-plus";
+import { TIER_RU, type TierKey } from "@handyman/core/shop";
 
 export const dynamic = "force-dynamic";
 
@@ -48,7 +52,9 @@ export default async function ProductPage({
     },
   });
   if (!p) notFound();
-  const [cats, brands, stock] = await Promise.all([loadCategories(), prisma.brand.findMany({ orderBy: { name: "asc" } }), stockByWarehouse(p.id)]);
+  const [cats, brands, stock, qty, compat, groups] = await Promise.all([
+    loadCategories(), prisma.brand.findMany({ orderBy: { name: "asc" } }), stockByWarehouse(p.id), qtyRulesOf(p.id), compatOfProduct(p.id), listCompatGroups(),
+  ]);
   const canEdit = can("products.edit");
   const canPrices = can("prices.edit");
   const price = p.price.toNumber();
@@ -121,6 +127,124 @@ export default async function ProductPage({
         </div>
         <p className="adm-muted" style={{ marginTop: 6 }}>Хиты и новинки показываются на главной (если блоки включены в «Сайт → Главная») и со значком на карточке товара. Импорт отметки не трогает.</p>
       </form>
+
+      <div className="adm-card">
+        <b>Опт и упаковка</b>
+        <p className="adm-muted" style={{ margin: "4px 0 8px" }}>
+          Цена за штуку сама снижается в корзине, когда покупатель берёт нужное количество (считает сервер). Упаковка работает так же: взяли 10 шт. —
+          цена за штуку как в упаковке, а на странице товара появляется кнопка «У кошик 10 шт.». Цена «только для уровня» (например, «Опт») видна
+          только таким покупателям после входа в кабинет и в заказе по звонку. Импорт эти цены не трогает.
+        </p>
+        {qty.breaks.length + qty.packs.length > 0 ? (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead><tr><th>Что</th><th className="num">От, шт.</th><th className="num">За штуку</th><th>Для кого</th><th aria-label="Действие" /></tr></thead>
+              <tbody>
+                {qty.breaks.map((b) => (
+                  <tr key={b.id}>
+                    <td>Опт</td><td className="num">{b.minQty}</td><td className="num">{money(b.pricePerUnit)}</td>
+                    <td>{b.clientTier ? `только уровень «${TIER_RU[b.clientTier as TierKey]}»` : "все покупатели"}</td>
+                    <td className="num">{canPrices && (
+                      <form action={deleteQtyPriceAction}>
+                        <input type="hidden" name="id" value={p.id} /><input type="hidden" name="kind" value="break" /><input type="hidden" name="ruleId" value={b.id} />
+                        <SubmitButton pendingText="…">Удалить</SubmitButton>
+                      </form>
+                    )}</td>
+                  </tr>
+                ))}
+                {qty.packs.map((k) => (
+                  <tr key={k.id}>
+                    <td>Упаковка «{k.unitLabel}» за {money(k.packPrice)}</td><td className="num">{k.unitsPerPack}</td><td className="num">{money(k.packPrice / k.unitsPerPack)}</td>
+                    <td>все покупатели</td>
+                    <td className="num">{canPrices && (
+                      <form action={deleteQtyPriceAction}>
+                        <input type="hidden" name="id" value={p.id} /><input type="hidden" name="kind" value="pack" /><input type="hidden" name="ruleId" value={k.id} />
+                        <SubmitButton pendingText="…">Удалить</SubmitButton>
+                      </form>
+                    )}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="adm-muted">Пока нет: цена одна при любом количестве.</p>
+        )}
+        {canPrices ? (
+          <div className="adm-row" style={{ alignItems: "flex-end", marginTop: 8 }}>
+            <form action={addQtyPriceAction} className="adm-row" style={{ alignItems: "flex-end" }}>
+              <input type="hidden" name="id" value={p.id} /><input type="hidden" name="kind" value="break" />
+              <div className="adm-field" style={{ margin: 0 }}><label htmlFor="qb-min">Опт: от, шт.</label><input id="qb-min" name="minQty" className="adm-input" inputMode="numeric" style={{ width: 90 }} required /></div>
+              <div className="adm-field" style={{ margin: 0 }}><label htmlFor="qb-price">Цена за шт., ₴</label><input id="qb-price" name="price" className="adm-input" inputMode="decimal" style={{ width: 110 }} required /></div>
+              <div className="adm-field" style={{ margin: 0 }}>
+                <label htmlFor="qb-tier">Для кого</label>
+                <select id="qb-tier" name="tier" className="adm-select" defaultValue="">
+                  <option value="">все покупатели</option>
+                  {(["WHOLESALE", "MASTER", "PRO", "LEGEND"] as const).map((k) => <option key={k} value={k}>только уровень «{TIER_RU[k]}»</option>)}
+                </select>
+              </div>
+              <SubmitButton pendingText="…">Добавить опт</SubmitButton>
+            </form>
+            <form action={addQtyPriceAction} className="adm-row" style={{ alignItems: "flex-end" }}>
+              <input type="hidden" name="id" value={p.id} /><input type="hidden" name="kind" value="pack" />
+              <div className="adm-field" style={{ margin: 0 }}><label htmlFor="qp-label">Упаковка</label><input id="qp-label" name="label" className="adm-input" defaultValue="уп." style={{ width: 80 }} /></div>
+              <div className="adm-field" style={{ margin: 0 }}><label htmlFor="qp-units">Штук</label><input id="qp-units" name="units" className="adm-input" inputMode="numeric" style={{ width: 80 }} required /></div>
+              <div className="adm-field" style={{ margin: 0 }}><label htmlFor="qp-price">Цена упаковки, ₴</label><input id="qp-price" name="price" className="adm-input" inputMode="decimal" style={{ width: 120 }} required /></div>
+              <SubmitButton pendingText="…">Добавить упаковку</SubmitButton>
+            </form>
+          </div>
+        ) : (
+          <p className="adm-muted">Менять цены может роль с правом «Цены».</p>
+        )}
+      </div>
+
+      <div className="adm-card">
+        <b>Совместимость</b>
+        <p className="adm-muted" style={{ margin: "4px 0 8px" }}>
+          Группа — общий признак: «Диск 125 мм», «Акумулятор 18 В». Инструмент группы (УШМ 125) и расходники группы (круги 125) подходят друг к другу:
+          на странице расходника — «Підходить до», на странице инструмента — «Витратні матеріали», в списках — фильтр «До мого інструменту»
+          для покупателей, которые заказывали этот инструмент. Все группы — <Link className="adm-link" href="/admin/compat">«Совместимость»</Link>.
+        </p>
+        {compat.length > 0 ? (
+          <ul style={{ margin: "0 0 8px", paddingLeft: 18 }}>
+            {compat.map((g) => (
+              <li key={g.groupId + g.role} style={{ marginBottom: 4 }}>
+                <Link className="adm-link" href={`/admin/compat/${g.groupId}`}>{g.label}</Link> — {g.role === "HOST" ? "инструмент" : "расходник / аксессуар"}
+                {canEdit && (
+                  <form action={removeCompatAction} style={{ display: "inline", marginLeft: 8 }}>
+                    <input type="hidden" name="id" value={p.id} /><input type="hidden" name="groupId" value={g.groupId} /><input type="hidden" name="role" value={g.role} />
+                    <SubmitButton pendingText="…">Убрать</SubmitButton>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="adm-muted">Товар не входит ни в одну группу.</p>
+        )}
+        {canEdit && (
+          <form action={addCompatAction} className="adm-row" style={{ alignItems: "flex-end" }}>
+            <input type="hidden" name="id" value={p.id} />
+            <div className="adm-field" style={{ margin: 0 }}>
+              <label htmlFor="cg-role">Этот товар —</label>
+              <select id="cg-role" name="role" className="adm-select" defaultValue="ACCESSORY">
+                <option value="ACCESSORY">расходник / аксессуар</option>
+                <option value="HOST">инструмент</option>
+              </select>
+            </div>
+            <div className="adm-field" style={{ margin: 0 }}>
+              <label htmlFor="cg-group">группы</label>
+              <select id="cg-group" name="groupId" className="adm-select" defaultValue={groups[0]?.id ?? ""}>
+                {groups.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
+                <option value="">+ новая группа…</option>
+              </select>
+            </div>
+            <div className="adm-field" style={{ margin: 0 }}><label htmlFor="cg-new">Новая группа (укр.)</label><input id="cg-new" name="newLabel" className="adm-input" placeholder="Диск 125 мм" style={{ width: 160 }} /></div>
+            <div className="adm-field" style={{ margin: 0 }}><label htmlFor="cg-new-ru">(рус.)</label><input id="cg-new-ru" name="newLabelRu" className="adm-input" placeholder="Диск 125 мм" style={{ width: 160 }} /></div>
+            <SubmitButton pendingText="…">Добавить</SubmitButton>
+          </form>
+        )}
+      </div>
 
       <form action={saveProductAction} className="adm-card">
         <input type="hidden" name="id" value={p.id} />

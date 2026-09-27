@@ -144,3 +144,26 @@ test("кабинет: без входа — экран входа (Telegram и S
   await noHorizontalScroll(page);
   expect(errors).toEqual([]);
 });
+
+test("витрина+: блок отзывов, «Порівняти» → страница сравнения, «Передзвоніть мені» проверяет номер (заявка не создаётся)", async ({ page }) => {
+  const errors = collectErrors(page);
+  await page.goto("/search?q=Vitals");
+  await page.locator(".hm-card-title a").first().click();
+  await expect(page).toHaveURL(/\/product\//);
+  await expect(page.locator("#reviews h2")).toBeVisible();
+  await page.locator("[data-action=compare]").click();
+  await expect(page.locator("[data-action=compare]")).toHaveAttribute("aria-pressed", "true");
+  // окно «Передзвоніть мені»: неверный номер — понятная ошибка, окно остаётся
+  await page.locator("[data-action=callback]").first().click();
+  await page.locator("dialog[open] #cb-phone").fill("12");
+  await page.locator("dialog[open] button[type=submit]").click();
+  await expect(page.locator("dialog[open] .hm-field-error")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await page.locator(".hm-compare-btn a").click();
+  await expect(page).toHaveURL(/\/compare$/);
+  await expect(page.locator(".hm-compare-table")).toBeVisible();
+  await noHorizontalScroll(page);
+  await page.getByRole("button", { name: /Очистити/ }).click();
+  await expect(page.locator(".hm-compare-table")).toHaveCount(0);
+  expect(errors).toEqual([]);
+});

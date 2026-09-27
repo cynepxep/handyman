@@ -90,6 +90,9 @@ export type SearchDoc = {
   isNew: boolean;
   /** место категории в меню витрины (группа → подгруппа → порядок категорий): порядок «как в меню» в разделах */
   menuRank: number;
+  /** шаг 5.6, совместимость: группы, к инструменту которых подходит этот расходник / группы, в которых товар — инструмент */
+  fits: string[];
+  tools: string[];
   image: string | null;
   descText: string;
   createdTs: number;
@@ -132,6 +135,7 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         images: { orderBy: { sort: "asc" }, take: 1, select: { url: true, localUrl: true, styledUrl: true } },
         attributes: { orderBy: { sort: "asc" }, select: { key: true, value: true } },
         stockItems: { select: { onHand: true, reserved: true } },
+        compatibility: { select: { role: true, group: { select: { key: true } } } },
       },
     });
     if (!rows.length) break;
@@ -159,6 +163,8 @@ async function buildDocs(where: { id?: { in: string[] } } = {}): Promise<{ docs:
         hit: r.isHit,
         isNew: r.isNew,
         menuRank: ranks.get(r.categoryId) ?? NO_RANK,
+        fits: r.compatibility.filter((c) => c.role === "ACCESSORY").map((c) => c.group.key),
+        tools: r.compatibility.filter((c) => c.role === "HOST").map((c) => c.group.key),
         image: r.images[0] ? pickImage(r.images[0], styleOn) : null, // фирменный стиль / своя копия / фото поставщика
         descText: htmlToText(r.descUk).slice(0, 400),
         createdTs: r.createdAt.getTime(),
@@ -181,7 +187,7 @@ function stockFields(ownQty: number, supplierAvailable: boolean) {
 
 const SETTINGS = () => ({
   searchableAttributes: ["nameUk", "nameRu", "sku", "articleCode", "brand", "categoryNames", "descText"],
-  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "local", "hasDiscount", "hit", "isNew", ...FACET_FIELDS],
+  filterableAttributes: ["categoryIds", "categoryId", "brand", "price", "available", "local", "hasDiscount", "hit", "isNew", "fits", "tools", ...FACET_FIELDS],
   sortableAttributes: ["price", "createdTs", "nameSort", "inStock", "menuRank"],
   rankingRules: ["words", "typo", "proximity", "attribute", "sort", "exactness", "inStock:desc"],
   synonyms: synonymMap(),
@@ -190,6 +196,8 @@ const SETTINGS = () => ({
   faceting: { maxValuesPerFacet: 300, sortFacetValuesBy: { "*": "count" } },
   pagination: { maxTotalHits: 5000 },
 });
+
+let settingsFixed = false;
 
 export async function ensureIndex() {
   const uid = indexUid();
@@ -283,6 +291,10 @@ export type SearchParams = {
   isNew?: boolean;
   /** код фильтра → выбранные значения (см. FACET_DEFS) */
   facets?: Record<string, string[]>;
+  /** шаг 5.6: расходники, подходящие к инструменту этих групп совместимости (пустой список — ничего) */
+  fits?: string[];
+  /** шаг 5.6: инструменты этих групп совместимости */
+  tools?: string[];
   sort?: SearchSort;
   page?: number;
   perPage?: number;
@@ -375,6 +387,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     groups.cats = inList("categoryId", params.categories.slice(0, 500));
   }
   if (params.part) groups.part = `categoryIds = ${esc(params.part)}`;
+  if (params.fits) groups.fits = params.fits.length ? inList("fits", params.fits.slice(0, 100)) : "fits IN [\"-\"]";
+  if (params.tools) groups.tools = params.tools.length ? inList("tools", params.tools.slice(0, 100)) : "tools IN [\"-\"]";
   if (brands.length) groups.brand = inList("brand", brands);
   if (params.min != null && Number.isFinite(params.min)) groups.min = `price >= ${params.min}`;
   if (params.max != null && Number.isFinite(params.max)) groups.max = `price <= ${params.max}`;
@@ -399,7 +413,13 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     if (groups.part) extra.push("part");
     for (const k of Object.keys(selectedFacets)) extra.push(`f:${k}`);
     for (const g of extra) queries.push({ indexUid: uid, q, filter: filterWithout(g), limit: 0, facets: [extraField(g)] });
-    const { status, data } = await meili<{ results: MeiliResponse[]; message?: string }>("POST", "/multi-search", { queries });
+    let { status, data } = await meili<{ results: MeiliResponse[]; message?: string }>("POST", "/multi-search", { queries });
+    // индекс собран до шага 5.6 (нет фильтров совместимости) — обновить настройки и повторить один раз
+    if (status === 400 && /not filterable/i.test(data?.message ?? "") && !settingsFixed) {
+      settingsFixed = true;
+      await ensureIndex();
+      ({ status, data } = await meili<{ results: MeiliResponse[]; message?: string }>("POST", "/multi-search", { queries }));
+    }
     if (status >= 400) {
       if (status === 404) throw new SearchUnavailableError("Поисковый индекс ещё не создан. Соберите его в админке.");
       throw new Error(`Поиск: ${data?.message ?? status}`);
