@@ -73,6 +73,8 @@ export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
                   </div>
                   <span className="hm-price">{v ? formatPrice(v.price * l.qty) : "…"}</span>
                 </div>
+                {v && v.qty === l.qty && v.price < v.basePrice && <p className="hm-cart-note is-ok">{labels.qtyApplied.replace("{price}", formatPrice(v.price))}</p>}
+                {v && v.qty === l.qty && v.next && <p className="hm-cart-note">{labels.qtyHint.replace("{n}", String(v.next.more)).replace("{price}", formatPrice(v.next.price))}</p>}
               </div>
               <button type="button" className="hm-iconbtn hm-cart-remove" onClick={() => cartStore.remove(l.sku)} aria-label={labels.remove.replace("{name}", v?.name ?? l.sku)}>✕</button>
             </li>

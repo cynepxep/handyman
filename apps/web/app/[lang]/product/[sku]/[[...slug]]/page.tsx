@@ -24,6 +24,11 @@ import { contactLinks } from "@/components/shop/site-chrome";
 import { PromoBanner } from "@/components/shop/promo-banner";
 import { bannersFor } from "@/lib/shop/banners";
 import { Breadcrumbs, Price, StockBadge, btn } from "@/components/shop/ui";
+import { compatBlocks, productQtyPrices, productReviews, watchState } from "@/lib/shop/product-plus";
+import { CompatSections, QtyPrices, ReviewsSection } from "@/components/shop/product-plus";
+import { CallbackButton, CompareButton, WatchButton } from "@/components/shop/plus";
+import type { TierKey } from "@handyman/core/shop";
+import { callbackLabels } from "@/lib/shop/cart-labels";
 
 const SPECS_VISIBLE = 8;
 
@@ -60,9 +65,15 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
   const c = await getShopContent(lang);
   const { t, pick } = c;
   const isTool = isToolCategory(p.categoryId);
-  const [place, similar, client, stats] = await Promise.all([productPlace(c.menu, p.categoryId), similarProducts(p, lang), isTool ? getClient() : null, getCategoryStats()]);
+  const client = await getClient();
+  // шаг 5.6: цены от количества, совместимость, отзывы, подписки «повідомити»
+  const [place, similar, tiers, compat, reviews, watch, stats] = await Promise.all([
+    productPlace(c.menu, p.categoryId), similarProducts(p, lang), productQtyPrices(p.id, p.price, (client?.tier as TierKey | undefined) ?? null),
+    compatBlocks(p.id, lang), productReviews(p.id), watchState(client ? { id: client.id, tgId: client.tgId } : null, p.id), getCategoryStats(),
+  ]);
+  const watchKind = p.stock === "order" ? "STOCK" : "PRICE";
   // «Мій інструмент» (шаг 5.5): отметка и ссылки на подходящие расходники (диски его диаметра, батареи его серии)
-  const mine = client ? await isMyTool(client.id, p.id) : false;
+  const mine = client && isTool ? await isMyTool(client.id, p.id) : false;
   const fits = isTool ? fitLinks(c, { categoryId: p.categoryId, name: p.nameUk, facets: extractFacets(p.attributes, stats.chainOf(p.categoryId)) }) : [];
   // баннер места «Страница товара» (ограниченный разделами — только в своих)
   const [promo] = await bannersFor("product", place?.group.id ?? null);
@@ -92,6 +103,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
       ...(p.brand ? { brand: { "@type": "Brand", name: p.brand } } : {}),
       ...(p.images.length ? { image: p.images.slice(0, 5) } : {}),
       ...(desc ? { description: htmlToText(desc).slice(0, 500) } : {}),
+      ...(reviews.summary.count > 0 ? { aggregateRating: { "@type": "AggregateRating", ratingValue: reviews.summary.avg, reviewCount: reviews.summary.count, bestRating: 5, worstRating: 1 } } : {}),
       offers: {
         "@type": "Offer",
         price: p.price.toFixed(2),
@@ -129,6 +141,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
           <p className="hm-muted hm-product-meta">
             {t("sku")}: <b>{p.sku}</b>
             {p.brand && <> · {t("filtBrand")}: <b>{p.brand}</b></>}
+            {reviews.summary.count > 0 && <> · <a className="hm-link" href="#reviews">★ {String(reviews.summary.avg).replace(".", ",")} ({reviews.summary.count})</a></>}
           </p>
 
           <div className="hm-buy">
@@ -140,6 +153,19 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
               <AddToCartButton sku={p.sku} label={t("card.buy")} className="hm-buy-main" />
               <OneClickButton sku={p.sku} name={name} label={t("card.buy1click")} />
               <FavoriteButton sku={p.sku} addLabel={t("fav.add")} removeLabel={t("fav.remove")} variant="page" />
+            </div>
+            <QtyPrices c={c} sku={p.sku} tiers={tiers} />
+            <div className="hm-buy-extra">
+              <WatchButton
+                key={watchKind}
+                productId={p.id}
+                kind={watchKind}
+                initialOn={watch.kinds.includes(watchKind)}
+                direct={watch.direct}
+                bot={watch.bot}
+                labels={{ btn: t(watchKind === "STOCK" ? "watch.stock" : "watch.price"), on: t(watchKind === "STOCK" ? "watch.on.stock" : "watch.on.price"), off: t("watch.off"), viaBot: t("watch.viaBot") }}
+              />
+              <CompareButton sku={p.sku} href={shopHref(lang, paths.compare())} labels={{ add: t("compare.add"), added: t("compare.added"), go: t("compare.go", { n: "{n}" }), full: t("compare.full", { n: 4 }) }} />
             </div>
           </div>
           {isTool && (
@@ -182,9 +208,11 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
                     <Icon name={h.icon} size={18} />{h.label}
                   </a>
                 ))}
+                <CallbackButton lang={lang} productId={p.id} labels={callbackLabels(t)} />
               </div>
             </div>
           )}
+          {help.length === 0 && <div className="hm-chips"><CallbackButton lang={lang} productId={p.id} labels={callbackLabels(t)} /></div>}
         </div>
       </div>
 
@@ -211,6 +239,10 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
           <div className="hm-prose" dangerouslySetInnerHTML={{ __html: desc }} />
         </section>
       )}
+
+      <CompatSections c={c} blocks={compat} />
+
+      <ReviewsSection c={c} productId={p.id} data={reviews} />
 
       {similar.length > 0 && (
         <section className="hm-product-block" aria-labelledby="h-similar">

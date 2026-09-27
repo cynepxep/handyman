@@ -22,6 +22,8 @@ export type CardData = {
   hit?: boolean;
   isNew?: boolean;
   image: string | null;
+  /** шаг 5.6: дешевле от N штук (опт/упаковка) */
+  optFrom?: number | null;
   specs: Array<{ key: string; text: string }>;
 };
 
@@ -31,13 +33,15 @@ export type CardLabels = {
   oldPrice: string;
   /** сердечко «Обране» (шаг 5.5) */
   favAdd: string; favRemove: string;
+  /** «Дешевше від {n} шт.» */
+  opt: string;
 };
 
 export const stockLabels = (t: T): StockLabels => ({ local: t("stock.local"), supplier: t("stock.supplier"), order: t("stock.order") });
 
 export const cardLabels = (t: T): CardLabels => ({
   noPhoto: t("card.noPhoto"), specs: t("card.specs.label"), buy: t("card.buy"), buy1click: t("card.buy1click"), oldPrice: t("card.oldPrice"),
-  stock: stockLabels(t), hit: t("badge.hit"), isNew: t("badge.new"), favAdd: t("fav.add"), favRemove: t("fav.remove"),
+  stock: stockLabels(t), hit: t("badge.hit"), isNew: t("badge.new"), favAdd: t("fav.add"), favRemove: t("fav.remove"), opt: t("card.opt", { n: "{n}" }),
 });
 
 /** Размеры фото для браузера: сколько пикселей реально нужно на каждой ширине экрана (грузится ровно столько). */
@@ -71,6 +75,7 @@ export function ProductCard({ card, labels, rail, priority }: { card: CardData; 
         )}
         <StockBadge level={card.stock} labels={labels.stock} />
         <Price price={card.price} oldPrice={card.oldPrice} oldLabel={(p) => labels.oldPrice.replace("{price}", p)} />
+        {card.optFrom ? <p className="hm-card-opt">{labels.opt.replace("{n}", String(card.optFrom))}</p> : null}
         <div className="hm-card-actions">
           <AddToCartButton sku={card.sku} label={labels.buy} block />
           <OneClickButton sku={card.sku} name={card.name} label={labels.buy1click} block />

@@ -9,6 +9,7 @@ import {
 import { notifyManagers, retryOutbox } from "./notify";
 import { salesReport, productsReport } from "./reports";
 import { lowStockList } from "./stock";
+import { runWatches } from "./storefront-plus";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -85,11 +86,11 @@ export async function weeklyReportText(s: NotifySettings, now = new Date()): Pro
 
 // ---------- запуск ----------
 
-export type JobsReport = { daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number };
+export type JobsReport = { daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number };
 
 /** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0 };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0 };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
@@ -146,6 +147,11 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
       await notifyManagers(`❗ Загрузка каталога не прошла: ${(r.error ?? "неизвестная ошибка").slice(0, 200)}. Откройте «Импорт» в админке.`);
       rep.alerts++;
     }
+  });
+
+  await step("watches", async () => {
+    // шаг 5.6: «Повідомити про зниження ціни / надходження» — покупателю в Telegram
+    rep.watches = await runWatches(now);
   });
 
   await step("retry", async () => {

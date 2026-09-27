@@ -196,6 +196,8 @@ model Product {
   recommends     Recommendation[] @relation("SourceProduct")
   favoritedBy    ClientFavorite[]
   ownedBy        ClientTool[]
+  reviews        Review[]
+  watches        ProductWatch[]
 
   @@index([categoryId])
   @@index([brandId])
@@ -333,12 +335,15 @@ model PriceBreak {
   @@index([productId])
 }
 
-// ---------- под будущее: совместимость товаров (не используется на Этапе 0) ----------
+// ---------- совместимость товаров (шаг 5.6): «Підходить до» / «Витратні матеріали» ----------
+// Группа — общий признак («Диск 125 мм», «Акумулятор 18 В M-Type»): инструменты (HOST) и расходники (ACCESSORY) в одной группе подходят друг к другу.
 
 model CompatibilityGroup {
-  id    String @id @default(cuid())
-  key   String @unique // напр. "disc-125mm", "battery-mtype18"
-  label String
+  id      String   @id @default(cuid())
+  key     String   @unique // напр. "disc-125mm", "battery-mtype18"
+  label   String // подпись на украинском («Диск 125 мм»)
+  labelRu String? // шаг 5.6: подпись на русском (пусто — украинская)
+  createdAt DateTime @default(now())
 
   products ProductCompatibility[]
 }
@@ -352,6 +357,7 @@ model ProductCompatibility {
   role      CompatibilityRole
 
   @@unique([productId, groupId, role])
+  @@index([groupId])
 }
 
 // ---------- под будущее: свой склад (не используется на Этапе 0) ----------
@@ -528,6 +534,7 @@ model Client {
   auditEntries ClientAudit[]
   favorites    ClientFavorite[]
   tools        ClientTool[]
+  watches      ProductWatch[]
 
   @@index([referredById])
 }
@@ -977,4 +984,62 @@ model ServiceEvent {
   text    String
 
   @@index([caseId])
+}
+
+// ---------- шаг 5.6: отзывы и вопросы о товаре (с модерацией), подписки «повідомити про зниження ціни / надходження» ----------
+
+enum ReviewKind {
+  REVIEW // отзыв с оценкой 1–5 и фото
+  QUESTION // вопрос о товаре (ответ магазина)
+}
+
+enum ReviewStatus {
+  PENDING // ждёт проверки (на сайте не видно)
+  PUBLISHED
+  REJECTED
+}
+
+model Review {
+  id          String       @id @default(cuid())
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  kind        ReviewKind   @default(REVIEW)
+  status      ReviewStatus @default(PENDING)
+  rating      Int? // 1–5, только у отзыва
+  name        String
+  text        String
+  photos      Json         @default("[]") // адреса своих копий: ["/media/rv/ab/<sha1>.webp"]
+  clientId    String? // вошедший покупатель (кабинет)
+  lang        Locale       @default(UK)
+  ipHash      String? // отпечаток адреса (защита от потока), сам адрес не храним
+  answer      String? // ответ магазина (показывается под отзывом/вопросом)
+  answeredBy  String?
+  answeredAt  DateTime?
+  moderatedBy String?
+  moderatedAt DateTime?
+  createdAt   DateTime     @default(now())
+
+  @@index([productId, status])
+  @@index([status, createdAt])
+}
+
+enum WatchKind {
+  PRICE // сообщить, когда цена станет ниже
+  STOCK // сообщить, когда товар появится в наличии
+}
+
+model ProductWatch {
+  id         String    @id @default(cuid())
+  clientId   String
+  client     Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  kind       WatchKind
+  basePrice  Decimal   @db.Decimal(10, 2) // цена в момент подписки
+  createdAt  DateTime  @default(now())
+  notifiedAt DateTime? // когда отправили сообщение (подписка выполнена); пусто — ждём
+
+  @@unique([clientId, productId, kind])
+  @@index([notifiedAt])
+  @@index([productId])
 }

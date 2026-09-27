@@ -8,6 +8,9 @@ import { setStockLevels, stockByWarehouse } from "@handyman/db/warehouses";
 import { requirePermission } from "@/lib/auth";
 import { parseMoney } from "@/lib/catalog";
 import { catalogChanged } from "@/lib/shop/cache";
+import {
+  PlusUserError, addPackaging, addPriceBreak, addToCompatGroup, createCompatGroup, deleteQtyRule, removeFromCompatGroup,
+} from "@handyman/db/storefront-plus";
 
 const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
 
@@ -145,5 +148,62 @@ export async function markProductsAction(mark: string, formData: FormData): Prom
     if (changed.length) await reindexSafely(() => reindexProducts(changed));
     const name = what === "hit" ? "«Хит»" : "«Новинка»";
     return value === "on" ? `Отметка ${name} поставлена: ${changed.length} шт.` : `Отметка ${name} снята: ${changed.length} шт.`;
+  });
+}
+
+// ---------- шаг 5.6: опт и упаковка, совместимость ----------
+
+/** Понятная ошибка из модуля «Витрина+» — как ошибка товара (показывается на странице). */
+async function plus<T>(fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (e instanceof PlusUserError) throw new ProductUserError(e.message);
+    throw e;
+  }
+}
+
+export async function addQtyPriceAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("prices.edit");
+  const id = String(formData.get("id"));
+  return run(`/admin/products/${id}`, async () => {
+    if (formData.get("kind") === "pack") {
+      await plus(() => addPackaging(id, { label: formData.get("label"), units: formData.get("units"), price: formData.get("price") }, session.username));
+      return "Упаковка добавлена: цена за штуку от этого количества снижается сама.";
+    }
+    await plus(() => addPriceBreak(id, { minQty: formData.get("minQty"), price: formData.get("price"), tier: formData.get("tier") }, session.username));
+    return "Оптовая цена добавлена.";
+  });
+}
+
+export async function deleteQtyPriceAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("prices.edit");
+  const id = String(formData.get("id"));
+  return run(`/admin/products/${id}`, async () => {
+    await deleteQtyRule(formData.get("kind") === "pack" ? "pack" : "break", String(formData.get("ruleId")), session.username);
+    return "Удалено.";
+  });
+}
+
+export async function addCompatAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("products.edit");
+  const id = String(formData.get("id"));
+  return run(`/admin/products/${id}`, async () => {
+    const role = formData.get("role") === "HOST" ? "HOST" : "ACCESSORY";
+    const p = await prisma.product.findUnique({ where: { id }, select: { sku: true } });
+    if (!p) throw new ProductUserError("Товар не найден.");
+    let groupId = String(formData.get("groupId") ?? "");
+    if (!groupId) groupId = await plus(() => createCompatGroup(formData.get("newLabel"), formData.get("newLabelRu"), session.username));
+    await addToCompatGroup(groupId, role, p.sku, session.username);
+    return role === "HOST" ? "Товар отмечен как инструмент группы." : "Товар отмечен как расходник группы.";
+  });
+}
+
+export async function removeCompatAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("products.edit");
+  const id = String(formData.get("id"));
+  return run(`/admin/products/${id}`, async () => {
+    await removeFromCompatGroup(String(formData.get("groupId")), id, formData.get("role") === "HOST" ? "HOST" : "ACCESSORY", session.username);
+    return "Убрано из группы.";
   });
 }

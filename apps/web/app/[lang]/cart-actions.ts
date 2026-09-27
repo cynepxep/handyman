@@ -3,7 +3,7 @@
 // Действия корзины и оформления, которые вызывает браузер. Цены, наличие, суммы и проверку формы делает сервер;
 // из браузера приходят только артикулы, количество и введённые покупателем данные.
 import { headers } from "next/headers";
-import { computeTotals, canSkipCall, type PayChoice, type StockLevel } from "@handyman/core/shop";
+import { computeTotals, canSkipCall, nextQtyPrice, type PayChoice, type StockLevel } from "@handyman/core/shop";
 import { isShopLang, paths, shopHref, type ShopLang } from "@handyman/core/site";
 import { clientDiscountFor, loadCheckoutSettings, placeOneClick, placeOrder, quoteCart } from "@handyman/db/orders";
 import { setReferrer } from "@handyman/db/clients";
@@ -23,6 +23,8 @@ async function creditReferral(orderNo: string) {
 
 export type CartLineView = {
   sku: string; name: string; href: string; image: string | null; price: number; oldPrice: number | null; stock: StockLevel; qty: number;
+  /** шаг 5.6: обычная цена за штуку (если price меньше — применён опт/упаковка) и следующая ступенька «ещё N шт. — по X» */
+  basePrice: number; next: { more: number; price: number } | null;
 };
 export type CartQuote = { lines: CartLineView[]; missing: string[]; subtotal: number };
 
@@ -31,11 +33,16 @@ const langOf = (l: unknown): ShopLang => (isShopLang(l) ? l : "uk");
 /** Корзина с актуальными ценами и наличием (для мини-корзины и страницы корзины). */
 export async function quoteCartAction(lang: unknown, items: unknown): Promise<CartQuote> {
   const l = langOf(lang);
-  const q = await quoteCart(items);
-  const lines = q.lines.map((x) => ({
-    sku: x.sku, name: l === "ru" && x.nameRu ? x.nameRu : x.nameUk, href: shopHref(l, paths.product(x.sku, x.nameUk)),
-    image: x.image, price: x.price, oldPrice: x.oldPrice, stock: x.stock, qty: x.qty,
-  }));
+  const client = await getClient();
+  const q = await quoteCart(items, { clientId: client?.id });
+  const lines = q.lines.map((x) => {
+    const nx = nextQtyPrice(x.tiers, x.qty);
+    return {
+      sku: x.sku, name: l === "ru" && x.nameRu ? x.nameRu : x.nameUk, href: shopHref(l, paths.product(x.sku, x.nameUk)),
+      image: x.image, price: x.price, oldPrice: x.oldPrice, stock: x.stock, qty: x.qty,
+      basePrice: x.basePrice, next: nx ? { more: nx.minQty - x.qty, price: nx.unitPrice } : null,
+    };
+  });
   return { lines, missing: q.missing, subtotal: Math.round(lines.reduce((a, x) => a + x.price * x.qty, 0) * 100) / 100 };
 }
 

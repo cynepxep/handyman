@@ -21,6 +21,8 @@ import { listTools } from "@handyman/db/cabinet";
 import { fitLinks } from "@/lib/shop/cabinet";
 import Image from "next/image";
 import { optimizable } from "@/lib/image-hosts";
+import { watchesOfClient } from "@handyman/db/storefront-plus";
+import { UnwatchButton } from "@/components/shop/plus";
 
 export const dynamic = "force-dynamic";
 
@@ -45,7 +47,7 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
   const client = await getClient();
   if (!client) return <LoginPanel lang={lang} t={pickTexts(c.texts, LOGIN_KEYS)} smsOn={smsLoginAvailable()} />;
 
-  const [loyalty, orders, invited, refCode, tools] = await Promise.all([
+  const [loyalty, orders, invited, refCode, tools, watches] = await Promise.all([
     loadLoyalty(),
     prisma.order.findMany({
       where: { clientId: client.id, isTest: false }, orderBy: { createdAt: "desc" }, take: 30,
@@ -54,6 +56,7 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
     prisma.client.count({ where: { referredById: client.id } }),
     client.refCode ? client.refCode : ensureRefCode(client.id).catch(() => null),
     listTools(client.id),
+    watchesOfClient(client.id),
   ]);
   const tier = client.tier as TierKey;
   const spent = client.spent.toNumber();
@@ -160,6 +163,23 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
         <h2>{t("account.fav")}</h2>
         <AccountFavorites href={shopHref(lang, paths.favorites())} count={t("account.fav.count", { n: "{n}" })} none={t("account.fav.none")} open={t("account.fav.open")} />
       </div>
+
+      {watches.length > 0 && (
+        <div className="hm-panel">
+          <h2>{t("account.watch.title")}</h2>
+          <ul className="hm-orders">
+            {watches.map((w) => (
+              <li key={w.id} className="hm-order-row">
+                <div>
+                  <Link className="hm-link" href={shopHref(lang, paths.product(w.product.sku, w.product.nameUk))}>{lang === "ru" && w.product.nameRu ? w.product.nameRu : w.product.nameUk}</Link>
+                  <div className="hm-muted">{w.kind === "PRICE" ? t("account.watch.price", { price: formatPrice(w.basePrice) }) : t("account.watch.stock")}</div>
+                </div>
+                <div className="hm-order-side"><UnwatchButton productId={w.product.id} kind={w.kind} label={t("watch.off")} /></div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {refUrl && (
         <div className="hm-panel">

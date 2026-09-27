@@ -12,6 +12,7 @@ import { ensureRefCode, linkTelegramPhone, loadLoyalty, setReferrer } from "./cl
 import { loadContacts, loadTextOverrides } from "./site-content";
 import { notifyManagers } from "./notify";
 import { TelegramError, tg, type TgMessage, type TgUpdate } from "./telegram";
+import { subscribeWatch } from "./storefront-plus";
 
 const money = (n: number) => `${n.toLocaleString("uk-UA", { maximumFractionDigits: 2 }).replace(/ /g, " ")} ₴`;
 
@@ -43,6 +44,7 @@ export async function handleUpdate(u: TgUpdate): Promise<void> {
     if (client) await prisma.client.update({ where: { id: client.id }, data: { tgStartedAt: new Date() } });
     if (start.payload?.kind === "login") return onLogin(m, start.payload.code, t, lang, kb, client);
     if (start.payload?.kind === "link") return onLink(m, start.payload.code, t, lang, kb);
+    if (start.payload?.kind === "watch") return onWatch(m, start.payload.watch, start.payload.code, t, lang, kb, client);
     if (start.payload?.kind === "ref") {
       await prisma.setting.upsert({ where: { key: `bot.ref.${tgId}` }, update: { value: { code: start.payload.code } }, create: { key: `bot.ref.${tgId}`, value: { code: start.payload.code } } });
       await send(m.chat.id, t["bot.ref.ok"], kb(Boolean(client?.phone)));
@@ -127,6 +129,19 @@ async function onLogin(m: TgMessage, code: string, t: Record<string, string>, la
   const id = client?.id ?? (await prisma.client.create({ data: { tgId, name: displayName(m.from!) || null, username: m.from!.username ?? null, lang: lang === "ru" ? "RU" : "UK", tgStartedAt: new Date() } })).id;
   await prisma.tgLogin.update({ where: { code }, data: { clientId: id, confirmedAt: new Date() } });
   await send(m.chat.id, t["bot.login.ok"], kb(Boolean(client?.phone)));
+}
+
+/** Шаг 5.6: кнопка на сайте «Повідомити про зниження ціни / надходження» открыла бота — подписываем этого покупателя (без входа на сайт). */
+async function onWatch(m: TgMessage, kind: "PRICE" | "STOCK", productId: string, t: Record<string, string>, lang: "uk" | "ru", kb: (hasPhone: boolean) => unknown, client: { id: string; phone: string | null } | null) {
+  const tgId = BigInt(m.from!.id);
+  const id = client?.id ?? (await prisma.client.create({ data: { tgId, name: displayName(m.from!) || null, username: m.from!.username ?? null, lang: lang === "ru" ? "RU" : "UK", tgStartedAt: new Date() } })).id;
+  const r = await subscribeWatch(id, productId, kind);
+  if (!r.ok) {
+    await send(m.chat.id, t["bot.watch.gone"], kb(Boolean(client?.phone)));
+    return;
+  }
+  const name = lang === "ru" && r.name.ru ? r.name.ru : r.name.uk;
+  await send(m.chat.id, fillText(t[kind === "PRICE" ? "bot.watch.price.ok" : "bot.watch.stock.ok"], { name, price: money(r.price) }), kb(Boolean(client?.phone)));
 }
 
 /** Кабинет на сайте → «Подключить Telegram»: код привязывает этот Telegram к покупателю (по его телефону — со слиянием дубля). */

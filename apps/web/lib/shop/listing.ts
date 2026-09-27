@@ -7,6 +7,8 @@ import {
   type MenuConfig, type MenuGroup, type MenuSub, type Task,
 } from "@handyman/core/catalog";
 import { paths, type ListingState, type ShopLang } from "@handyman/core/site";
+import { myToolGroups } from "@handyman/db/storefront-plus";
+import { getClient } from "@/lib/client-auth";
 import { getCategoryStats, toCards, type ShopCard } from "./catalog";
 
 export const PER_PAGE = 24;
@@ -84,7 +86,17 @@ export type ListingData = {
   quick: { key: string; label: string; values: Array<{ value: string; count: number }> } | null;
   /** чипы частей подраздела (показываются, если частей с товарами хотя бы две) */
   parts: ListingPart[];
+  /** шаг 5.6: инструмент вошедшего покупателя (из его заказов) — есть, значит показываем фильтр «До мого інструменту» */
+  mine: { tools: string[] } | null;
 };
+
+/** Инструмент вошедшего покупателя для фильтра «До мого інструменту» (нет входа или инструмента — null). */
+async function myTools() {
+  const client = await getClient();
+  if (!client) return null;
+  const my = await myToolGroups(client.id);
+  return my.keys.length ? my : null;
+}
 
 async function listParts(r: ResolvedListing, counts: Record<string, number>, lang: ShopLang): Promise<ListingPart[]> {
   if (!r.parts?.length) return [];
@@ -101,8 +113,13 @@ export async function runListing(
   r: ResolvedListing, state: ListingState, lang: ShopLang, page = state.page, opts: { countOnly?: boolean } = {},
 ): Promise<ListingData | null> {
   try {
+    const my = await myTools();
+    // «До мого інструменту»: расходники к инструменту покупателя; нет инструмента — пусто (фильтр и не показывается)
+    const fits = state.fit ? [state.fit] : state.mine ? (my?.keys ?? []) : undefined;
     const params = {
       q: r.q ?? "",
+      ...(fits ? { fits } : {}),
+      ...(state.tool ? { tools: [state.tool] } : {}),
       ...(r.categories ? { categories: r.categories } : {}),
       ...(state.part && r.parts?.includes(state.part) ? { part: state.part } : {}),
       facets: state.facets,
@@ -119,11 +136,12 @@ export async function runListing(
       perPage: opts.countOnly ? 1 : PER_PAGE,
     };
     const result = await searchProducts(params);
-    if (opts.countOnly) return { result, cards: [], quick: null, parts: [] };
+    const mine = my ? { tools: my.tools } : null;
+    if (opts.countOnly) return { result, cards: [], quick: null, parts: [], mine };
     const cards = await toCards(result.items, lang);
     const q = pickQuickPick(r.quickPick, result.facets.attrs);
     const quick = q ? { key: q.key, label: q.label, values: sortFacetValues(q.key, q.values.map((v) => ({ value: v.value, count: v.count }))) } : null;
-    return { result, cards, quick, parts: await listParts(r, result.categoryCounts, lang) };
+    return { result, cards, quick, parts: await listParts(r, result.categoryCounts, lang), mine };
   } catch (e) {
     if (e instanceof SearchUnavailableError) return null;
     throw e;

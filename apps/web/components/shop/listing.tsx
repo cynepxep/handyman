@@ -63,7 +63,7 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
     );
   }
 
-  const { result, cards, quick, parts } = data;
+  const { result, cards, quick, parts, mine } = data;
   const partHref = (part?: string) => {
     const next: ListingState = { ...state, page: 1 };
     if (part) next.part = part;
@@ -96,6 +96,7 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
   if (state.sale) chips.push({ text: t("onSale"), href: href({ ...state, sale: false, page: 1 }) });
   if (state.hit) chips.push({ text: t("home.hits.title"), href: href({ ...state, hit: false, page: 1 }) });
   if (state.isNew) chips.push({ text: t("home.new.title"), href: href({ ...state, isNew: false, page: 1 }) });
+  if (state.mine) chips.push({ text: t("compat.mine"), href: href({ ...state, mine: false, page: 1 }) });
   if (state.min != null || state.max != null) {
     const noPrice: ListingState = { ...state, page: 1 };
     delete noPrice.min;
@@ -153,6 +154,12 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
             <FilterSheet key={`sheet-${listingQuery(state, q)}`} {...panel} />
             <SortSelect base={base} q={q} state={state} options={sortOptions} label={t("sort")} />
           </div>
+          {mine && !state.mine && (
+            <p className="hm-mine">
+              <Link className="hm-chip" href={href({ ...state, mine: true, page: 1 })} scroll={false}><Icon name="check" size={18} />{t("compat.mine")}</Link>
+              <span className="hm-muted">{t("compat.mine.hint", { tools: mine.tools.slice(0, 3).join(", ") + (mine.tools.length > 3 ? "…" : "") })}</span>
+            </p>
+          )}
           {chips.length > 0 && (
             <ul className="hm-chips" aria-label={t("filters.selected")}>
               {chips.map((ch) => (

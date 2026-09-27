@@ -11,6 +11,8 @@ import { stockLabels } from "./product-card";
 import { btn } from "./ui";
 import { BottomCart, HeaderCart } from "./cart/cart-buttons";
 import { HeaderFav } from "./fav-store";
+import { CallbackButton } from "./plus";
+import { callbackLabels } from "@/lib/shop/cart-labels";
 
 /** Ссылка на мессенджер или звонок: снаружи сайта — в новой вкладке. */
 function ContactPill({ href, icon, label }: { href: string; icon: string; label: string }) {
@@ -100,7 +102,10 @@ export function SiteFooter({ c }: { c: ShopContent }) {
           <div><dt>{t("footer.hours")}</dt><dd style={{ whiteSpace: "pre-line" }}>{hours || unknown}</dd></div>
           <div>
             <dt>{t("footer.phone")}</dt>
-            <dd>{k.phones.length ? k.phones.map((p) => <div key={p}><a href={telHref(p)}>{p}</a></div>) : unknown}</dd>
+            <dd>
+              {k.phones.length ? k.phones.map((p) => <div key={p}><a href={telHref(p)}>{p}</a></div>) : unknown}
+              <div><CallbackButton lang={lang} labels={callbackLabels(t)} variant="link" /></div>
+            </dd>
           </div>
           {k.email && <div><dt>{t("footer.email")}</dt><dd><a href={`mailto:${k.email}`}>{k.email}</a></dd></div>}
         </dl>

@@ -1,5 +1,6 @@
 // Подписи корзины и окна «Купити в 1 клік» из реестра текстов (правятся в «Сайт → Тексты»).
 import type { CartUiLabels } from "@/components/shop/cart/cart-context";
+import type { CallbackLabels } from "@/components/shop/plus";
 import { stockLabels } from "@/components/shop/product-card";
 import type { T } from "./content";
 
@@ -11,5 +12,14 @@ export function cartUiLabels(t: T): CartUiLabels {
     stock: stockLabels(t),
     oneClickTitle: t("oneClick.title"), oneClickLead: t("oneClick.lead"), phone: t("checkout.phone"), oneClickName: t("oneClick.name"),
     oneClickSubmit: t("oneClick.submit"), sending: t("checkout.sending"),
+    qtyApplied: t("qty.applied", { price: "{price}" }), qtyHint: t("qty.hint", { n: "{n}", price: "{price}" }),
+  };
+}
+
+/** Шаг 5.6: окно «Передзвоніть мені» (страница товара, подвал). */
+export function callbackLabels(t: T): CallbackLabels {
+  return {
+    btn: t("callback.btn"), title: t("callback.title"), lead: t("callback.lead"), phone: t("callback.phone"), name: t("callback.name"),
+    send: t("callback.send"), sending: t("checkout.sending"), close: t("close"),
   };
 }
