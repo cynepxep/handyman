@@ -105,13 +105,22 @@ export async function compatOfProduct(productId: string): Promise<ProductCompat[
 }
 
 /**
- * «Мой инструмент» покупателя: инструменты (HOST в какой-нибудь группе), которые он заказывал (кроме отменённых и тестовых).
- * Кабинет «Мой инструмент» (шаг 5.5) добавит к этому списку инструмент, отмеченный вручную.
+ * «Мой инструмент» покупателя: инструменты (HOST в какой-нибудь группе), которые он заказывал (кроме отменённых и тестовых)
+ * или отметил в кабинете «Це мій інструмент» (шаг 5.5). Убранный из кабинета («Прибрати») не считается, даже если заказан.
  */
 export async function myToolGroups(clientId: string | null | undefined): Promise<{ keys: string[]; tools: string[] }> {
   if (!clientId) return { keys: [], tools: [] };
   const rows = await prisma.productCompatibility.findMany({
-    where: { role: "HOST", product: { orderItems: { some: { order: { clientId, isTest: false, status: { notIn: ["CANCELLED", "RETURNED"] } } } } } },
+    where: {
+      role: "HOST",
+      product: {
+        OR: [
+          { orderItems: { some: { order: { clientId, isTest: false, status: { notIn: ["CANCELLED", "RETURNED"] } } } } },
+          { ownedBy: { some: { clientId, hidden: false } } },
+        ],
+        ownedBy: { none: { clientId, hidden: true } },
+      },
+    },
     select: { group: { select: { key: true } }, product: { select: { nameUk: true } } },
   });
   return { keys: [...new Set(rows.map((r) => r.group.key))], tools: [...new Set(rows.map((r) => r.product.nameUk))] };

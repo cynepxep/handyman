@@ -110,6 +110,15 @@ test("совместимость: группа, инструмент и расх
   assert.deepEqual((await plus.myToolGroups(null)).keys, []);
   const other = await prisma.client.create({ data: { phone: "+380500000001" } });
   assert.deepEqual((await plus.myToolGroups(other.id)).keys, []);
+  // Х1: отмечен в кабинете «Мій інструмент» (шаг 5.5) — тоже мой; «Прибрати» — не мой, даже если заказан
+  await prisma.clientTool.create({ data: { clientId: other.id, productId: a.id, source: "manual" } });
+  assert.deepEqual((await plus.myToolGroups(other.id)).keys, ["dysk-125-mm"]);
+  await prisma.clientTool.update({ where: { clientId_productId: { clientId: other.id, productId: a.id } }, data: { hidden: true } });
+  assert.deepEqual((await plus.myToolGroups(other.id)).keys, []);
+  await prisma.clientTool.create({ data: { clientId: buyer.id, productId: a.id, source: "order", hidden: true } });
+  assert.deepEqual((await plus.myToolGroups(buyer.id)).keys, [], "убранный из кабинета заказанный инструмент не считается");
+  await prisma.clientTool.deleteMany({ where: { productId: a.id } });
+  assert.deepEqual((await plus.myToolGroups(buyer.id)).keys, ["dysk-125-mm"]);
 
   try {
     const fits = await search.searchProducts({ fits: ["dysk-125-mm"] });
