@@ -80,7 +80,7 @@
 `price` (с учётом количества), `basePrice` и `tiers`; при пересчёте количества цену брать `unitPriceAt(basePrice, tiers, qty)`, не `price`. Совместимость —
 поля индекса `fits`/`tools`, адрес `?fit=`/`?tool=` (место, не фильтр) и `?mine=1`; после правки связей — `reindexProducts`. Отзывы (`/admin/reviews`, право
 `reviews.moderate`), фото — `/media/rv/…`; подписки `ProductWatch` проверяет `runJobs`; «Передзвоніть мені» — `Task` с `who: "сайт"`; сравнение — `/compare`,
-список в `localStorage` «hm.compare». Шаг 5.5 (избранное, «Мой инструмент», общая корзина) ещё не сделан — «мой инструмент» пока только из заказов (`myToolGroups`).
+список в `localStorage` «hm.compare». Шаг 5.5 (избранное, «Мой инструмент», общая корзина) доделывает отдельная сессия; после слияния подключить его «Мой инструмент» к `myToolGroups` (хвост Х1).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
