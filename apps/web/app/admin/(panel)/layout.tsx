@@ -6,7 +6,7 @@ import { AdminNav, type NavItem } from "./nav";
 import "./admin.css";
 
 // group — раздел меню на телефоне (шаг 4.8)
-const SECTIONS: Array<{ href: string; label: string; group: string; permission?: Permission }> = [
+const SECTIONS: Array<{ href: string; label: string; group: string; permission?: Permission; ownerOnly?: boolean }> = [
   { href: "/admin", label: "Главная", group: "Продажи" },
   { href: "/admin/orders", label: "Заказы", group: "Продажи", permission: "orders.view" },
   { href: "/admin/clients", label: "Клиенты", group: "Продажи", permission: "clients.view" },
@@ -26,6 +26,7 @@ const SECTIONS: Array<{ href: string; label: string; group: string; permission?:
   { href: "/admin/media", label: "Фото товаров", group: "Склад и каталог", permission: "import.run" },
   { href: "/admin/banners", label: "Реклама", group: "Сайт и реклама", permission: "ads.edit" },
   { href: "/admin/notifications", label: "Уведомления", group: "Настройки", permission: "managers.edit" },
+  { href: "/admin/integrations", label: "Интеграции", group: "Настройки", ownerOnly: true },
   { href: "/admin/staff", label: "Сотрудники", group: "Настройки", permission: "staff.manage" },
   { href: "/admin/roles", label: "Роли и права", group: "Настройки", permission: "staff.manage" },
   { href: "/admin/audit", label: "Журнал", group: "Настройки", permission: "audit.view" },
@@ -34,7 +35,7 @@ const SECTIONS: Array<{ href: string; label: string; group: string; permission?:
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   // общее меню — даже если нужно включить код из приложения (страницы сами отправят в «Мой аккаунт»)
   const session = await requireStaff({ allowWithout2fa: true });
-  const items: NavItem[] = SECTIONS.filter((s) => !s.permission || session.permissions.includes(s.permission)).map(
+  const items: NavItem[] = SECTIONS.filter((s) => (!s.ownerOnly || session.roleKey === "owner") && (!s.permission || session.permissions.includes(s.permission))).map(
     ({ href, label, group }) => ({ href, label, group }),
   );
 

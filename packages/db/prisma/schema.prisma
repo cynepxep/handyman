@@ -900,6 +900,15 @@ model Setting {
   value Json
 }
 
+// Ключи внешних сервисов (шаг 3.1, раздел «Интеграции»): «telegram.botToken» → зашифрованное значение (AES-256-GCM,
+// ключ шифрования — SECRETS_KEY или файл .data/secrets.key, в базе его нет). Результат последней проверки — в Setting «integrations.checks».
+model IntegrationSecret {
+  key       String   @id
+  sealed    String
+  updatedAt DateTime @updatedAt
+  updatedBy String
+}
+
 model PriceLog {
   id        String         @id @default(cuid())
   productId String

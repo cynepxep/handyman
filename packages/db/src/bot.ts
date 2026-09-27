@@ -13,6 +13,7 @@ import { loadContacts, loadTextOverrides } from "./site-content";
 import { notifyManagers } from "./notify";
 import { TelegramError, tg, type TgMessage, type TgUpdate } from "./telegram";
 import { subscribeWatch } from "./storefront-plus";
+import { secret } from "./integrations";
 
 const money = (n: number) => `${n.toLocaleString("uk-UA", { maximumFractionDigits: 2 }).replace(/ /g, " ")} ₴`;
 
@@ -202,8 +203,8 @@ export async function pollOnce(owner: string, waitSec = 25): Promise<number> {
 }
 
 /** Секрет вебхука (заголовок X-Telegram-Bot-Api-Secret-Token) — производный от токена, сам токен не раскрывается. */
-export function webhookSecret(): string | null {
-  const token = process.env.BOT_TOKEN?.trim();
+export async function webhookSecret(): Promise<string | null> {
+  const token = await secret("telegram.botToken");
   return token ? createHash("sha256").update(`webhook:${token}`).digest("hex").slice(0, 48) : null;
 }
 

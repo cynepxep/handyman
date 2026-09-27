@@ -4,6 +4,7 @@
 import { hostname } from "node:os";
 import { runJobs } from "@handyman/db/jobs";
 import { TelegramError, pollOnce, releaseBotLease } from "@handyman/db/bot";
+import { secret } from "@handyman/db/integrations";
 
 const g = globalThis as unknown as { hmWorker?: ReturnType<typeof setInterval>; hmBot?: boolean };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -22,9 +23,12 @@ export function startWorker(): void {
   startBot();
 }
 
-/** Чтение бота (getUpdates). Только одна копия сайта читает (аренда в базе); при конфликте с другой программой — пауза. */
+/**
+ * Чтение бота (getUpdates). Только одна копия сайта читает (аренда в базе); при конфликте с другой программой — пауза.
+ * Токен бота может появиться позже (владелец вписал его в «Интеграциях») — тогда чтение начнётся само, без перезапуска.
+ */
 function startBot(): void {
-  if (g.hmBot || !process.env.BOT_TOKEN?.trim() || process.env.HM_BOT === "off" || process.env.BOT_WEBHOOK === "on") return;
+  if (g.hmBot || process.env.HM_BOT === "off" || process.env.BOT_WEBHOOK === "on") return;
   g.hmBot = true;
   const owner = `${hostname()}:${process.pid}`;
   const stop = () => void releaseBotLease(owner).catch(() => {});
@@ -33,9 +37,17 @@ function startBot(): void {
   let warned = false;
   void (async () => {
     await sleep(5_000);
-    console.info("[bot] читаю сообщения бота (долгий опрос)");
+    let reading = false;
     for (;;) {
       try {
+        if (!(await secret("telegram.botToken"))) {
+          if (reading) console.info("[bot] токен бота убран — чтение остановлено");
+          reading = false;
+          await sleep(60_000);
+          continue;
+        }
+        if (!reading) console.info("[bot] читаю сообщения бота (долгий опрос)");
+        reading = true;
         const n = await pollOnce(owner);
         warned = false;
         if (n === -1) await sleep(30_000); // читает другая копия сайта

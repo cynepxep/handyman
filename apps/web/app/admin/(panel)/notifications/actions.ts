@@ -6,7 +6,7 @@ import { notifyManagers } from "@handyman/db/notify";
 import { requirePermission } from "@/lib/auth";
 
 const back = (kind: "ok" | "error", text: string) => `/admin/notifications?${kind}=${encodeURIComponent(text)}`;
-const RESULT: Record<string, string> = { SENT: "Отправлено в Telegram.", DEV: "Не отправлено: бот не настроен (нет BOT_TOKEN / ADMIN_CHAT_ID в .env).", FAILED: "Ошибка отправки — проверьте бота и чат." };
+const RESULT: Record<string, string> = { SENT: "Отправлено в Telegram.", DEV: "Не отправлено: бот не настроен (токен бота и чат менеджеров — в разделе «Интеграции»).", FAILED: "Ошибка отправки — проверьте бота и чат." };
 
 export async function saveNotifyAction(formData: FormData): Promise<void> {
   const s = await requirePermission("managers.edit");

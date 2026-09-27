@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { handleUpdate, webhookSecret } from "@handyman/db/bot";
 
 export async function POST(req: NextRequest) {
-  const secret = webhookSecret();
+  const secret = await webhookSecret();
   if (!secret || req.headers.get("x-telegram-bot-api-secret-token") !== secret) return new NextResponse("forbidden", { status: 403 });
   try {
     await handleUpdate(await req.json());

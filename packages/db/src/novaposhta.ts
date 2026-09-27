@@ -1,8 +1,10 @@
 // Нова Пошта: справочник городов и отделений/почтоматов для оформления заказа (запросы только с сервера).
-// Поиск городов и отделений работает и без ключа; ключ NOVAPOSHTA_KEY (в .env) понадобится для ТТН (Этап 3).
+// Поиск городов и отделений работает и без ключа; ключ («Интеграции» или NOVAPOSHTA_KEY в .env) понадобится для ТТН (шаг 3.4).
 // Кэш в памяти сервера на сутки: весь список отделений города (у Одеси ~1800 точек) грузится один раз.
 // Если НП не отвечает — функции возвращают null, и в оформлении поля работают как обычный текст.
 // В тестах сеть не нужна: setNovaPoshtaFetch() подставляет заглушку.
+
+import { secret } from "./integrations";
 
 const API = "https://api.novaposhta.ua/v2.0/json/";
 const DAY = 24 * 60 * 60 * 1000;
@@ -24,7 +26,7 @@ async function call<T>(calledMethod: string, methodProperties: Record<string, st
     const res = await fetchImpl(API, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ apiKey: process.env.NOVAPOSHTA_KEY ?? "", modelName: "Address", calledMethod, methodProperties }),
+      body: JSON.stringify({ apiKey: await secret("novaposhta.apiKey"), modelName: "Address", calledMethod, methodProperties }),
       signal: AbortSignal.timeout(8000),
     });
     const j = (await res.json()) as NpResponse<T>;
