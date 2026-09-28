@@ -1,5 +1,6 @@
 // Нова Пошта (шаг 3.4) — чистая логика без базы и сети: настройки отправителя, статусы посылок и что они значат для заказа,
 // тело запросов ТТН, разбор ответов НП, вес посылки, наложенный платёж, бесплатная доставка от суммы, отчёт по отказам.
+// Стоимость и срок доставки покупателю не считаются (решение владельца 2026-09-28): на сайте — условия наложенного платежа текстом.
 // Формат API — api.novaposhta.ua/v2.0/json (модели Counterparty, InternetDocument, TrackingDocument); сверено с документацией НП,
 // вживую не проверялось (в облаке НП закрыта) — см. CHANGELOG «Не проверено».
 
@@ -400,20 +401,6 @@ export function readTracking(body: unknown): NpTrack[] {
         scheduled: npDate(d.ScheduledDeliveryDate), cost: Number.isFinite(cost) && cost > 0 ? cost : null,
       };
     });
-}
-
-/** Стоимость доставки из InternetDocument.getDocumentPrice, ₴. */
-export function readPrice(body: unknown): number | null {
-  const d = firstData(body);
-  const c = Number(d?.Cost);
-  return d && Number.isFinite(c) && c >= 0 ? c : null;
-}
-
-/** Ориентировочная дата из InternetDocument.getDocumentDeliveryDate. */
-export function readDeliveryDate(body: unknown): Date | null {
-  const d = firstData(body);
-  const v = d?.DeliveryDate;
-  return npDate(v && typeof v === "object" ? (v as { date?: unknown }).date : v);
 }
 
 /** Отправители (контрагенты) и контактные лица из кабинета НП — для выбора в настройках. */

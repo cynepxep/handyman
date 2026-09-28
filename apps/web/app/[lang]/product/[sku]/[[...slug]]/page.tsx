@@ -28,8 +28,7 @@ import { compatBlocks, productQtyPrices, productReviews, watchState } from "@/li
 import { CompatSections, QtyPrices, ReviewsSection } from "@/components/shop/product-plus";
 import { CallbackButton, CompareButton, WatchButton } from "@/components/shop/plus";
 import type { TierKey } from "@handyman/core/shop";
-import { callbackLabels, npEstLabels } from "@/lib/shop/cart-labels";
-import { NpEstimateLine } from "@/components/shop/np-estimate";
+import { callbackLabels } from "@/lib/shop/cart-labels";
 import { loadCheckoutSettings } from "@handyman/db/orders";
 
 const SPECS_VISIBLE = 8;
@@ -202,12 +201,16 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
             <li>
               <Icon name="truck" size={22} />
               <span>
-                <NpEstimateLine
-                  lang={lang} sku={p.sku} labels={npEstLabels(t)} freeFrom={checkout.delivery.np ? checkout.npFreeFrom : 0}
-                  fallback={<><b>{t("trust.delivery.title")}</b> {t("trust.delivery.text")}</>}
-                />
+                <b>{t("trust.delivery.title")}</b> {t("trust.delivery.text")}
+                {checkout.delivery.np && checkout.npFreeFrom > 0 && <span className="hm-np-free">{t("np.freeFrom", { sum: formatPrice(checkout.npFreeFrom) })}</span>}
               </span>
             </li>
+            {checkout.delivery.np && checkout.pay.prepay && (
+              <li data-np-cod>
+                <Icon name="cash" size={22} />
+                <span><b>{t("np.cod.title")}.</b> {t("np.cod.terms")}</span>
+              </li>
+            )}
           </ul>
 
           {help.length > 0 && (

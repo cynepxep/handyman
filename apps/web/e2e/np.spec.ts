@@ -61,19 +61,16 @@ test("экран с клавиатурой (низкий): список поме
   expect(box!.y + box!.height).toBeLessThanOrEqual(420);
 });
 
-test("шаг 3.4: после выбора відділення — стоимость и срок доставки, в итоге строка «Доставка»", async ({ page }) => {
+test("шаг 3.4: Нова Пошта с передплатою — условия наложенного платежа, без расчёта цены и срока", async ({ page }) => {
   await openCheckout(page);
-  await page.locator("#co-city").tap();
-  await page.keyboard.type("Київ", { delay: 80 });
-  await citiesOrSkip(page);
-  await page.locator("#co-city-list [role=option]").first().tap();
-  await page.locator("#co-point-list [role=option]").first().tap();
-  const est = page.locator(".hm-np-est[data-np-est]");
-  try {
-    await est.waitFor({ timeout: 15_000 });
-  } catch {
-    test.skip(true, "Нова Пошта не посчитала стоимость (нет связи с НП)");
+  const prepay = page.locator("input[name=pay][value=prepay]");
+  if (!(await prepay.count())) test.skip(true, "предоплата выключена в настройках оформления");
+  await prepay.tap();
+  await expect(page.locator("[data-np-cod]")).toContainText("Накладений платіж");
+  await expect(page.locator("[data-np-est]")).toHaveCount(0);
+  const full = page.locator("input[name=pay][value=full]");
+  if (await full.count()) {
+    await full.tap();
+    await expect(page.locator("[data-np-cod]")).toHaveCount(0);
   }
-  await expect(est).toContainText(/Нова Пошта в .+: (~.+₴|безкоштовно)/);
-  await expect(page.locator(".hm-sum > div").nth(1)).not.toContainText("За тарифом");
 });

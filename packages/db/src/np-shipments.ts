@@ -1,22 +1,22 @@
 // Нова Пошта (шаг 3.4): ТТН кнопкой из заказа, номер вручную, статусы посылок и автостатусы заказа, сообщения покупателю,
-// отказы и чёрный список, стоимость и срок доставки для витрины, настройки отправителя, печать.
+// отказы и чёрный список, настройки отправителя, печать. Стоимость и срок доставки покупателю не считаем (решение владельца 2026-09-28).
 // Ключ — только через secret("novaposhta.apiKey"). Без ключа: на компьютере разработки — тестовые ТТН (номер «99…», в НП не уходят;
 // статусы — тестовыми кнопками в заказе), в production — ТТН только вручную (номер из кабинета НП).
 // Правила (статусы, тело запроса, разбор ответов) — @handyman/core/shop (novaposhta.ts). Запросы — npRequest (novaposhta.ts), в тестах — setNovaPoshtaFetch.
 
 import { prisma, Prisma } from "./client";
 import {
-  NP_SETTING_KEY, NP_STATE_RU, NP_STUB_CODES, autoOrderStatus, counterpartyProps, isNpFree, isNpRef, isStuck, npErrorText,
-  npNextCheck, npPhone, npPrintUrl, npStateOf, npToday, parcelWeightKg, parseNpSettings, readCounterparty, readDeliveryDate, readPrice, readRefList,
+  NP_SETTING_KEY, NP_STATE_RU, NP_STUB_CODES, autoOrderStatus, counterpartyProps, isStuck, npErrorText,
+  npNextCheck, npPhone, npPrintUrl, npStateOf, npToday, parcelWeightKg, parseNpSettings, readCounterparty, readRefList,
   readTracking, readTtnSave, refusalStats, senderMissing, shouldBlacklist, ttnProps, weightKgFromAttr, firstNameOf,
   type NpParcelForm, type NpSettings, type NpState, type TtnForm,
 } from "@handyman/core/shop";
 import { fillText, resolveTexts } from "@handyman/core/site";
 import { secret } from "./integrations";
-import { npCities, npPoints, npRequest, onNovaPoshtaReset, type NpPointKind } from "./novaposhta";
+import { npCities, npPoints, npRequest, type NpPointKind } from "./novaposhta";
 import { loadTextOverrides } from "./site-content";
 import { notifyManagers } from "./notify";
-import { loadCheckoutSettings, setOrderStatus } from "./orders";
+import { setOrderStatus } from "./orders";
 import { sendAutoMessages, sendOrderMessages } from "./messages";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
@@ -45,7 +45,6 @@ async function saveNpSettings(v: NpSettings, who: string, action: string) {
     prisma.setting.upsert({ where: { key: NP_SETTING_KEY }, update: { value: json(v) }, create: { key: NP_SETTING_KEY, value: json(v) } }),
     prisma.auditLog.create({ data: { who, action, details: json({ ...v }) } }),
   ]);
-  estimates.clear();
 }
 
 /** Посылка по умолчанию и правила (вес, места, наложенный платёж, автостатусы, чёрный список). */
@@ -149,63 +148,6 @@ export async function orderWeightKg(orderId: string, s?: NpSettings): Promise<nu
   const items = await prisma.orderItem.findMany({ where: { orderId }, select: { productId: true, qty: true } });
   const w = await productWeights(items.map((i) => i.productId ?? ""));
   return parcelWeightKg(items.map((i) => ({ kg: i.productId ? w.get(i.productId) ?? null : null, qty: i.qty })), settings.weightKg);
-}
-
-// ---------- стоимость и срок для витрины ----------
-
-type Estimate = { cost: number | null; free: boolean; date: string | null };
-const estimates = new Map<string, { at: number; v: Omit<Estimate, "free"> }>();
-const EST_TTL = 6 * 3600_000;
-let odesaRef: { at: number; ref: string } | null = null;
-onNovaPoshtaReset(() => {
-  estimates.clear();
-  odesaRef = null;
-});
-
-/** Город отправки: из настроек, иначе Одеса (магазин в Одессе) — по справочнику НП. */
-async function senderCityRef(s: NpSettings): Promise<string | null> {
-  if (s.cityRef) return s.cityRef;
-  if (odesaRef && Date.now() - odesaRef.at < 24 * 3600_000) return odesaRef.ref;
-  const list = await npCities("Одеса");
-  const c = list?.find((x) => /^м\. Одеса/i.test(x.name)) ?? list?.[0];
-  if (!c) return null;
-  odesaRef = { at: Date.now(), ref: c.ref };
-  return c.ref;
-}
-
-/**
- * Примерная стоимость (тариф НП «відділення → відділення», оценочная стоимость = сумма) и дата доставки в город покупателя.
- * Бесплатная доставка от суммы — `free: true` (стоимость не показываем). null — НП не ответила / нет города.
- * Кэш на 6 часов по городу, весу (шаг 0,5 кг) и сумме (шаг 500 ₴).
- */
-export async function npEstimate(p: { cityRef: string; total: number; weightKg: number; now?: Date }): Promise<Estimate | null> {
-  if (!isNpRef(p.cityRef)) return null;
-  const [s, co] = await Promise.all([loadNpSettings(), loadCheckoutSettings()]);
-  const free = isNpFree(p.total, co.npFreeFrom);
-  const from = await senderCityRef(s);
-  if (!from) return null;
-  const w = Math.max(0.5, Math.ceil(p.weightKg * 2) / 2);
-  const cost = Math.max(500, Math.ceil(p.total / 500) * 500);
-  const key = `${from}|${p.cityRef}|${w}|${cost}`;
-  const hit = estimates.get(key);
-  if (hit && Date.now() - hit.at < EST_TTL) return { ...hit.v, free };
-  const [price, date] = await Promise.all([
-    npRequest("InternetDocument", "getDocumentPrice", {
-      CitySender: from, CityRecipient: p.cityRef, Weight: String(w), ServiceType: "WarehouseWarehouse", Cost: String(cost), CargoType: "Parcel", SeatsAmount: "1",
-    }),
-    npRequest("InternetDocument", "getDocumentDeliveryDate", { DateTime: npToday(p.now), ServiceType: "WarehouseWarehouse", CitySender: from, CityRecipient: p.cityRef }),
-  ]);
-  const v = { cost: price.ok ? readPrice(price.body) : null, date: date.ok ? readDeliveryDate(date.body)?.toISOString().slice(0, 10) ?? null : null };
-  if (v.cost == null && v.date == null) return null;
-  if (estimates.size > 2000) estimates.clear();
-  estimates.set(key, { at: Date.now(), v });
-  return { ...v, free };
-}
-
-/** Оценка для корзины: вес по характеристикам товаров. */
-export async function npEstimateForItems(cityRef: string, total: number, items: Array<{ productId: string; qty: number }>): Promise<Estimate | null> {
-  const [s, w] = await Promise.all([loadNpSettings(), productWeights(items.map((i) => i.productId))]);
-  return npEstimate({ cityRef, total, weightKg: parcelWeightKg(items.map((i) => ({ kg: w.get(i.productId) ?? null, qty: i.qty })), s.weightKg) });
 }
 
 // ---------- ТТН ----------

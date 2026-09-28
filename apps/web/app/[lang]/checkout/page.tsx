@@ -13,7 +13,6 @@ import { formatPrice } from "@/components/shop/format";
 import { stockLabels } from "@/components/shop/product-card";
 import { CheckoutForm, type CheckoutLabels } from "@/components/shop/cart/checkout-form";
 import { Breadcrumbs } from "@/components/shop/ui";
-import { npEstLabels } from "@/lib/shop/cart-labels";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/checkout">): Promise<Metadata> {
   const { lang } = await params;
@@ -59,7 +58,7 @@ export default async function CheckoutPage({ params }: PageProps<"/[lang]/checko
     place: t("place"), sending: t("checkout.sending"), agree: t("checkout.agree"), loading: t("cart.loading"),
     empty: t("checkout.empty"), toCatalog: t("toCatalog"), gone: t("cart.gone"),
     stock: stockLabels(t),
-    npEst: npEstLabels(t), npFree: t("checkout.np.free"),
+    npFree: t("checkout.np.free"), codTitle: t("np.cod.title"), codTerms: t("np.cod.terms"),
   };
 
   return (

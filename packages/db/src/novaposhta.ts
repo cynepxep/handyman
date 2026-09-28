@@ -18,11 +18,7 @@ export function setNovaPoshtaFetch(f: FetchLike | null) {
   fetchImpl = f ?? ((url, init) => fetch(url, init));
   cities.clear();
   points.clear();
-  for (const fn of resetHooks) fn();
 }
-const resetHooks: Array<() => void> = [];
-/** Другие модули НП (ТТН, стоимость) сбрасывают свои кэши вместе со справочником. */
-export const onNovaPoshtaReset = (fn: () => void) => void resetHooks.push(fn);
 
 export type NpResult = { ok: true; data: unknown[]; body: unknown } | { ok: false; body: unknown; network: boolean };
 

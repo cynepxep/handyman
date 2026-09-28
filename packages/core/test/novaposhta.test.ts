@@ -4,8 +4,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_NP_SETTINGS, autoOrderStatus, blacklistAllowsPay, codDefault, counterpartyProps, defaultTtnForm, isNpFree, isStuck, npDate, npErrorText,
-  npFreeLeft, npNextCheck, npPrintUrl, npStateOf, npToday, parcelWeightKg, parseCheckoutSettings, parseNpSettings, readCounterparty, readDeliveryDate,
-  readPrice, readRefList, readTracking, readTtnSave, recipientNames, refusalStats, senderMissing, shouldBlacklist, ttnProps, validateCheckoutSettingsForm,
+  npFreeLeft, npNextCheck, npPrintUrl, npStateOf, npToday, parcelWeightKg, parseCheckoutSettings, parseNpSettings, readCounterparty,
+  readRefList, readTracking, readTtnSave, recipientNames, refusalStats, senderMissing, shouldBlacklist, ttnProps, validateCheckoutSettingsForm,
   validateNpParcelForm, validateTtnForm, weightKgFromAttr,
 } from "../src/shop";
 
@@ -168,7 +168,7 @@ test("запросы: получатель, ТТН с наложенным пл�
   assert.match(npToday(new Date("2026-09-28T22:30:00Z")), /^29\.09\.2026$/);
 });
 
-test("разбор ответов НП: контрагент, ТТН, статусы, цена, дата, ошибки", () => {
+test("разбор ответов НП: контрагент, ТТН, статусы, дата, ошибки", () => {
   assert.deepEqual(readCounterparty({ success: true, data: [{ Ref: R(5), ContactPerson: { success: true, data: [{ Ref: R(6) }] } }] }), { ref: R(5), contactRef: R(6) });
   assert.equal(readCounterparty({ success: false, errors: ["x"] }), null);
   const saved = readTtnSave({ success: true, data: [{ Ref: R(9), IntDocNumber: "20450000012345", CostOnSite: 85, EstimatedDeliveryDate: "30.09.2026" }] });
@@ -181,9 +181,6 @@ test("разбор ответов НП: контрагент, ТТН, стату
   assert.equal(tr[0].code, "7");
   assert.equal(tr[0].scheduled?.toISOString(), "2026-09-30T09:00:00.000Z");
   assert.equal(tr[0].cost, 85);
-  assert.equal(readPrice({ success: true, data: [{ Cost: 70, AssessedCost: 1500 }] }), 70);
-  assert.equal(readPrice({ success: false }), null);
-  assert.equal(readDeliveryDate({ success: true, data: [{ DeliveryDate: { date: "2026-10-01 00:00:00.000000", timezone: "Europe/Kiev" } }] })?.toISOString(), "2026-10-01T09:00:00.000Z");
   assert.equal(npDate("мусор"), null);
   assert.match(npErrorText({ success: false, errors: ["API auth fail"] }), /API-ключ/);
   assert.match(npErrorText({ success: false, errors: ["FirstName is invalid"] }), /кириллицей/);

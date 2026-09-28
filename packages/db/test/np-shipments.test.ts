@@ -1,6 +1,6 @@
 // Нова Пошта (шаг 3.4) на базе handyman_test: тестовые ТТН без ключа и тестовые статусы → «Отправлен» / «Выполнен», сообщение «в отделении»,
 // отказ → чёрный список → только полная оплата; бесплатная доставка от суммы; ТТН вручную; НП с подменённой сетью — отправитель, ТТН
-// (контрагент + накладная с наложенным платежом), опрос статусов, сбой сети, удаление, стоимость и срок с кэшем, печать; production без ключа.
+// (контрагент + накладная с наложенным платежом), опрос статусов, сбой сети, удаление, печать; production без ключа.
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { setupTestDb, waitDone, cleanup, sampleText, skipMsg, file } from "./helpers";
@@ -75,10 +75,6 @@ function fakeNp(_url: string, init: { body: string }) {
     }
     case "InternetDocument.delete":
       return reply(ok([{ Ref: b.methodProperties.DocumentRefs }]));
-    case "InternetDocument.getDocumentPrice":
-      return reply(ok([{ Cost: 70 + Number(b.methodProperties.Weight) * 10, AssessedCost: b.methodProperties.Cost }]));
-    case "InternetDocument.getDocumentDeliveryDate":
-      return reply(ok([{ DeliveryDate: { date: "2026-10-01 00:00:00.000000", timezone: "Europe/Kiev" } }]));
     case "TrackingDocument.getStatusDocuments": {
       const docs = b.methodProperties.Documents as Array<{ DocumentNumber: string }>;
       return reply(ok(docs.filter((d) => tracking.has(d.DocumentNumber)).map((d) => ({ Number: d.DocumentNumber, StatusCode: tracking.get(d.DocumentNumber)!.code, Status: tracking.get(d.DocumentNumber)!.text }))));
@@ -244,7 +240,7 @@ test("бесплатная доставка от суммы: отметка в �
   }
 });
 
-test("с ключом (сеть подменена): отправитель, ТТН, опрос статусов, сбой сети, удаление, стоимость и срок, печать", async (t) => {
+test("с ключом (сеть подменена): отправитель, ТТН, опрос статусов, сбой сети, удаление, печать", async (t) => {
   if (!ready) return t.skip(skipMsg);
   live();
   try {
@@ -327,17 +323,6 @@ test("с ключом (сеть подменена): отправитель, Т�
     await np.deleteTtn(sh2.id, "М");
     assert.deepEqual(calls.map((c) => `${c.method}:${c.props.DocumentRefs}`), [`delete:${sh2.ref}`]);
 
-    // стоимость и срок для витрины: из Одессы, кэш, бесплатно от суммы
-    calls.length = 0;
-    const e1 = await np.npEstimate({ cityRef: CITY, total: 1200, weightKg: 2.7, now: new Date("2026-09-29T08:00:00Z") });
-    assert.deepEqual(e1, { cost: 100, free: false, date: "2026-10-01" });
-    const priceCall = calls.find((c) => c.method === "getDocumentPrice")!;
-    assert.deepEqual([priceCall.props.CitySender, priceCall.props.Weight, priceCall.props.Cost], [ODESA, "3", "1500"]);
-    await np.npEstimate({ cityRef: CITY, total: 1100, weightKg: 2.9 });
-    assert.equal(calls.filter((c) => c.method === "getDocumentPrice").length, 1, "тот же город, вес и сумма — из кэша");
-    const est = await np.npEstimateForItems(CITY, 1200, [{ productId, qty: 1 }]);
-    assert.equal(est?.cost, 100);
-    assert.equal(await np.npEstimate({ cityRef: "not-a-ref", total: 1, weightKg: 1 }), null);
   } finally {
     stub();
   }

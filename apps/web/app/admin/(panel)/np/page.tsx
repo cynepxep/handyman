@@ -232,7 +232,7 @@ async function Settings({ isOwner, mode }: { isOwner: boolean; mode: Awaited<Ret
           </form>
         ) : null}
         <h3>Откуда отправляем</h3>
-        <p style={{ margin: "0 0 8px" }}>{s.cityName ? <>{s.cityName}, {s.warehouseName}</> : <span className="adm-muted">не указано (для расчёта стоимости на сайте берётся Одеса)</span>}</p>
+        <p style={{ margin: "0 0 8px" }}>{s.cityName ? <>{s.cityName}, {s.warehouseName}</> : <span className="adm-muted">не указано</span>}</p>
         <form action={saveNpPlaceAction} className="adm-row">
           <label htmlFor="np-scity">Город</label>
           <input id="np-scity" name="city" className="adm-input" style={{ width: 170 }} defaultValue={s.cityName.replace(/^м\.\s*/, "").split(",")[0] || "Одеса"} required />

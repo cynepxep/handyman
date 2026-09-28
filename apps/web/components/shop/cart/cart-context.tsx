@@ -7,7 +7,7 @@ import Link from "next/link";
 import type { ShopLang } from "@handyman/core/site/routes";
 import { oneClickAction } from "@/app/[lang]/cart-actions";
 import type { StockLabels } from "../ui";
-import type { NpEstLabels } from "../np-estimate";
+import type { NpDeliveryLabels } from "../np-delivery";
 import { btn } from "../ui";
 import { Icon } from "../icons";
 import { CartLines } from "./cart-view";
@@ -48,8 +48,8 @@ export type CartUiLabels = {
   oneClickTitle: string; oneClickLead: string; phone: string; oneClickName: string; oneClickSubmit: string; sending: string;
   /** шаг 5.6: «Ціна від кількості: {price} / шт.», «Ще {n} шт. — і по {price} / шт.» */
   qtyApplied: string; qtyHint: string;
-  /** шаг 3.4: доставка НП — стоимость и срок, «до бесплатной доставки» */
-  np: NpEstLabels;
+  /** шаг 3.4: «до бесплатной доставки» */
+  np: NpDeliveryLabels;
 };
 
 type Ctx = {

@@ -15,7 +15,6 @@ import type { PickupPoint } from "@handyman/core/shop/warehouse";
 import { formatPrice } from "../format";
 import { StockBadge, btn, type StockLabels } from "../ui";
 import { Combo } from "./combo";
-import { npEstText, useNpEstimate, type NpEstLabels } from "../np-estimate";
 import { PhoneInput } from "./phone-input";
 import { cartStore, useCart } from "./store";
 
@@ -35,8 +34,8 @@ export type CheckoutLabels = {
   total: string; payNow: string; later: string; payLater: string;
   place: string; sending: string; agree: string; loading: string; empty: string; toCatalog: string; gone: string;
   stock: StockLabels;
-  /** шаг 3.4: стоимость и срок НП, «Безкоштовно (Нова Пошта)» */
-  npEst: NpEstLabels; npFree: string;
+  /** шаг 3.4: «Безкоштовно (Нова Пошта)» и условия наложенного платежа (стоимость и срок доставки не считаем) */
+  npFree: string; codTitle: string; codTerms: string;
 };
 
 export type CheckoutOptions = { pay: Pay[]; delivery: Delivery[] };
@@ -128,9 +127,6 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
   }, [key, lang, pay, done]);
 
   const canSkipCall = quote?.canSkipCall ?? true;
-  // шаг 3.4: стоимость и срок НП в выбранный город (и «бесплатно» от суммы — то же правило, что при заказе)
-  const est = useNpEstimate(delivery === "np" && !done ? cityRef : null, lines, pay);
-  const estText = est ? npEstText(est, city, lang, labels.npEst) : null;
 
   if (!lines.length && !done) {
     return (
@@ -262,7 +258,10 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
                         {errText("npPoint")}
                       </div>
                     </div>
-                    {estText && <p className="hm-np-est" aria-live="polite" data-np-est>{estText}</p>}
+                    {/* шаг 3.4: остаток при получении — условия наложенного платежа НП (текст — «Сайт → Тексты → Доставка») */}
+                    {pay === "prepay" && (quote?.totals.later ?? 1) > 0 && (
+                      <p className="hm-np-cod" data-np-cod><b>{labels.codTitle}.</b> {labels.codTerms}</p>
+                    )}
                   </div>
                 )}
               </>
@@ -363,8 +362,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
             <span>{labels.shipping}</span>
             <span>
               {delivery === "pickup" ? labels.shippingFree
-                : delivery === "np" && est?.free ? labels.npFree
-                : delivery === "np" && est?.cost != null ? labels.npEst.cost.replace("{sum}", formatPrice(est.cost))
+                : delivery === "np" && t && quote && quote.npFreeFrom > 0 && t.total >= quote.npFreeFrom ? labels.npFree
                 : labels.shippingTariff}
             </span>
           </div>

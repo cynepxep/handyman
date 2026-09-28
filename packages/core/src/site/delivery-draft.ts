@@ -8,7 +8,7 @@ export type DraftContacts = { addressUk: string; addressRu: string; hoursUk: str
 const money = (n: number) => `${Math.round(n).toLocaleString("uk-UA").replace(/ /g, " ")} ₴`;
 
 type Words = {
-  deliveryH: string; np: string; npWays: string; npFree: (sum: string) => string; pickup: (addr: string, hours: string) => string; courier: string;
+  deliveryH: string; np: string; npWays: string; npFree: (sum: string) => string; npCod: string; pickup: (addr: string, hours: string) => string; courier: string;
   termsH: string; local: string; supplier: string; order: string;
   payH: string; prepay: (sum: string) => string; prepayNone: string; full: string; card: string; fullDisc: (p: number) => string;
   after: string; unknown: string;
@@ -19,6 +19,7 @@ const UK: Words = {
   np: "**Нова Пошта** — по всій Україні, за тарифами перевізника.",
   npWays: "Можна отримати у відділенні або поштоматі Нової Пошти.",
   npFree: (s) => `Від ${s} — доставка Новою Поштою безкоштовна.`,
+  npCod: "При передплаті решту суми сплачуєте у відділенні при отриманні (накладений платіж); комісію за грошовий переказ Нова Пошта бере за своїм тарифом.",
   pickup: (a, h) => `**Самовивіз з магазину** — ${a}.${h ? ` Графік: ${h}.` : ""} Зателефонуємо, коли замовлення буде готове.`,
   courier: "**Кур’єр по Одесі** — час і вартість доставки узгодить менеджер.",
   termsH: "## Терміни",
@@ -40,6 +41,7 @@ const RU: Words = {
   np: "**Новая Почта** — по всей Украине, по тарифам перевозчика.",
   npWays: "Можно получить в отделении или почтомате Новой Почты.",
   npFree: (s) => `От ${s} — доставка Новой Почтой бесплатная.`,
+  npCod: "При предоплате остаток суммы оплачиваете в отделении при получении (наложенный платёж); комиссию за денежный перевод Новая Почта берёт по своему тарифу.",
   pickup: (a, h) => `**Самовывоз из магазина** — ${a}.${h ? ` График: ${h}.` : ""} Позвоним, когда заказ будет готов.`,
   courier: "**Курьер по Одессе** — время и стоимость доставки согласует менеджер.",
   termsH: "## Сроки",
@@ -58,7 +60,7 @@ const RU: Words = {
 
 function build(w: Words, s: CheckoutSettings, address: string, hours: string): string {
   const out: string[] = [w.deliveryH, ""];
-  if (s.delivery.np) out.push(`- ${w.np} ${w.npWays}${s.npFreeFrom > 0 ? ` ${w.npFree(money(s.npFreeFrom))}` : ""}`);
+  if (s.delivery.np) out.push(`- ${w.np} ${w.npWays}${s.npFreeFrom > 0 ? ` ${w.npFree(money(s.npFreeFrom))}` : ""}${s.pay.prepay && s.prepayAmount > 0 ? ` ${w.npCod}` : ""}`);
   if (s.delivery.pickup) out.push(`- ${w.pickup(address.trim() || w.unknown, hours.replace(/\s*\n\s*/g, "; ").trim())}`);
   if (s.delivery.courier) out.push(`- ${w.courier}`);
   out.push("", w.termsH, "", `- ${w.local}`, `- ${w.supplier}`, `- ${w.order}`, "", w.payH, "");
