@@ -1,6 +1,7 @@
 // Витрина на телефоне (Pixel 7, 412 px): главные сценарии покупателя. Данные — настоящий каталог из базы, поэтому проверяем
 // устройство страниц, а не конкретные цены. Заказы не создаются.
 import { expect, test, type Page } from "@playwright/test";
+import { CLIENT_CABINET_ON } from "@handyman/core/site/routes";
 
 const SUB = "/catalog/ruchnyy-instrument/vykrutky-bity-shestyhrannyky";
 
@@ -133,7 +134,17 @@ test("несуществующая страница — понятная 404 с 
   await expect(page.locator("h1")).toBeVisible();
 });
 
+test("кабинет выключен (CLIENT_CABINET_ON = false): /account — 404, в нижней панели нет «Кабінет»", async ({ page }) => {
+  test.skip(CLIENT_CABINET_ON, "кабинет включён");
+  const res = await page.goto("/account");
+  expect(res?.status()).toBe(404);
+  await page.goto("/");
+  await expect(page.locator(".hm-bottomnav a[href='/account']")).toHaveCount(0);
+  await expect(page.locator(".hm-headacc")).toHaveCount(0);
+});
+
 test("кабинет: без входа — экран входа (Telegram и SMS), кнопки не меньше 44 px, без прокрутки вбок и ошибок", async ({ page }) => {
+  test.skip(!CLIENT_CABINET_ON, "кабинет выключен владельцем");
   const errors = collectErrors(page);
   await page.goto("/account");
   await expect(page.locator("h1")).toHaveText(/Вхід у кабінет/);

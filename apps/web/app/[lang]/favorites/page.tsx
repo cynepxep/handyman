@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isShopLang, paths, shopHref } from "@handyman/core/site";
+import { CLIENT_CABINET_ON, isShopLang, paths, shopHref } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
 import { getClient } from "@/lib/client-auth";
 import { Breadcrumbs, btn } from "@/components/shop/ui";
@@ -31,7 +31,7 @@ export default async function FavoritesPage({ params }: PageProps<"/[lang]/favor
         lang={lang}
         labels={cardLabels(t)}
         empty={t("fav.empty")}
-        guest={client ? null : (
+        guest={client || !CLIENT_CABINET_ON ? null : (
           <div className="hm-panel hm-row">
             <p>{t("fav.guest")}</p>
             <Link className={btn("secondary", { small: true })} href={shopHref(lang, paths.account())}>{t("fav.login")}</Link>

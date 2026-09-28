@@ -80,7 +80,7 @@
 **5.5** кабинет: «Обране» (`/favorites`, сердечки — `components/shop/fav-store.tsx`), «Мій інструмент» и подсказки расходников (`core/src/shop/cabinet.ts`,
 `lib/shop/cabinet.ts`), общая корзина сайт ↔ Mini App (`cart/cart-sync.tsx`, `Client.cart/cartVersion`; `db/src/cabinet.ts`). При слиянии карточек клиента —
 `moveCabinet`.
-**5.2–5.3** вход покупателя (`db/src/client-auth.ts`, `lib/client-auth.ts`, кука `hm_client`): Telegram (код → бот → сайт), SMS (заглушка в dev, в production без провайдера скрыт), Mini App (`/api/client/miniapp`, `miniapp-bridge.tsx`); кабинет `/account`; `?ref=` → кука `hm_ref` в `proxy.ts`. Кэш контента витрины — ключ с версией реестра текстов.
+**5.2–5.3** вход покупателя (`db/src/client-auth.ts`, `lib/client-auth.ts`, кука `hm_client`): Telegram (код → бот → сайт), SMS (заглушка в dev, в production без провайдера скрыт), Mini App (`/api/client/miniapp`, `miniapp-bridge.tsx`); кабинет `/account` (**с 2026-09-28 выключен владельцем**: `CLIENT_CABINET_ON` в `core/src/site/routes.ts` — новые ссылки на кабинет показывать только при нём); `?ref=` → кука `hm_ref` в `proxy.ts`. Кэш контента витрины — ключ с версией реестра текстов.
 **5.6** «Витрина+» (`core/src/shop/storefront-plus.ts`, `db/src/storefront-plus.ts`, тексты `core/src/site/texts-plus.ts`): опт/упаковка — `quoteCart` отдаёт
 `price` (с учётом количества), `basePrice` и `tiers`; при пересчёте количества цену брать `unitPriceAt(basePrice, tiers, qty)`, не `price`. Совместимость —
 поля индекса `fits`/`tools`, адрес `?fit=`/`?tool=` (место, не фильтр) и `?mine=1`; после правки связей — `reindexProducts`. Отзывы (`/admin/reviews`, право
