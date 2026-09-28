@@ -1,6 +1,8 @@
 // «Интеграции» (шаг 3.1): ключи внешних сервисов — только владелец. Ключи хранятся в базе зашифрованными и показываются маской;
 // пустое поле при сохранении — «оставить как было». Без ключа сервис работает заглушкой (так было и раньше).
+import Link from "next/link";
 import { integrationsOverview, secretsKeySource, type FieldState } from "@handyman/db/integrations";
+import { loadKeycrmSettings } from "@handyman/db/keycrm";
 import { requireOwner } from "@/lib/auth";
 import { SubmitButton } from "../import/client-bits";
 import { checkIntegrationAction, clearIntegrationAction, saveIntegrationAction } from "./actions";
@@ -19,7 +21,7 @@ function FieldNow({ f }: { f: FieldState }) {
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; s?: string }> }) {
   await requireOwner();
   const sp = await searchParams;
-  const list = await integrationsOverview();
+  const [list, keycrm] = await Promise.all([integrationsOverview(), loadKeycrmSettings()]);
 
   return (
     <>
@@ -38,6 +40,12 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
           </h2>
           <p style={{ margin: "4px 0" }}>{it.what}</p>
           {!it.configured && <p className="adm-muted" style={{ margin: "4px 0" }}>Без ключа: {it.stub.charAt(0).toLowerCase() + it.stub.slice(1)}</p>}
+          {it.id === "keycrm" && (
+            <p style={{ margin: "6px 0" }}>
+              Передача заказов: {keycrm.enabled ? <span className="adm-chip ok">включена</span> : <span className="adm-chip">выключена</span>}{" "}
+              <Link className="adm-link" href="/admin/integrations/keycrm">Включить / выключить, статусы, вебхук →</Link>
+            </p>
+          )}
           {sp.s === it.id && sp.error && <p className="adm-flash err" role="alert">{sp.error}</p>}
           {sp.s === it.id && sp.ok && <p className="adm-flash ok" role="status">{sp.ok}</p>}
           {it.check && !(sp.s === it.id && (sp.ok || sp.error)) && (

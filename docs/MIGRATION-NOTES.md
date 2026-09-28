@@ -228,3 +228,15 @@ manual», сумма, **зачтено** `paid` и возвращено `refunde
 - `ImportRun.undoneAt`, `undoneBy`, `undoReport` — когда, кто отменил загрузку и итог (удалено, скрыто, возвращено).
 - В `ImportRun.report` (JSON) новые поля: `brands` (бренды в файле и решения), `supplierProducts`, `createdCategories`, `createdBrands`, `addedBrandLinks`.
 В старом проекте поставщик был один (Vitals), брендов в фиде нет; отмены загрузки не было.
+
+## Миграция `20260929090000_keycrm_sync` (шаг 3.5, KeyCRM)
+
+Только добавления:
+- `Order`: `keycrmState` (пусто — не передаётся; `queued | sending | sent | error`), `keycrmAttempts`, `keycrmNextTryAt` (когда повторить; пусто
+  при `error` — только кнопкой), `keycrmError`, `keycrmSentAt`, `keycrmUuid` (номер в источнике: `HM-0001` или `TEST-HM-0001`), `keycrmStub`
+  (номер из заглушки), `keycrmStatusId` (последний известный статус в KeyCRM), `keycrmCheckedAt` (когда спрашивали KeyCRM). Индекс по `keycrmState`.
+  Поле `keycrmId` было и раньше (из прототипа) — теперь заполняется номером заказа в KeyCRM.
+- `PendingNotif.keycrmStatus` — название статуса в KeyCRM для напоминания менеджеру; индекс (заказ, `resolved`). Таблица была заготовлена раньше, теперь используется.
+- Настройки — `Setting` с ключом `keycrm.settings` (переключатель, таблица соответствия статусов, загруженный список статусов). `WebhookLog` с
+  `source = KEYCRM` — только номер, статус и номер в источнике (без телефона).
+В старом проекте KeyCRM был (передача заказов, `keycrm_id`); статусы из KeyCRM и очередь повторов — новые.

@@ -211,6 +211,8 @@ async function createOrderRecord(p: {
   });
   if (created.changed.length) await reindexSafely(() => reindexProducts(created.changed));
   if (!p.isTest) await notifyLowStock(created.low);
+  // шаг 3.5: в очередь KeyCRM (если передача включена; тестовые — только кнопкой). Модуль грузится здесь: keycrm.ts сам импортирует orders.ts
+  if (!p.isTest) await (await import("./keycrm")).afterOrderCreated(created.order.id);
   return { order: created.order, totals, accessKey };
 }
 

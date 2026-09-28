@@ -8,6 +8,7 @@ import { retryOutbox } from "@handyman/db/notify";
 import { MONO_PENDING, unpaidOf, validateInvoiceAmount, validateManualOrder, validateManualReceipt, validateRefund, validateSeller } from "@handyman/core/shop";
 import { PaymentError, cancelInvoiceLink, createManagerInvoice, orderInvoices, refreshInvoice, refundInvoice } from "@handyman/db/payments";
 import { ReceiptError, createManualReceipt, receiptableOf, retryReceipt, sendReceiptToClient } from "@handyman/db/receipts";
+import { resolvePendingNotifs, sendOrderToKeycrm } from "@handyman/db/keycrm";
 import { prisma } from "@handyman/db";
 import { requirePermission } from "@/lib/auth";
 import { requestOrigin } from "@/lib/request-origin";
@@ -51,6 +52,8 @@ export async function setStatusAction(formData: FormData): Promise<void> {
   const customText = String(formData.get("custom") ?? "");
   if (!templateIds.length && !customText.trim()) redirect(back(id, "ok", "Сохранено."));
   const rep = await sendOrderMessages(id, { templateIds, customText }, who);
+  // покупателю написали — напоминание «статус сменился в KeyCRM, напишите покупателю» больше не нужно (шаг 3.5)
+  if (rep.sent + rep.noChannel + rep.dev > 0) await resolvePendingNotifs(id);
   const parts = [
     rep.sent && `отправлено в Telegram: ${rep.sent}`,
     rep.noChannel && `сохранено для копирования (покупатель ещё без бота): ${rep.noChannel}`,
@@ -183,4 +186,22 @@ export async function sendReceiptAction(formData: FormData): Promise<void> {
     redirect(back(id, "error", receiptErr(e)));
   }
   redirect(back(id, "ok", `Чек: ${text}.`));
+}
+
+// ---------- KeyCRM (шаг 3.5) ----------
+
+/** «Отправить в KeyCRM» / «Отправить ещё раз». Тестовый заказ — только с галочкой подтверждения (уйдёт с пометкой «ТЕСТ»). */
+export async function sendKeycrmAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("orders.edit");
+  const id = String(formData.get("id") ?? "");
+  const r = await sendOrderToKeycrm(id, session.name || session.username, { confirmTest: formData.get("confirmTest") === "on" });
+  redirect(back(id, r.ok ? "ok" : "error", r.ok ? `Заказ передан в KeyCRM: № ${r.id}.` : r.error));
+}
+
+/** «Не нужно писать»: убрать напоминание о смене статуса в KeyCRM. */
+export async function dismissPendingAction(formData: FormData): Promise<void> {
+  await requirePermission("orders.edit");
+  const id = String(formData.get("id") ?? "");
+  await resolvePendingNotifs(id);
+  redirect(back(id, "ok", "Напоминание убрано."));
 }
