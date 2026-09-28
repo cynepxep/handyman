@@ -8,9 +8,9 @@ import { prisma, Prisma } from "./client";
 import { imageRows } from "./media";
 import {
   parseFeed, planImport, decideCategory, slugify, PATH_SEP, NO_CATEGORY_PATH, FeedFormatError,
-  UNSORTED_ID, UNSORTED_NAME_UK, UNSORTED_NAME_RU,
+  UNSORTED_ID, UNSORTED_NAME_UK, UNSORTED_NAME_RU, NO_BRAND_KEY, NEW_BRAND_PREFIX, countVendors, suggestBrand, decideBrand, vendorKey,
   type FeedParseResult, type FeedIssue, type ImportPlan, type ImportSummary, type ExistingProduct,
-  type StoredMapping, type PriceJump, type CategoryPlacement,
+  type StoredMapping, type PriceJump, type CategoryPlacement, type BrandDecision, type BrandSuggestion, type StoredBrandChoice,
 } from "@handyman/core/catalog";
 
 /** Ошибка, текст которой можно показать владельцу как есть. */
@@ -44,8 +44,35 @@ export type TreeRow = {
 const toTreeDecision = (d: ReturnType<typeof decideCategory>): TreeDecision =>
   d.kind === "skip" ? { kind: "skip", reason: d.reason } : d.kind === "new" ? { kind: "new", categoryId: d.categoryId, name: d.name } : { kind: "category", categoryId: d.categoryId };
 
+/** Бренд из фида и что с ним будет (таблица «Бренды в файле» на экране проверки). */
+export type BrandRow = {
+  key: string; // vendorKey или NO_BRAND_KEY
+  name: string; // как написано в фиде
+  count: number;
+  decision: BrandDecision;
+  suggested: BrandSuggestion;
+  overridden: boolean; // выбрал владелец (иначе автоподсказка)
+};
+
+/** Выбор владельца по бренду фида. */
+export type BrandChoice =
+  | { kind: "auto" }
+  | { kind: "skip" }
+  | { kind: "none" }
+  | { kind: "brand"; brandId: string }
+  | { kind: "new"; name: string };
+
 export type ImportReport = {
   feedInfo: { date: string | null; currency: string | null; totalRows: number };
+  /** Бренды в файле (в отчётах до появления выбора брендов — нет). */
+  brands?: BrandRow[];
+  /** Сколько товаров этого поставщика из фида уже есть в каталоге (для предупреждения «станут Под заказ»). */
+  supplierProducts?: number;
+  /** Категории, созданные этой загрузкой (при отмене удаляются, если опустели). */
+  createdCategories?: string[];
+  /** Бренды, созданные этой загрузкой, и бренды, впервые отмеченные у поставщика (при отмене убираются, если без товаров). */
+  createdBrands?: string[];
+  addedBrandLinks?: string[];
   issues: FeedIssue[];
   needConfirm: PriceJump[];
   priceChanges: { sku: string; name: string; oldPrice: number; newPrice: number; pct: number }[];
@@ -182,10 +209,82 @@ async function readStored(supplierId: string): Promise<StoredMapping> {
   return new Map(rows.map((r) => [r.path, { categoryId: r.categoryId, skip: r.skip }]));
 }
 
-async function ensureBrand(name: string | null): Promise<string | null> {
-  if (!name) return null;
-  const b = await prisma.brand.upsert({ where: { name }, update: {}, create: { name } });
-  return b.id;
+/** Наш бренд по названию без учёта регистра («MILWAUKEE» = «Milwaukee»); нет — создаётся. */
+export async function ensureBrandByName(rawName: string): Promise<string> {
+  return (await findOrCreateBrand(rawName)).id;
+}
+
+async function findOrCreateBrand(rawName: string): Promise<{ id: string; created: boolean }> {
+  const name = rawName.replace(/\s+/g, " ").trim().slice(0, 80);
+  if (!name) throw new ImportUserError("У бренда должно быть название.");
+  const found = await prisma.brand.findFirst({ where: { name: { equals: name, mode: "insensitive" } }, select: { id: true } });
+  if (found) return { id: found.id, created: false };
+  const b = await prisma.brand.create({ data: { name } }).catch(() => prisma.brand.findUniqueOrThrow({ where: { name } }));
+  return { id: b.id, created: true };
+}
+
+async function readBrandStored(supplierId: string): Promise<Map<string, StoredBrandChoice>> {
+  const rows = await prisma.feedBrandMap.findMany({ where: { supplierId } });
+  return new Map(rows.map((r) => [r.vendor, { brandId: r.brandId, skip: r.skip }]));
+}
+
+/** Сохраняет выбор владельца по брендам фида (ключ — vendorKey). auto — вернуть автоподсказку. */
+export async function saveBrandMapping(supplierId: string, choices: Record<string, BrandChoice>) {
+  for (const [vendor, choice] of Object.entries(choices)) {
+    if (!vendor) continue;
+    if (choice.kind === "auto") {
+      await prisma.feedBrandMap.deleteMany({ where: { supplierId, vendor } });
+      continue;
+    }
+    let brandId: string | null = null;
+    if (choice.kind === "brand") {
+      const b = await prisma.brand.findUnique({ where: { id: choice.brandId }, select: { id: true } });
+      if (!b) throw new ImportUserError("Выбранный бренд не найден — обновите страницу.");
+      brandId = b.id;
+    } else if (choice.kind === "new") {
+      brandId = await ensureBrandByName(choice.name);
+    }
+    const skip = choice.kind === "skip";
+    await prisma.feedBrandMap.upsert({
+      where: { supplierId_vendor: { supplierId, vendor } },
+      update: { brandId, skip },
+      create: { supplierId, vendor, brandId, skip },
+    });
+    if (brandId) await linkSupplierBrands(supplierId, [brandId]);
+  }
+}
+
+/** Отметить, что поставщик возит эти бренды (повтор не страшен). Возвращает бренды, которых у поставщика раньше не было. */
+export async function linkSupplierBrands(supplierId: string, brandIds: Iterable<string>): Promise<string[]> {
+  const ids = [...new Set(brandIds)].filter(Boolean);
+  if (!ids.length) return [];
+  const had = new Set((await prisma.supplierBrand.findMany({ where: { supplierId, brandId: { in: ids } }, select: { brandId: true } })).map((l) => l.brandId));
+  const fresh = ids.filter((id) => !had.has(id));
+  if (fresh.length) await prisma.supplierBrand.createMany({ data: fresh.map((brandId) => ({ supplierId, brandId })), skipDuplicates: true });
+  return fresh;
+}
+
+/**
+ * Решения по брендам фида: выбор владельца, иначе автоподсказка (бренд из фида или бренд поставщика по умолчанию).
+ * create — создать новые бренды (при применении); без него у нового бренда временный код «new:<название>».
+ */
+async function resolveBrands(supplier: { id: string; defaultBrand: string | null }, parsed: FeedParseResult, create: boolean) {
+  const [brands, stored] = await Promise.all([prisma.brand.findMany({ select: { id: true, name: true } }), readBrandStored(supplier.id)]);
+  const mapping = new Map<string, BrandDecision>();
+  const rows: BrandRow[] = [];
+  const createdBrands: string[] = [];
+  for (const v of countVendors(parsed.items)) {
+    const suggested = suggestBrand(v.key === NO_BRAND_KEY ? null : v.name, brands, supplier.defaultBrand);
+    let decision = decideBrand(stored.get(v.key), suggested);
+    if (create && decision.kind === "brand" && decision.brandId?.startsWith(NEW_BRAND_PREFIX)) {
+      const b = await findOrCreateBrand(decision.brandId.slice(NEW_BRAND_PREFIX.length));
+      if (b.created) createdBrands.push(b.id);
+      decision = { kind: "brand", brandId: b.id };
+    }
+    mapping.set(v.key, decision);
+    rows.push({ key: v.key, name: v.name, count: v.count, decision, suggested, overridden: stored.has(v.key) });
+  }
+  return { mapping, rows, createdBrands };
 }
 
 /** Сохраняет выбор владельца по веткам фида. auto — вернуть автоподсказку. */
@@ -287,7 +386,10 @@ function buildTree(parsed: FeedParseResult, stored: StoredMapping): TreeRow[] {
   return rows.sort((a, b) => a.key.localeCompare(b.key, "uk"));
 }
 
-function makeReport(plan: ImportPlan, existing: Map<string, ExistingProduct>, parsed: FeedParseResult, tree: TreeRow[], newCategories: string[]): ImportReport {
+function makeReport(
+  plan: ImportPlan, existing: Map<string, ExistingProduct>, parsed: FeedParseResult, tree: TreeRow[], newCategories: string[],
+  extra: { brands: BrandRow[]; supplierId: string },
+): ImportReport {
   const priceChanges: ImportReport["priceChanges"] = [];
   const needConfirm: PriceJump[] = [];
   const conflicts: ImportReport["conflicts"] = [];
@@ -319,6 +421,8 @@ function makeReport(plan: ImportPlan, existing: Map<string, ExistingProduct>, pa
     newCategories,
     errors: [],
     tree,
+    brands: extra.brands,
+    supplierProducts: [...existing.values()].filter((e) => e.supplierId === extra.supplierId && e.source === "FEED").length,
   };
 }
 
@@ -331,18 +435,18 @@ function newCategoryNames(plan: ImportPlan, known: Set<string>): string[] {
   return [...names];
 }
 
-async function computePlan(supplierId: string, parsed: FeedParseResult, approved: ReadonlySet<string>) {
+async function computePlan(supplierId: string, parsed: FeedParseResult, approved: ReadonlySet<string>, createBrands = false) {
   const supplier = await prisma.supplier.findUniqueOrThrow({ where: { id: supplierId } });
-  const brand = supplier.defaultBrand ? await prisma.brand.findUnique({ where: { name: supplier.defaultBrand }, select: { id: true } }) : null;
+  const brands = await resolveBrands(supplier, parsed, createBrands);
   const stored = await readStored(supplierId);
   const existing = await loadExisting(supplierId, parsed.items.map((i) => i.sku));
   const plan = planImport(
     parsed.items, existing,
-    { supplierId, markupPct: supplier.markupPct, jumpPct: 30, brandId: brand?.id ?? null, stored, approvedSkus: approved, now: new Date() },
+    { supplierId, markupPct: supplier.markupPct, jumpPct: 30, brandId: null, brands: brands.mapping, stored, approvedSkus: approved, now: new Date() },
     { totalRows: parsed.info.totalRows, issues: parsed.issues.length },
   );
   const cats = await prisma.category.findMany({ select: { id: true } });
-  return { supplier, stored, existing, plan, knownCategories: new Set(cats.map((c) => c.id)) };
+  return { supplier, stored, existing, plan, brands, knownCategories: new Set(cats.map((c) => c.id)) };
 }
 
 // ---------- проверка ----------
@@ -374,9 +478,9 @@ export async function refreshPreview(runId: string) {
   const run = await prisma.importRun.findUniqueOrThrow({ where: { id: runId } });
   if (run.status !== "PREVIEW") throw new ImportUserError("Эта проверка уже применена. Запустите новую.");
   const parsed = await loadParsed(run);
-  const { stored, existing, plan, knownCategories } = await computePlan(run.supplierId, parsed, new Set());
+  const { stored, existing, plan, brands, knownCategories } = await computePlan(run.supplierId, parsed, new Set());
   const tree = buildTree(parsed, stored);
-  const report = makeReport(plan, existing, parsed, tree, newCategoryNames(plan, knownCategories));
+  const report = makeReport(plan, existing, parsed, tree, newCategoryNames(plan, knownCategories), { brands: brands.rows, supplierId: run.supplierId });
   await prisma.importRun.update({
     where: { id: runId },
     data: {
@@ -403,7 +507,8 @@ export async function startApply(input: { runId: string; approvedSkus: string[];
   });
 }
 
-async function ensureCategories(plan: ImportPlan, known: Set<string>) {
+/** Создаёт недостающие категории; возвращает коды созданных. */
+async function ensureCategories(plan: ImportPlan, known: Set<string>): Promise<string[]> {
   const tops = new Map<string, string>();
   const levels: Map<string, { id: string; name: string; parentId: string }>[] = [new Map(), new Map()];
   for (const p of plan.items) {
@@ -423,17 +528,38 @@ async function ensureCategories(plan: ImportPlan, known: Set<string>) {
     if (!lvl.size) continue;
     await prisma.category.createMany({ data: [...lvl.values()].map((c) => ({ id: c.id, nameUk: c.name, nameRu: c.name, parentId: c.parentId })), skipDuplicates: true });
   }
+  return [...tops.keys(), ...levels.flatMap((l) => [...l.keys()])];
+}
+
+type UndoRow = { runId: string; productId: string; kind: "created" | "updated"; before?: Prisma.InputJsonValue; after?: Prisma.InputJsonValue };
+
+/** Значение поля товара для записи отката (JSON): даты — строкой ISO. */
+const undoVal = (v: unknown): unknown => (v instanceof Date ? v.toISOString() : v === undefined ? null : v);
+
+/** Прежние и новые значения полей, которые меняет импорт (для отмены загрузки). */
+function undoDiff(cur: ExistingProduct, changes: Record<string, unknown>) {
+  const before: Record<string, unknown> = {};
+  const after: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(changes)) {
+    before[k] = undoVal((cur as unknown as Record<string, unknown>)[k]);
+    after[k] = undoVal(v);
+  }
+  return { before: before as Prisma.InputJsonValue, after: after as Prisma.InputJsonValue };
 }
 
 async function executeApply(runId: string, approved: ReadonlySet<string>, who: string, afterDone?: (s: ImportSummary) => Promise<void>) {
   const run = await prisma.importRun.findUniqueOrThrow({ where: { id: runId } });
   const parsed = await loadParsed(run);
-  const supplier = await prisma.supplier.findUniqueOrThrow({ where: { id: run.supplierId } });
   await ensureSystemCategories();
-  await ensureBrand(supplier.defaultBrand);
-  const { existing, plan, knownCategories } = await computePlan(run.supplierId, parsed, approved);
-  await ensureCategories(plan, knownCategories);
+  const { existing, plan, brands, knownCategories } = await computePlan(run.supplierId, parsed, approved, true);
+  const createdCategories = await ensureCategories(plan, knownCategories);
   const allCats = new Set((await prisma.category.findMany({ select: { id: true } })).map((c) => c.id));
+
+  // что сделано с товарами — пишем по ходу, чтобы загрузку можно было отменить даже после сбоя
+  const undo: UndoRow[] = [];
+  const flushUndo = async () => {
+    while (undo.length) await prisma.importUndo.createMany({ data: undo.splice(0, 500) });
+  };
 
   const errors: ImportReport["errors"] = [];
   const work = plan.items.filter((p) => p.action === "create" || p.action === "update");
@@ -446,13 +572,15 @@ async function executeApply(runId: string, approved: ReadonlySet<string>, who: s
     try {
       if (p.action === "create") {
         if (!allCats.has(p.data.categoryId)) throw new Error(`Категория «${p.data.categoryId}» не существует`);
-        await prisma.product.create({
+        const row = await prisma.product.create({
           data: {
             sku: p.sku, source: "FEED", visible: true, ...p.data,
             images: { create: imageRows(p.item.pictures) }, // своя копия подставится сразу, если фото уже скачивали
             attributes: { create: p.item.params.map((a, sort) => ({ key: a.name, value: a.value, sort })) },
           },
+          select: { id: true },
         });
+        undo.push({ runId, productId: row.id, kind: "created" });
         created++;
       } else if (p.action === "update") {
         const ops: Prisma.PrismaPromise<unknown>[] = [];
@@ -467,14 +595,20 @@ async function executeApply(runId: string, approved: ReadonlySet<string>, who: s
           ops.push(prisma.productAttribute.createMany({ data: p.replaceParams.map((a, sort) => ({ productId: p.productId, key: a.name, value: a.value, sort })) }));
         }
         if (ops.length) await prisma.$transaction(ops);
+        const cur = existing.get(p.sku);
+        if (cur && Object.keys(p.changes).length) undo.push({ runId, productId: p.productId, kind: "updated", ...undoDiff(cur, p.changes) });
         updated++;
       }
     } catch (e) {
       if (errors.length < CAP.errors) errors.push({ sku: p.sku, message: e instanceof Error ? e.message.split("\n").pop()!.trim() : String(e) });
     }
     done++;
-    if (done % 25 === 0) await prisma.importRun.update({ where: { id: runId }, data: { progress: done } });
+    if (done % 25 === 0) {
+      await prisma.importRun.update({ where: { id: runId }, data: { progress: done } });
+      if (undo.length >= 200) await flushUndo();
+    }
   }
+  await flushUndo();
 
   // пропавшие из фида: одинаковые изменения применяем пачками
   const groups = new Map<string, { ids: string[]; data: Prisma.ProductUpdateManyMutationInput }>();
@@ -483,16 +617,33 @@ async function executeApply(runId: string, approved: ReadonlySet<string>, who: s
     const g = groups.get(key) ?? { ids: [], data: m.changes as Prisma.ProductUpdateManyMutationInput };
     g.ids.push(m.productId);
     groups.set(key, g);
+    const cur = existing.get(m.sku);
+    if (cur) undo.push({ runId, productId: m.productId, kind: "updated", ...undoDiff(cur, m.changes) });
   }
   for (const g of groups.values()) {
     for (let i = 0; i < g.ids.length; i += 500) {
       await prisma.product.updateMany({ where: { id: { in: g.ids.slice(i, i + 500) } }, data: g.data });
     }
   }
+  await flushUndo();
+
+  // поставщик возит бренды загруженных товаров
+  const usedBrands = new Set<string>();
+  for (const p of plan.items) {
+    if (p.action === "create" && p.data.brandId) usedBrands.add(p.data.brandId);
+    if (p.action === "update" || p.action === "unchanged") {
+      const d = brands.mapping.get(vendorKey(p.item.vendor));
+      if (d?.kind === "brand" && d.brandId) usedBrands.add(d.brandId);
+    }
+  }
+  const addedBrandLinks = await linkSupplierBrands(run.supplierId, usedBrands);
 
   const tree = buildTree(parsed, await readStored(run.supplierId));
-  const report = makeReport(plan, existing, parsed, tree, []);
+  const report = makeReport(plan, existing, parsed, tree, [], { brands: brands.rows, supplierId: run.supplierId });
   report.errors = errors;
+  report.createdCategories = createdCategories;
+  report.createdBrands = brands.createdBrands;
+  report.addedBrandLinks = addedBrandLinks;
   const summary: ImportSummary = { ...plan.summary, created, updated, errors: errors.length };
   await prisma.importRun.update({
     where: { id: runId },
@@ -518,15 +669,19 @@ async function failStale(supplierId?: string) {
 
 export async function getRun(runId: string) {
   await failStale();
-  return prisma.importRun.findUnique({ where: { id: runId } });
+  return prisma.importRun.findUnique({ where: { id: runId }, include: { supplier: { select: { id: true, name: true } } } });
 }
 
-export async function listRuns(supplierId: string, take = 10) {
+/** Журнал загрузок: одного поставщика или всех (supplierId не задан). */
+export async function listRuns(supplierId?: string, take = 10) {
   await failStale(supplierId);
   return prisma.importRun.findMany({
-    where: { supplierId },
+    where: supplierId ? { supplierId } : {},
     orderBy: { startedAt: "desc" },
     take,
-    select: { id: true, sourceKind: true, sourceRef: true, status: true, summary: true, error: true, who: true, startedAt: true, finishedAt: true },
+    select: {
+      id: true, sourceKind: true, sourceRef: true, status: true, summary: true, error: true, who: true, startedAt: true, finishedAt: true,
+      undoneAt: true, supplier: { select: { id: true, name: true } },
+    },
   });
 }

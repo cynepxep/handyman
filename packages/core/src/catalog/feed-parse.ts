@@ -32,6 +32,8 @@ export type FeedItem = {
   categoryPath: string[] | null;
   pictures: string[];
   params: FeedParam[];
+  /** Бренд (производитель) из фида: тег vendor/brand/producer или характеристика «Бренд»/«Виробник». Нет — null (у Vitals нет вообще). */
+  vendor: string | null;
 };
 
 export type FeedIssue = {
@@ -167,6 +169,21 @@ function readAvailable(g: Node, rawItem: unknown): boolean {
   return qty == null ? true : qty > 0;
 }
 
+const VENDOR_TAGS = ["vendor", "brand", "producer", "manufacturer", "vendor_name"];
+const VENDOR_PARAM = /^(бренд|виробник|производитель|торгова марка|торговая марка|марка|brand|manufacturer|vendor)$/i;
+
+/** Бренд товара: тег фида (YML/Prom — vendor), иначе характеристика «Бренд»/«Виробник». Пробелы схлопываются. */
+function readVendor(g: Node, params: FeedParam[]): string | null {
+  let v = "";
+  for (const tag of VENDOR_TAGS) {
+    v = text(g[tag]);
+    if (v) break;
+  }
+  if (!v) v = params.find((p) => VENDOR_PARAM.test(p.name.trim()))?.value ?? "";
+  v = v.replace(/\s+/g, " ").trim().slice(0, 80);
+  return /[\p{L}\p{N}]/u.test(v) ? v : null;
+}
+
 export function parseFeed(input: Uint8Array | string): FeedParseResult {
   const source = typeof input === "string" ? input : decodeFeedBytes(input);
   let tree: unknown;
@@ -272,6 +289,7 @@ export function parseFeed(input: Uint8Array | string): FeedParseResult {
       }
     }
 
+    const vendor = readVendor(g, params);
     const description = sanitizeHtml(text(g["description"]));
     const features = sanitizeHtml(text(g["features_text"]));
 
@@ -289,6 +307,7 @@ export function parseFeed(input: Uint8Array | string): FeedParseResult {
       categoryPath: catKnown ? pathOf(categoryId) : null,
       pictures,
       params,
+      vendor,
     });
   });
 

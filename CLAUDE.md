@@ -98,6 +98,9 @@
 **3.3** чеки Checkbox (`core/src/shop/receipts.ts`, `db/src/receipts.ts`, таблица `FiscalReceipt`): чек ставится в очередь внутри транзакции `applyInvoiceState`
 (`queuePaymentReceiptTx`) и отправляется сразу, повторы и закрытие смены в 23:00 — `runJobs`; блок «Кассовые чеки» в заказе, ручной чек, ссылки на странице заказа.
 Id чека в Checkbox = наш UUID (повтор не задвоит). Без ключей и не в production — тестовые чеки (`receiptMode() === "stub"`). В тестах сеть — `setReceiptsFetch`.
+**Поставщики и бренды** (вне плана, просьба владельца): `/admin/suppliers` (`db/src/suppliers.ts`), поставщик выбирается в «Импорте», бренды файла —
+`core/src/catalog/brands.ts` + `FeedBrandMap`; «Отменить загрузку» — `db/src/import-undo.ts` по `ImportUndo` (что загрузка создала/поменяла). Новое поле,
+которое меняет импорт, — добавить в `RESTORABLE` в `import-undo.ts`, иначе отмена его не вернёт.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -148,7 +151,7 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 292 проверки (core 182 + интеграционные db 110). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 301 проверка (core 184 + интеграционные db 117). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

@@ -52,8 +52,8 @@ export default async function ProductPage({
     },
   });
   if (!p) notFound();
-  const [cats, brands, stock, qty, compat, groups] = await Promise.all([
-    loadCategories(), prisma.brand.findMany({ orderBy: { name: "asc" } }), stockByWarehouse(p.id), qtyRulesOf(p.id), compatOfProduct(p.id), listCompatGroups(),
+  const [cats, brands, suppliers, stock, qty, compat, groups] = await Promise.all([
+    loadCategories(), prisma.brand.findMany({ orderBy: { name: "asc" } }), prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }), stockByWarehouse(p.id), qtyRulesOf(p.id), compatOfProduct(p.id), listCompatGroups(),
   ]);
   const canEdit = can("products.edit");
   const canPrices = can("prices.edit");
@@ -301,6 +301,15 @@ export default async function ProductPage({
                 <option value="">— без бренда —</option>
                 {brands.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="adm-field">
+              <label htmlFor="supplierId">Поставщик{mark("supplierId")}</label>
+              <select id="supplierId" name="supplierId" className="adm-select" defaultValue={p.supplierId ?? ""}>
+                <option value="">— без поставщика —</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
                 ))}
               </select>
             </div>

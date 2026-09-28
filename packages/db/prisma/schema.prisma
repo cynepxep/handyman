@@ -136,6 +136,8 @@ model Brand {
   sort    Int       @default(0)
   visible Boolean   @default(true)
   products Product[]
+  suppliers SupplierBrand[]
+  feedMaps  FeedBrandMap[]
 }
 
 model Supplier {
@@ -151,6 +153,32 @@ model Supplier {
   products     Product[]
   feedMaps     FeedCategoryMap[]
   importRuns   ImportRun[]
+  brands       SupplierBrand[]
+  brandMaps    FeedBrandMap[]
+}
+
+// Какие бренды возит поставщик (многие ко многим: у бренда может быть несколько поставщиков).
+// Импорт дописывает сюда бренды загруженных товаров, владелец правит в «Поставщики и бренды».
+model SupplierBrand {
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  brandId    String
+  brand      Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@id([supplierId, brandId])
+  @@index([brandId])
+}
+
+// Выбор владельца при импорте: бренд из фида поставщика → наш бренд, «без бренда» (brandId пусто) или «не загружать».
+model FeedBrandMap {
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  vendor     String // ключ бренда из фида (vendorKey: нижний регистр) или «(без бренду)»
+  brandId    String?
+  brand      Brand?   @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  skip       Boolean  @default(false)
+
+  @@id([supplierId, vendor])
 }
 
 model Product {
@@ -307,8 +335,26 @@ model ImportRun {
   who        String?
   startedAt  DateTime     @default(now())
   finishedAt DateTime?
+  undoneAt   DateTime? // загрузку откатили («Отменить загрузку»)
+  undoneBy   String?
+  undoReport Json? // итог отката: удалено, скрыто, возвращено
+  undo       ImportUndo[]
 
   @@index([supplierId, startedAt])
+}
+
+// Что именно сделала загрузка с каждым товаром — чтобы её можно было отменить.
+// created — товар создан этой загрузкой; updated — before/after: прежние и новые значения изменённых полей.
+model ImportUndo {
+  id        String    @id @default(cuid())
+  runId     String
+  run       ImportRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  productId String // без связи: товар при откате удаляется
+  kind      String // "created" | "updated"
+  before    Json?
+  after     Json?
+
+  @@index([runId, kind])
 }
 
 // ---------- под будущее: упаковка/опт (не используется на Этапе 0) ----------

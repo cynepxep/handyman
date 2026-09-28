@@ -119,3 +119,13 @@ test("очистка HTML: чужие теги, скрипты, ссылки", (
 test("htmlToText: текст для поиска без тегов", () => {
   assert.equal(htmlToText("<h2>Опис</h2><p>Пила&nbsp;<b>Vitals</b></p><ul><li>раз</li><li>два</li></ul>"), "Опис Пила Vitals раз два");
 });
+
+test("бренд товара: тег vendor, иначе характеристика «Виробник»; у Vitals бренда нет", () => {
+  const xml = `<yml_catalog><shop><categories><category id="1">Інструмент</category></categories><offers>
+    <offer id="1"><vendorCode>M-1</vendorCode><name>Дриль M18</name><price>100</price><categoryId>1</categoryId><vendor>  MILWAUKEE </vendor></offer>
+    <offer id="2"><vendorCode>M-2</vendorCode><name>Гайковерт</name><price>100</price><categoryId>1</categoryId><param name="Виробник">Makita</param></offer>
+    <offer id="3"><vendorCode>M-3</vendorCode><name>Ключ</name><price>100</price><categoryId>1</categoryId><vendor>-</vendor></offer>
+  </offers></shop></yml_catalog>`;
+  assert.deepEqual(parseFeed(xml).items.map((i) => i.vendor), ["MILWAUKEE", "Makita", null]);
+  assert.ok(parseFeed(sample).items.every((i) => i.vendor === null));
+});

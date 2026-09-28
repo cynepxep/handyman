@@ -33,7 +33,9 @@
     "./storefront-plus": "./src/storefront-plus.ts",
     "./integrations": "./src/integrations.ts",
     "./payments": "./src/payments.ts",
-    "./receipts": "./src/receipts.ts"
+    "./receipts": "./src/receipts.ts",
+    "./suppliers": "./src/suppliers.ts",
+    "./import-undo": "./src/import-undo.ts"
   },
   "scripts": {
     "generate": "prisma generate",

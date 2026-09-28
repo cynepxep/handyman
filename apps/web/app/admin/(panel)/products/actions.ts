@@ -5,6 +5,7 @@ import { prisma } from "@handyman/db";
 import { acceptSupplierPrice, moveProductsToCategory, ProductUserError, setProductFlag, unlockField, updateProductManual } from "@handyman/db/catalog-products";
 import { reindexProducts, reindexSafely } from "@handyman/db/catalog-search";
 import { setStockLevels, stockByWarehouse } from "@handyman/db/warehouses";
+import { SupplierUserError, setProductsBrand } from "@handyman/db/suppliers";
 import { requirePermission } from "@/lib/auth";
 import { parseMoney } from "@/lib/catalog";
 import { catalogChanged } from "@/lib/shop/cache";
@@ -55,6 +56,7 @@ export async function saveProductAction(formData: FormData): Promise<void> {
         visible: formData.get("visible") === "on",
         categoryId: String(formData.get("categoryId") ?? ""),
         brandId: String(formData.get("brandId") ?? "") || null,
+        supplierId: formData.has("supplierId") ? String(formData.get("supplierId") ?? "") || null : undefined,
       },
       { who: session.username, canEditPrices },
     );
@@ -148,6 +150,29 @@ export async function markProductsAction(mark: string, formData: FormData): Prom
     if (changed.length) await reindexSafely(() => reindexProducts(changed));
     const name = what === "hit" ? "«Хит»" : "«Новинка»";
     return value === "on" ? `Отметка ${name} поставлена: ${changed.length} шт.` : `Отметка ${name} снята: ${changed.length} шт.`;
+  });
+}
+
+/** Поставить бренд отмеченным товарам (или «без бренда»). Бренд защищается от импорта, как при ручной правке. */
+export async function brandProductsAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("products.edit");
+  const back = String(formData.get("back") || "/admin/products");
+  const safeBack = back.startsWith("/admin/products") ? back : "/admin/products";
+  const ids = formData.getAll("ids").map(String);
+  const raw = String(formData.get("setBrand") ?? "");
+  return run(safeBack, async () => {
+    if (!ids.length) throw new ProductUserError("Не выбрано ни одного товара.");
+    if (!raw) throw new ProductUserError("Выберите бренд в списке.");
+    const brandId = raw === "none" ? null : raw;
+    let count: number;
+    try {
+      count = await setProductsBrand(ids, brandId, session.username);
+    } catch (e) {
+      if (e instanceof SupplierUserError) throw new ProductUserError(e.message);
+      throw e;
+    }
+    await reindexSafely(() => reindexProducts(ids));
+    return brandId ? `Бренд поставлен: ${count} шт. Импорт его больше не поменяет.` : `Бренд убран: ${count} шт.`;
   });
 }
 

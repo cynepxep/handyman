@@ -23,6 +23,8 @@ export type ProductEditInput = {
   visible: boolean;
   categoryId: string;
   brandId: string | null;
+  /** Поставщик; не передан — не меняется. */
+  supplierId?: string | null;
 };
 
 export type EditOptions = {
@@ -58,6 +60,11 @@ export async function updateProductManual(productId: string, input: ProductEditI
     const brand = await prisma.brand.findUnique({ where: { id: input.brandId }, select: { id: true } });
     if (!brand) throw new ProductUserError("Такого бренда нет.");
   }
+  if (input.supplierId) {
+    const sup = await prisma.supplier.findUnique({ where: { id: input.supplierId }, select: { id: true } });
+    if (!sup) throw new ProductUserError("Такого поставщика нет.");
+  }
+  const supplierId = input.supplierId === undefined ? cur.supplierId : input.supplierId;
 
   // Описание — HTML, который потом показывается на сайте: пропускаем через ту же очистку, что и описания из фида.
   const descUk = sanitizeHtml(input.descUk) || null;
@@ -72,6 +79,7 @@ export async function updateProductManual(productId: string, input: ProductEditI
   if (input.visible !== cur.visible) changed.add("visible");
   if (input.categoryId !== cur.categoryId) changed.add("categoryId");
   if ((input.brandId ?? null) !== cur.brandId) changed.add("brandId");
+  if (supplierId !== cur.supplierId) changed.add("supplierId");
   // Закупочную цену импорт не трогает, поэтому защита (замок) ей не нужна.
   const purchaseChanged = !same(purchasePrice, cur.purchasePrice?.toNumber() ?? null);
 
@@ -87,7 +95,7 @@ export async function updateProductManual(productId: string, input: ProductEditI
   const ops: Prisma.PrismaPromise<unknown>[] = [
     prisma.product.update({
       where: { id: productId },
-      data: { nameUk, nameRu, descUk, descRu, price, oldPrice, purchasePrice, visible: input.visible, categoryId: input.categoryId, brandId: input.brandId ?? null, priceConflict },
+      data: { nameUk, nameRu, descUk, descRu, price, oldPrice, purchasePrice, visible: input.visible, categoryId: input.categoryId, brandId: input.brandId ?? null, supplierId, priceConflict },
     }),
     prisma.auditLog.create({
       data: { who: opts.who, action: "product.edit", target: cur.sku, details: { fields: [...changed, ...(purchaseChanged ? ["purchasePrice"] : [])] } },

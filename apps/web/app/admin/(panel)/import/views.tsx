@@ -1,13 +1,26 @@
 import Link from "next/link";
 import type { ImportSummary } from "@handyman/core/catalog";
-import { PATH_SEP } from "@handyman/core/catalog";
-import type { ImportReport, TreeDecision, TreeRow } from "@handyman/db/catalog-import";
+import { NEW_BRAND_PREFIX, NO_BRAND_KEY, PATH_SEP, UNSORTED_ID, brandDecisionText } from "@handyman/core/catalog";
+import type { BrandRow, ImportReport, TreeDecision, TreeRow } from "@handyman/db/catalog-import";
+import type { UndoInfo } from "@handyman/db/import-undo";
 import { AutoRefresh, SubmitButton } from "./client-bits";
-import { applyAction, saveMappingAction, saveSupplierAction, startPreviewAction } from "./actions";
+import { applyAction, deleteRunAction, saveMappingAction, startPreviewAction, undoImportAction } from "./actions";
 
 type Cat = { id: string; nameUk: string };
+type BrandOpt = { id: string; name: string };
+type SupplierRow = {
+  id: string;
+  name: string;
+  active: boolean;
+  feedUrl: string | null;
+  markupPct: number | null;
+  defaultBrand: string | null;
+  products: number;
+  brands: BrandOpt[];
+};
 type RunRow = {
   id: string;
+  supplierId: string;
   sourceKind: string;
   sourceRef: string | null;
   status: "PREVIEW" | "RUNNING" | "DONE" | "FAILED";
@@ -36,23 +49,55 @@ function Stat({ value, label, tone = "" }: { value: number | string; label: stri
 
 // ---------- запуск ----------
 
-export function StartCard({ feedUrl }: { feedUrl: string | null }) {
+/** Чей каталог загружаем: поставщики кнопками (у каждого своя ссылка на фид, свои бренды и свой журнал). */
+export function SupplierPicker({ suppliers, currentId, canEdit }: { suppliers: SupplierRow[]; currentId: string; canEdit: boolean }) {
   return (
     <div className="adm-card">
-      <h2 style={{ marginTop: 0 }}>Загрузить каталог поставщика</h2>
+      <b>Поставщик:</b>
+      <div className="adm-row" style={{ marginTop: 8, gap: 6 }}>
+        {suppliers.map((s) => (
+          <Link
+            key={s.id}
+            href={`/admin/import?supplier=${s.id}`}
+            className={s.id === currentId ? "adm-btn primary" : "adm-btn"}
+            aria-current={s.id === currentId ? "true" : undefined}
+            title={s.active ? undefined : "Выключен: с ним сейчас не работаем"}
+          >
+            {s.name} <span style={{ opacity: 0.75 }}>· {s.products} тов.</span>{s.active ? "" : " (выкл.)"}
+          </Link>
+        ))}
+        {canEdit && <Link href="/admin/suppliers/new" className="adm-btn">+ Новый поставщик</Link>}
+      </div>
+      {!canEdit && <p className="adm-muted" style={{ marginTop: 6 }}>Добавлять поставщиков может роль с правом «Поставщики и бренды».</p>}
+    </div>
+  );
+}
+
+export function StartCard({ supplier, canEdit }: { supplier: SupplierRow; canEdit: boolean }) {
+  return (
+    <div className="adm-card">
+      <h2 style={{ marginTop: 0 }}>Загрузить каталог поставщика «{supplier.name}»</h2>
       <p className="adm-muted">
-        Сначала будет <b>проверка</b>: вы увидите, что появится и изменится, ничего не записывая в каталог. Только потом — кнопка «Применить».
+        Сначала будет <b>проверка</b>: вы увидите, что появится и изменится, и выберете, какие бренды загружать, — ничего не записывая в каталог.
+        Только потом — кнопка «Применить». Неудачную загрузку можно отменить.
+      </p>
+      <p className="adm-muted">
+        Наценка: {supplier.markupPct == null ? "нет (цена фида = РРЦ)" : `${supplier.markupPct}%`} · бренд, если в файле не указан: {supplier.defaultBrand ?? "не задан"} ·
+        бренды поставщика: {supplier.brands.length ? supplier.brands.map((b) => b.name).join(", ") : "пока нет"}
+        {canEdit && <> · <Link className="adm-link" href={`/admin/suppliers/${supplier.id}`}>настройки поставщика</Link></>}
       </p>
       <form action={startPreviewAction} className="adm-field">
         <input type="hidden" name="mode" value="url" />
+        <input type="hidden" name="supplierId" value={supplier.id} />
         <label htmlFor="feed-url">Ссылка на XML-фид</label>
         <div className="adm-row">
-          <input id="feed-url" name="url" className="adm-input" style={{ flex: "1 1 320px" }} defaultValue={feedUrl ?? ""} placeholder="https://…" />
+          <input id="feed-url" name="url" className="adm-input" style={{ flex: "1 1 320px" }} defaultValue={supplier.feedUrl ?? ""} placeholder="https://…" />
           <SubmitButton primary pendingText="Скачиваю и проверяю… (до минуты)">Проверить по ссылке</SubmitButton>
         </div>
       </form>
       <form action={startPreviewAction} className="adm-field">
         <input type="hidden" name="mode" value="file" />
+        <input type="hidden" name="supplierId" value={supplier.id} />
         <label htmlFor="feed-file">Или файл XML с компьютера (если сайт поставщика не отдаёт фид программе)</label>
         <div className="adm-row">
           <input id="feed-file" name="file" type="file" accept=".xml,text/xml,application/xml" className="adm-input" />
@@ -60,35 +105,6 @@ export function StartCard({ feedUrl }: { feedUrl: string | null }) {
         </div>
       </form>
     </div>
-  );
-}
-
-export function SupplierCard({ supplier, canEdit }: { supplier: { name: string; feedUrl: string | null; defaultBrand: string | null; markupPct: number | null }; canEdit: boolean }) {
-  return (
-    <details className="adm-card">
-      <summary>
-        <b>Поставщик «{supplier.name}»</b> <span className="adm-muted">— наценка {supplier.markupPct == null ? "нет (цена фида = РРЦ)" : `${supplier.markupPct}%`}, бренд по умолчанию: {supplier.defaultBrand ?? "не задан"}</span>
-      </summary>
-      {canEdit ? (
-        <form action={saveSupplierAction} style={{ marginTop: 10 }}>
-          <div className="adm-field">
-            <label htmlFor="s-url">Ссылка на фид (подставляется при проверке)</label>
-            <input id="s-url" name="feedUrl" className="adm-input wide" defaultValue={supplier.feedUrl ?? ""} />
-          </div>
-          <div className="adm-field">
-            <label htmlFor="s-brand">Бренд для товаров без указания производителя в фиде</label>
-            <input id="s-brand" name="defaultBrand" className="adm-input" defaultValue={supplier.defaultBrand ?? ""} />
-          </div>
-          <div className="adm-field">
-            <label htmlFor="s-markup">Наценка к цене фида, % (у Vitals в фиде уже рекомендованная розничная цена — оставьте пустым)</label>
-            <input id="s-markup" name="markupPct" className="adm-input" inputMode="decimal" defaultValue={supplier.markupPct ?? ""} />
-          </div>
-          <SubmitButton>Сохранить</SubmitButton>
-        </form>
-      ) : (
-        <p className="adm-muted">Менять настройки поставщика может роль с правом «Поставщики и бренды».</p>
-      )}
-    </details>
   );
 }
 
@@ -149,12 +165,70 @@ function MappingTree({ tree, cats }: { tree: TreeRow[]; cats: Cat[] }) {
   );
 }
 
+// ---------- бренды в файле ----------
+
+function BrandTable({ rows, brands }: { rows: BrandRow[]; brands: BrandOpt[] }) {
+  const names = new Map(brands.map((b) => [b.id, b.name]));
+  const suggestedText = (r: BrandRow) =>
+    r.suggested.kind === "brand" ? names.get(r.suggested.brandId) ?? "—" : r.suggested.kind === "new" ? `новый бренд «${r.suggested.name}»` : "без бренда";
+  return (
+    <div className="adm-table-wrap">
+      <table className="adm-table">
+        <thead>
+          <tr>
+            <th>В файле</th>
+            <th className="num">Товаров</th>
+            <th>Загружать как</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => {
+            const d = r.decision;
+            const value = !r.overridden ? "auto" : d.kind === "skip" ? "skip" : d.brandId ? `brand:${d.brandId}` : "none";
+            const isNone = r.key === NO_BRAND_KEY;
+            const feedNameIsNew = !isNone && !brands.some((b) => b.name.toLowerCase() === r.name.toLowerCase());
+            return (
+              <tr key={r.key}>
+                <td>
+                  {isNone ? <i>бренд не указан</i> : <b>{r.name}</b>}
+                  {r.overridden ? <> <span className="adm-chip">выбрано вами</span></> : null}
+                  <div className="adm-muted">сейчас: {brandDecisionText(d, names)}</div>
+                </td>
+                <td className="num">{r.count}</td>
+                <td>
+                  <input type="hidden" name={`bk_${i}`} value={r.key} />
+                  <div className="adm-row" style={{ gap: 6 }}>
+                    <select name={`bm_${i}`} defaultValue={value} className="adm-select" aria-label={`Бренд для «${r.name}»`}>
+                      <option value="auto">Автоматически: {suggestedText(r)}</option>
+                      <option value="skip">Не загружать эти товары</option>
+                      <option value="none">Без бренда</option>
+                      {feedNameIsNew && <option value={`new:${r.name}`}>Создать бренд «{r.name}»</option>}
+                      {brands.map((b) => (
+                        <option key={b.id} value={`brand:${b.id}`}>{b.name}</option>
+                      ))}
+                    </select>
+                    <input name={`bn_${i}`} className="adm-input" style={{ flex: "0 1 200px" }} placeholder="или новый бренд" aria-label={`Новый бренд для «${r.name}»`} />
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 // ---------- проверка ----------
 
-export function PreviewView({ run, cats, canApply }: { run: RunRow; cats: Cat[]; canApply: boolean }) {
+export function PreviewView({ run, cats, brands, supplierName, canApply }: { run: RunRow; cats: Cat[]; brands: BrandOpt[]; supplierName: string; canApply: boolean }) {
   const s = run.summary as ImportSummary;
   const r = run.report as ImportReport;
   const reasons = Object.entries(s.skippedByReason);
+  // Похоже на файл другого поставщика: большая часть уже загруженных товаров этого поставщика «пропадёт».
+  const supplierProducts = r.supplierProducts ?? 0;
+  const suspicious = s.missing >= 5 && supplierProducts > 0 && s.missing / supplierProducts >= 0.3;
+  const newBrands = (r.brands ?? []).filter((b) => b.decision.kind === "brand" && b.decision.brandId?.startsWith(NEW_BRAND_PREFIX));
   return (
     <>
       <h2>Результат проверки — в каталог пока ничего не записано</h2>
@@ -180,9 +254,31 @@ export function PreviewView({ run, cats, canApply }: { run: RunRow; cats: Cat[];
         </p>
       )}
       {r.newCategories.length > 0 && <p className="adm-muted">Будут созданы новые категории: {r.newCategories.join(", ")}.</p>}
+      {newBrands.length > 0 && (
+        <p className="adm-muted">Будут созданы новые бренды: {newBrands.map((b) => (b.decision.kind === "brand" ? b.decision.brandId!.slice(NEW_BRAND_PREFIX.length) : "")).join(", ")}.</p>
+      )}
+      {suspicious && (
+        <div className="adm-flash err" role="alert">
+          <b>Внимание: похоже, это файл другого поставщика.</b> У поставщика «{supplierName}» уже {supplierProducts} товаров, и {s.missing} из них нет в этом файле —
+          после «Применить» они станут «Под заказ». Если вы загружаете каталог другого поставщика — вернитесь назад, выберите нужного поставщика
+          (или добавьте нового) и проверьте файл заново.
+        </div>
+      )}
 
       <form>
         <input type="hidden" name="runId" value={run.id} />
+        {r.brands && r.brands.length > 0 && (
+          <>
+            <h3>Бренды в файле</h3>
+            <p className="adm-muted" style={{ maxWidth: 760 }}>
+              Выберите, какие бренды загружать и под каким названием. «Не загружать» — эти товары не попадут в каталог. Если бренд в файле не указан,
+              подставляется бренд поставщика по умолчанию. Выбор запоминается для следующих загрузок этого поставщика.
+            </p>
+            <div className="adm-card">
+              <BrandTable rows={r.brands} brands={brands} />
+            </div>
+          </>
+        )}
         <h3>Куда класть товары</h3>
         <p className="adm-muted" style={{ maxWidth: 760 }}>
           Программа сама предложила категории по названиям (список ниже). Проверьте и при необходимости поменяйте. Товары из «Архів продукції» по умолчанию не загружаются.
@@ -232,7 +328,7 @@ export function PreviewView({ run, cats, canApply }: { run: RunRow; cats: Cat[];
           )}
         </div>
         <p className="adm-muted" style={{ marginTop: 6 }}>
-          «Применить» тоже сохраняет ваш выбор категорий. Числа выше пересчитываются кнопкой «Сохранить выбор и пересчитать».
+          «Применить» тоже сохраняет ваш выбор категорий и брендов. Числа выше пересчитываются кнопкой «Сохранить выбор и пересчитать».
         </p>
       </form>
 
@@ -284,7 +380,7 @@ export function RunningView({ run }: { run: RunRow }) {
   );
 }
 
-export function DoneView({ run }: { run: RunRow }) {
+export function DoneView({ run, lost }: { run: RunRow; lost: { categories: number; products: number; unsorted: number } | null }) {
   const s = run.summary as ImportSummary;
   const r = run.report as ImportReport;
   return (
@@ -304,6 +400,18 @@ export function DoneView({ run }: { run: RunRow }) {
       <p>
         Завершён {when(run.finishedAt)}. <Link className="adm-link" href="/admin/products">Открыть товары</Link> · <Link className="adm-link" href="/admin/import">Новая проверка</Link>
       </p>
+      {lost && lost.products > 0 && (
+        <div className="adm-flash err" style={{ background: "var(--adm-soft)", color: "inherit" }}>
+          <b>{lost.products} товаров этого поставщика не видно в каталоге сайта</b>: их разделы ({lost.categories}) не добавлены в меню. Поиск на сайте их находит,
+          а в «Каталог» они попадут, когда вы разложите разделы по группам меню: <Link className="adm-link" href="/admin/site/menu#lost">Сайт → Меню и задачи</Link>.
+        </div>
+      )}
+      {lost && lost.unsorted > 0 && (
+        <div className="adm-flash err" style={{ background: "var(--adm-soft)", color: "inherit" }}>
+          <b>{lost.unsorted} товаров этого поставщика в «Нераспределённых»</b> (в файле у них не было категории) — покупатели их не видят даже в поиске.
+          Перенесите их в нужные категории: <Link className="adm-link" href={`/admin/products?cat=${UNSORTED_ID}&supplier=${run.supplierId}`}>Товары → Нераспределённые</Link>.
+        </div>
+      )}
       <Details title={`Ошибки при записи (${s.errors})`} show={r.errors.length > 0}>
         <ul>{r.errors.map((e, n) => <li key={n}>{e.sku}: {e.message}</li>)}</ul>
       </Details>
@@ -324,9 +432,55 @@ export function FailedView({ run }: { run: RunRow }) {
   );
 }
 
+// ---------- отмена загрузки и удаление записи ----------
+
+export function RunTools({ runId, undone, info }: { runId: string; undone: boolean; info: UndoInfo }) {
+  if (!info.can && info.deletable) {
+    return (
+      <form action={deleteRunAction} style={{ marginTop: 24 }}>
+        <input type="hidden" name="runId" value={runId} />
+        {!undone && <p className="adm-muted">{info.reason}</p>}
+        <SubmitButton pendingText="Убираю…">Убрать запись из журнала</SubmitButton>
+      </form>
+    );
+  }
+  return (
+    <div className="adm-card" style={{ marginTop: 24 }}>
+      <h3 style={{ marginTop: 0 }}>Отменить загрузку</h3>
+      {info.can ? (
+        <form action={undoImportAction}>
+          <input type="hidden" name="runId" value={runId} />
+          <p style={{ marginTop: 0 }}>
+            Будет удалено товаров, добавленных этой загрузкой: <b>{info.created}</b> (товары, которые уже заказали, лежат на складе или имеют отзывы, не удаляются,
+            а скрываются с сайта).{" "}
+            {info.updated > 0 && (info.legacy
+              ? <>Товарам поставщика, которые эта загрузка отметила «нет в фиде» ({info.updated}), отметка будет снята.</>
+              : <>Товарам, которые она изменила ({info.updated}), вернутся прежние цены, наличие, бренд и категория — кроме полей, которые после загрузки уже поменяли.</>)}
+          </p>
+          {info.legacy && (
+            <p className="adm-muted">
+              Это загрузка, сделанная до появления отмены: изменения цен у существующих товаров вернуть нельзя, наличие у поставщика обновится при следующей
+              загрузке его каталога.
+            </p>
+          )}
+          <p className="adm-muted">Фото, скачанные для этих товаров, остаются на диске: при повторной загрузке они подставятся сразу.</p>
+          <div className="adm-row">
+            <label><input type="checkbox" name="confirm" /> Да, отменить эту загрузку</label>
+            <SubmitButton pendingText="Отменяю… (до пары минут)">Отменить загрузку</SubmitButton>
+          </div>
+        </form>
+      ) : (
+        <p className="adm-muted" style={{ marginTop: 0 }}>{info.reason}</p>
+      )}
+    </div>
+  );
+}
+
 // ---------- журнал ----------
 
-export function HistoryTable({ runs }: { runs: Omit<RunRow, "total" | "progress" | "report">[] }) {
+type HistoryRow = Omit<RunRow, "total" | "progress" | "report" | "supplierId"> & { undoneAt: Date | null; supplier: { id: string; name: string } };
+
+export function HistoryTable({ runs }: { runs: HistoryRow[] }) {
   if (!runs.length) return <p className="adm-muted">Запусков ещё не было.</p>;
   return (
     <div className="adm-table-wrap">
@@ -334,6 +488,7 @@ export function HistoryTable({ runs }: { runs: Omit<RunRow, "total" | "progress"
         <thead>
           <tr>
             <th>Когда</th>
+            <th>Поставщик</th>
             <th>Источник</th>
             <th>Статус</th>
             <th className="num">Добавлено</th>
@@ -346,9 +501,14 @@ export function HistoryTable({ runs }: { runs: Omit<RunRow, "total" | "progress"
             const s = r.summary as ImportSummary | null;
             return (
               <tr key={r.id}>
-                <td><a className="adm-link" href={`/admin/import?run=${r.id}`}>{when(r.startedAt)}</a></td>
+                <td><Link className="adm-link" href={`/admin/import?run=${r.id}`}>{when(r.startedAt)}</Link></td>
+                <td>{r.supplier.name}</td>
                 <td style={{ overflowWrap: "anywhere" }}>{r.sourceKind === "url" ? "ссылка" : "файл"}{r.sourceRef ? `: ${r.sourceRef.slice(0, 60)}` : ""}</td>
-                <td><span className={`adm-chip ${r.status === "DONE" ? "ok" : r.status === "FAILED" ? "bad" : "warn"}`}>{STATUS_RU[r.status]}</span></td>
+                <td>
+                  {r.undoneAt
+                    ? <span className="adm-chip">Отменена</span>
+                    : <span className={`adm-chip ${r.status === "DONE" ? "ok" : r.status === "FAILED" ? "bad" : "warn"}`}>{STATUS_RU[r.status]}</span>}
+                </td>
                 <td className="num">{r.status === "DONE" && s ? s.created : "—"}</td>
                 <td className="num">{r.status === "DONE" && s ? s.updated : "—"}</td>
                 <td>{r.who ?? "—"}</td>

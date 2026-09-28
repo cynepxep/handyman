@@ -18,6 +18,7 @@ const SECTIONS: Array<{ href: string; label: string; group: string; permission?:
   { href: "/admin/reports", label: "Отчёты", group: "Деньги и отчёты", permission: "orders.view" },
   { href: "/admin/finance", label: "Финансы", group: "Деньги и отчёты", permission: "finance.view" },
   { href: "/admin/import", label: "Импорт", group: "Склад и каталог", permission: "import.run" },
+  { href: "/admin/suppliers", label: "Поставщики и бренды", group: "Склад и каталог", permission: "suppliers.edit" },
   { href: "/admin/products", label: "Товары", group: "Склад и каталог", permission: "products.view" },
   { href: "/admin/categories", label: "Категории", group: "Склад и каталог", permission: "products.view" },
   { href: "/admin/compat", label: "Совместимость", group: "Склад и каталог", permission: "products.view" },
