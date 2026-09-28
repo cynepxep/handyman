@@ -2,6 +2,7 @@
 // Личных данных покупателя здесь нет: номер, сумма, что будет дальше и как оплатить.
 // Шаг 3.2: предоплата и полная оплата — кнопка «Сплатити» (monobank); сюда же банк возвращает покупателя после оплаты.
 // Шаг 3.3: ссылки на готовые кассовые чеки Checkbox.
+// Оплатили картой онлайн — «Дякуємо! … отримано. Менеджер зв’яжеться з вами» (thanks.paid.prepay | thanks.paid.full).
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -65,7 +66,13 @@ export default async function ThanksPage({ params, searchParams }: PageProps<"/[
             </>
           )}
         </div>
-        {paid > 0 && <p className="hm-alert hm-alert-ok">{view === "paid" ? `${t("paidT")} ${t("pay.paid.sum", { sum: formatPrice(paid) })}` : t("pay.paid.sum", { sum: formatPrice(paid) })}</p>}
+        {paid > 0 && (
+          <p className="hm-alert hm-alert-ok">
+            {view === "paid"
+              ? t(o.payMode === "PREPAY" ? "thanks.paid.prepay" : "thanks.paid.full", { sum: formatPrice(paid) })
+              : t("pay.paid.sum", { sum: formatPrice(paid) })}
+          </p>
+        )}
         {receipts.length > 0 && (
           <ul className="hm-receipts">
             {receipts.map((r) => (
