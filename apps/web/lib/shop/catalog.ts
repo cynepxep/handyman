@@ -40,15 +40,16 @@ const loadCategoryRows = cached(
   "category-rows", [TAG_CATALOG], 300,
 );
 
-/** Фото для плиток разделов: самый дорогой товар в наличии с фото в каждой категории (кэш как у счётчиков). */
+/** Фото для плиток разделов: самый дорогой товар с фото в каждой категории, в наличии — в первую очередь (кэш как у счётчиков). */
 const loadCategoryTops = cached(
-  (styleOn: boolean) => prisma.$queryRaw<Array<{ categoryId: string; price: number; url: string }>>`
-    SELECT DISTINCT ON (p."categoryId") p."categoryId", p.price::float8 AS price,
+  (styleOn: boolean) => prisma.$queryRaw<Array<{ categoryId: string; price: number; url: string; available: boolean }>>`
+    SELECT DISTINCT ON (p."categoryId") p."categoryId", p.price::float8 AS price, p."supplierAvailable" AS available,
       (SELECT COALESCE(CASE WHEN ${styleOn} THEN i."styledUrl" END, i."localUrl", i.url) FROM "ProductImage" i WHERE i."productId" = p.id ORDER BY i.sort LIMIT 1) AS url
     FROM "Product" p
-    WHERE p.visible AND p."supplierAvailable" AND EXISTS (SELECT 1 FROM "ProductImage" i WHERE i."productId" = p.id)
-    ORDER BY p."categoryId", p.price DESC`,
-  "category-tops", [TAG_CATALOG], 300,
+    WHERE p.visible AND EXISTS (SELECT 1 FROM "ProductImage" i WHERE i."productId" = p.id)
+    ORDER BY p."categoryId", p."supplierAvailable" DESC, p.price DESC`,
+  // сначала товар в наличии у поставщика; если в разделе всё «під замовлення» — всё равно с фото, а не пустая плитка
+  "category-tops-v2", [TAG_CATALOG], 300,
 );
 
 export const getCategoryStats = cache(async () => {
@@ -145,7 +146,7 @@ export async function getMenuView(menu: MenuConfig) {
 
   const groups: GroupView[] = menu.groups.map((group) => {
     const catIds = group.subs.flatMap((s) => catsOfSub.get(s.id) ?? []);
-    const best = catIds.map((id) => topOf.get(id)).filter((x) => x != null).sort((a, b) => b.price - a.price)[0];
+    const best = catIds.map((id) => topOf.get(id)).filter((x) => x != null).sort((a, b) => Number(b.available) - Number(a.available) || b.price - a.price)[0];
     const subs = group.subs.map((s) => ({ id: s.id, slug: slugOf(s), nameUk: s.nameUk, nameRu: s.nameRu, total: subTotal.get(s.id) ?? 0, hidden: s.hidden === true }));
     return { group, total: subs.reduce((a, s) => a + s.total, 0), image: best?.url ?? null, subs };
   });
