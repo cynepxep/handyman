@@ -20,7 +20,8 @@ export type CheckoutSettings = {
 export const DEFAULT_CHECKOUT: CheckoutSettings = {
   prepayAmount: 200,
   fullPayDiscountPct: 0,
-  pay: { prepay: true, full: true, card: true },
+  // полная оплата онлайн выключена, пока онлайн-оплата не подключена (решение владельца 2026-09-28); включается в «Сайт → Оформлення»
+  pay: { prepay: true, full: false, card: true },
   delivery: { np: true, pickup: true, courier: true },
 };
 

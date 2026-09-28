@@ -1,7 +1,7 @@
 // Тексты онлайн-оплаты (шаг 3.2): блок оплаты на странице заказа, назначение платежа в monobank, сообщение со ссылкой на оплату;
 // шаг 3.3 — ссылка на кассовый чек Checkbox и сообщение с ней.
 // Правятся в «Сайт → Тексты», группа «Оплата». Переменные в фигурных скобках ({sum}, {no}) подставляет сайт — их менять нельзя.
-// Старые ключи прототипа из той же группы тоже используются: payBtn, checkPay, retry, noPay, devPay, paidT.
+// Старые ключи прототипа из той же группы тоже используются: payBtn, checkPay, retry, noPay, devPay (после оплаты — «thanks.paid.*» в группе «После заказа»).
 import type { TextEntry } from "./texts";
 
 const t = (key: string, group: string, hint: string, uk: string, ru: string): TextEntry => ({ key, group, hint, uk, ru });

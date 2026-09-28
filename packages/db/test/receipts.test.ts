@@ -95,6 +95,8 @@ before(async () => {
   const runId = await s.imp.startPreview({ supplierId: s.supplierId, source: file(sampleText), who: "test" });
   await s.imp.startApply({ runId, approvedSkus: [], who: "test" });
   await waitDone(s.imp, runId);
+  // «Повна оплата онлайн» по умолчанию выключена — здесь проверяем и её
+  await orders.saveCheckoutSettings({ ...(await orders.loadCheckoutSettings()), pay: { prepay: true, full: true, card: true } }, "test");
   const p = await prisma.product.findFirstOrThrow({ where: { supplierAvailable: true, visible: true, price: { gt: 150 } }, orderBy: { sku: "asc" } });
   sku = p.sku;
   price = p.price.toNumber();
