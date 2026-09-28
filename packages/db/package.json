@@ -16,6 +16,7 @@
     "./search-stats": "./src/search-stats.ts",
     "./warehouses": "./src/warehouses.ts",
     "./novaposhta": "./src/novaposhta.ts",
+    "./np-shipments": "./src/np-shipments.ts",
     "./media": "./src/media.ts",
     "./photo-choice": "./src/photo-choice.ts",
     "./banners": "./src/banners.ts",

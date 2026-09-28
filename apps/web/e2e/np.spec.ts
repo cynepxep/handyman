@@ -60,3 +60,20 @@ test("экран с клавиатурой (низкий): список поме
   const box = await list.boundingBox();
   expect(box!.y + box!.height).toBeLessThanOrEqual(420);
 });
+
+test("шаг 3.4: после выбора відділення — стоимость и срок доставки, в итоге строка «Доставка»", async ({ page }) => {
+  await openCheckout(page);
+  await page.locator("#co-city").tap();
+  await page.keyboard.type("Київ", { delay: 80 });
+  await citiesOrSkip(page);
+  await page.locator("#co-city-list [role=option]").first().tap();
+  await page.locator("#co-point-list [role=option]").first().tap();
+  const est = page.locator(".hm-np-est[data-np-est]");
+  try {
+    await est.waitFor({ timeout: 15_000 });
+  } catch {
+    test.skip(true, "Нова Пошта не посчитала стоимость (нет связи с НП)");
+  }
+  await expect(est).toContainText(/Нова Пошта в .+: (~.+₴|безкоштовно)/);
+  await expect(page.locator(".hm-sum > div").nth(1)).not.toContainText("За тарифом");
+});

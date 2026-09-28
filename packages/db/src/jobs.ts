@@ -13,6 +13,7 @@ import { lowStockList } from "./stock";
 import { runWatches } from "./storefront-plus";
 import { pollInvoices } from "./payments";
 import { closeShift, processReceipts, receiptMode } from "./receipts";
+import { trackShipments } from "./np-shipments";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -90,12 +91,12 @@ export async function weeklyReportText(s: NotifySettings, now = new Date()): Pro
 // ---------- запуск ----------
 
 export type JobsReport = {
-  daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number; payments: number; receipts: number; shiftClosed: boolean;
+  daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number; payments: number; receipts: number; shiftClosed: boolean; np: number;
 };
 
 /** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, np: 0 };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
@@ -172,6 +173,11 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
   await step("shift", async () => {
     // шаг 3.3: смена кассира не может длиться больше суток — закрываем в 23:00 по Киеву (раз в день)
     if (shiftCloseDue(c.hour) && (await receiptMode()) === "live" && (await claimOnce(`checkbox-close:${c.ymd}`))) rep.shiftClosed = await closeShift();
+  });
+
+  await step("np", async () => {
+    // шаг 3.4: статусы посылок Новой Почты (каждой — когда пора: в пути раз в час) → «Отправлен» / «Выполнен», отказы, «лежит в отделении»
+    rep.np = await trackShipments(now);
   });
 
   await step("retry", async () => {

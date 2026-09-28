@@ -15,6 +15,8 @@ export type CheckoutSettings = {
   fullPayDiscountPct: number;
   pay: Record<PayChoice, boolean>;
   delivery: Record<DeliveryChoice, boolean>;
+  /** Шаг 3.4: бесплатная доставка Новой Почтой от этой суммы заказа, ₴ (0 — выключено; доставку оплачивает магазин). */
+  npFreeFrom: number;
 };
 
 export const DEFAULT_CHECKOUT: CheckoutSettings = {
@@ -22,10 +24,12 @@ export const DEFAULT_CHECKOUT: CheckoutSettings = {
   fullPayDiscountPct: 0,
   pay: { prepay: true, full: true, card: true },
   delivery: { np: true, pickup: true, courier: true },
+  npFreeFrom: 0,
 };
 
 const MAX_PREPAY = 100_000;
 const MAX_DISCOUNT = 30;
+const MAX_FREE = 1_000_000;
 
 const num = (v: unknown, def: number, min: number, max: number) => {
   const n = typeof v === "number" ? v : typeof v === "string" ? Number(v.replace(/\s/g, "").replace(",", ".")) : NaN;
@@ -45,6 +49,7 @@ export function parseCheckoutSettings(raw: unknown): CheckoutSettings {
     fullPayDiscountPct: num(o.fullPayDiscountPct, DEFAULT_CHECKOUT.fullPayDiscountPct, 0, MAX_DISCOUNT),
     pay: flags(o.pay, PAY_CHOICES, DEFAULT_CHECKOUT.pay),
     delivery: flags(o.delivery, DELIVERY_CHOICES, DEFAULT_CHECKOUT.delivery),
+    npFreeFrom: num(o.npFreeFrom, DEFAULT_CHECKOUT.npFreeFrom, 0, MAX_FREE),
   };
 }
 
@@ -60,5 +65,7 @@ export function validateCheckoutSettingsForm(input: Record<string, string | unde
   const delivery = Object.fromEntries(DELIVERY_CHOICES.map((k) => [k, input[`delivery.${k}`] === "on"])) as Record<DeliveryChoice, boolean>;
   if (!PAY_CHOICES.some((k) => pay[k])) return { ok: false, error: "Оставьте включённым хотя бы один способ оплаты." };
   if (!DELIVERY_CHOICES.some((k) => delivery[k])) return { ok: false, error: "Оставьте включённым хотя бы один способ доставки." };
-  return { ok: true, value: { prepayAmount: Math.round(prepay * 100) / 100, fullPayDiscountPct: Math.round(disc * 100) / 100, pay, delivery } };
+  const free = Number((input.npFreeFrom ?? "0").replace(/\s/g, "").replace(",", ".") || 0);
+  if (!Number.isFinite(free) || free < 0 || free > MAX_FREE) return { ok: false, error: "Бесплатная доставка от суммы — число от 0 (выключено) до 1 000 000 ₴." };
+  return { ok: true, value: { prepayAmount: Math.round(prepay * 100) / 100, fullPayDiscountPct: Math.round(disc * 100) / 100, pay, delivery, npFreeFrom: Math.round(free) } };
 }

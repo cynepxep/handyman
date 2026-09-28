@@ -224,7 +224,8 @@ export async function reindexProducts(ids: string[]): Promise<void> {
   const { docs, hiddenIds } = await buildDocs({ id: { in: ids } });
   const present = new Set(docs.map((d) => d.id));
   const remove = [...new Set([...hiddenIds, ...ids.filter((id) => !present.has(id))])];
-  if (docs.length) await task("POST", `/indexes/${uid}/documents`, docs);
+  // primaryKey — если индекса ещё нет (чистый Meilisearch), он создастся с верным ключом, а не «угадает» его и не упадёт
+  if (docs.length) await task("POST", `/indexes/${uid}/documents?primaryKey=id`, docs);
   if (remove.length) await task("POST", `/indexes/${uid}/documents/delete-batch`, remove);
 }
 
@@ -237,7 +238,7 @@ export async function updateMenuRanks(): Promise<{ updated: number }> {
   const uid = indexUid();
   const docs = rows.map((r) => ({ id: r.id, menuRank: ranks.get(r.categoryId) ?? NO_RANK }));
   // PUT — частичное обновление: остальные поля документа не трогаются
-  for (let i = 0; i < docs.length; i += 1000) await task("PUT", `/indexes/${uid}/documents`, docs.slice(i, i + 1000));
+  for (let i = 0; i < docs.length; i += 1000) await task("PUT", `/indexes/${uid}/documents?primaryKey=id`, docs.slice(i, i + 1000));
   return { updated: docs.length };
 }
 

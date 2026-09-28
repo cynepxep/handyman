@@ -180,6 +180,12 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-print-table .num { text-align: right; white-space: nowrap; }
 .adm-print-table tfoot td { border: 0; }
 .adm-print-box { font-size: 18px; text-align: center; width: 32px; }
+/* шаг 3.4: наша наклейка на посылку (100×100 мм) и блок «Нова Пошта» в заказе */
+.adm-print-label { width: 100mm; min-height: 100mm; box-sizing: border-box; border: 2px solid #000; padding: 4mm; font-size: 11pt; }
+.adm-print-label p { margin: 0 0 3mm; }
+.adm-print-ttn { font-size: 22pt; font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.adm-np-ttn { border: 1px solid var(--adm-line); border-radius: 10px; padding: 10px 12px; }
+.adm-np-form label { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 @media print {
   .adm-bar, .no-print { display: none !important; }
   .adm-page { padding: 0; max-width: none; }

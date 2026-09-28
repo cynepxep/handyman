@@ -9,6 +9,7 @@ import "./admin.css";
 const SECTIONS: Array<{ href: string; label: string; group: string; permission?: Permission; ownerOnly?: boolean }> = [
   { href: "/admin", label: "Главная", group: "Продажи" },
   { href: "/admin/orders", label: "Заказы", group: "Продажи", permission: "orders.view" },
+  { href: "/admin/np", label: "Нова Пошта", group: "Продажи", permission: "orders.view" },
   { href: "/admin/clients", label: "Клиенты", group: "Продажи", permission: "clients.view" },
   { href: "/admin/tasks", label: "Задачи", group: "Продажи", permission: "orders.view" },
   { href: "/admin/service", label: "Гарантия", group: "Продажи", permission: "orders.view" },

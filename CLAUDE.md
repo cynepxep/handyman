@@ -98,6 +98,11 @@
 **3.3** чеки Checkbox (`core/src/shop/receipts.ts`, `db/src/receipts.ts`, таблица `FiscalReceipt`): чек ставится в очередь внутри транзакции `applyInvoiceState`
 (`queuePaymentReceiptTx`) и отправляется сразу, повторы и закрытие смены в 23:00 — `runJobs`; блок «Кассовые чеки» в заказе, ручной чек, ссылки на странице заказа.
 Id чека в Checkbox = наш UUID (повтор не задвоит). Без ключей и не в production — тестовые чеки (`receiptMode() === "stub"`). В тестах сеть — `setReceiptsFetch`.
+**3.4** Нова Пошта (`core/src/shop/novaposhta.ts`, `db/src/np-shipments.ts`, таблица `NpShipment`, раздел `/admin/np`, блок в заказе `orders/[id]/np-block.tsx`):
+ТТН кнопкой / вручную, статусы посылок в `runJobs` (шаг «np») → «Отправлен»/«Выполнен» через `setOrderStatus`, отказы → `Client.npRefusals`/`blacklisted`
+(чёрный список — в `placeOrder` только `full`/`card`). `Order.ttn` — главный номер, посылки — `NpShipment` (`active` — текущая). Запросы к НП — только
+`npRequest` (`novaposhta.ts`; в тестах `setNovaPoshtaFetch`, подставной сервер — `NOVAPOSHTA_BASE`). Без ключа и не в production — тестовые ТТН (`npMode() === "stub"`).
+Бесплатная доставка — `CheckoutSettings.npFreeFrom` → `Order.npFreeShipping`. Стоимость и срок на витрине — `npEstimateAction` (`components/shop/np-estimate.tsx`).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -148,7 +153,7 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 292 проверки (core 182 + интеграционные db 110). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 309 проверок (core 193 + интеграционные db 116). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

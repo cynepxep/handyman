@@ -9,7 +9,7 @@ import {
   type ManualOrderInput, type OrderFilters, type SellerDetails,
 } from "@handyman/core/shop";
 import {
-  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, qtyPrices, unitPriceAt, type QtyPrice, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
+  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, blacklistAllowsPay, isNpFree, cleanCart, qtyPrices, unitPriceAt, type QtyPrice, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
   type CartLineInput, type CheckoutErrors, type CheckoutSettings, type DeliveryChoice, type PayChoice, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
@@ -175,6 +175,8 @@ async function createOrderRecord(p: {
 }) {
   const clientPct = await clientDiscountFor(p.sessionClientId);
   const totals = computeTotals(p.lines, p.pay, p.settings, clientPct);
+  // шаг 3.4: бесплатная доставка Новой Почтой от суммы — доставку оплачивает магазин (ТТН с плательщиком «отправитель»)
+  const npFreeShipping = p.delivery === "np" && isNpFree(totals.total, p.settings.npFreeFrom);
   const accessKey = randomBytes(12).toString("base64url");
   const created = await prisma.$transaction(async (tx) => {
     // вошёл в кабинет — заказ его (телефон в заказе — получателя); если у него ещё нет телефона и этот свободен — запомним
@@ -199,7 +201,7 @@ async function createOrderRecord(p: {
         subtotal: totals.subtotal, discountPct: totals.discountPct, total: totals.total, dueNow: totals.dueNow,
         city: p.city ?? null, address: p.address ?? null, npWarehouseRef: p.npPoint ?? null, deliveryType: p.npType ?? null,
         npCityRef: p.npCityRef ?? null, npPointRef: p.npPointRef ?? null, pickupWarehouseId: p.pickupWarehouseId ?? null,
-        comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest,
+        comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest, npFreeShipping,
         recipientName: p.name, recipientPhone: p.phone, source: p.source, createdBy: p.createdBy ?? null, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
         items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i], unitCost: costs.get(l.productId) ?? null })) },
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") } },
@@ -211,7 +213,13 @@ async function createOrderRecord(p: {
   });
   if (created.changed.length) await reindexSafely(() => reindexProducts(created.changed));
   if (!p.isTest) await notifyLowStock(created.low);
-  return { order: created.order, totals, accessKey };
+  return { order: created.order, totals, accessKey, npFreeShipping };
+}
+
+/** Шаг 3.4: покупатель в чёрном списке (отказы от посылок) — по кабинету или по телефону. */
+async function isBlacklisted(clientId: string | null | undefined, phone: string): Promise<boolean> {
+  const rows = await prisma.client.findMany({ where: { OR: [...(clientId ? [{ id: clientId }] : []), { phone }] }, select: { blacklisted: true } });
+  return rows.some((r) => r.blacklisted);
 }
 
 function managerText(o: { no: string; isTest: boolean }, head: string, body: string[]) {
@@ -226,6 +234,8 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
   const check = validateCheckout(raw, settings, quote.lines.map((l) => l.stock));
   if (!check.ok) return check;
   const v = check.value;
+  // шаг 3.4: чёрный список — только полная оплата (без остатка при получении)
+  if (!blacklistAllowsPay(v.pay) && (await isBlacklisted(opts.clientId, v.phone))) return { ok: false, errors: { pay: "err.payBlacklist" } };
   // количество — как в корзине после очистки (cleanCart), цены — из базы
   const qtyBySku = new Map(v.items.map((i) => [i.sku, i.qty]));
   const lines = quote.lines.map((l) => {
@@ -252,7 +262,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     }
   }
 
-  const { order, totals, accessKey } = await createOrderRecord({
+  const { order, totals, accessKey, npFreeShipping } = await createOrderRecord({
     lines, pay: v.pay, delivery: v.delivery, settings, phone: v.phone, name, lang: opts.lang, isTest: opts.isTest ?? false, source: "site",
     city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : pickup?.cityUk ?? null,
     address: v.delivery === "courier" ? v.address : pickup?.addressUk ?? null,
@@ -262,7 +272,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте", sessionClientId: opts.clientId,
   });
   const delivery =
-    v.delivery === "np" ? `Нова Пошта: ${v.city}, ${npPointRef ? npPoint : `${NP_RU[v.npType ?? "warehouse"]} ${npPoint}`}`
+    v.delivery === "np" ? `Нова Пошта: ${v.city}, ${npPointRef ? npPoint : `${NP_RU[v.npType ?? "warehouse"]} ${npPoint}`}${npFreeShipping ? " — доставка бесплатно (за наш счёт)" : ""}`
     : v.delivery === "pickup" ? `Самовывоз${pickup ? `: ${pickup.cityUk}, ${pickup.addressUk}` : " из магазина"}`
     : `Курьер по Одессе: ${v.address}`;
   await notifyManagers(managerText(order, "🆕 Новый заказ", [
@@ -292,8 +302,10 @@ export async function placeOneClick(
     source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId,
   });
   const l = quote.lines[0];
+  const listed = await isBlacklisted(opts.clientId, phone);
   await notifyManagers(managerText(order, "⚡ Купить в 1 клик", [
     `${name || "Без имени"}, ${formatPhone(phone)} — перезвонить`,
+    listed ? "⚠️ Покупатель в чёрном списке (отказы от посылок) — только полная оплата" : "",
     `• ${l.nameUk} × ${l.qty} = ${money(l.price * l.qty)}${l.stock === "order" ? " — ПОД ЗАКАЗ" : ""}`,
   ]), order.id).catch((e) => console.error("[orders] уведомление не сохранено", e));
   return { ok: true, no: order.no, accessKey: order.accessKey ?? "" };

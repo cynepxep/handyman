@@ -26,7 +26,8 @@ export type CartLineView = {
   /** шаг 5.6: обычная цена за штуку (если price меньше — применён опт/упаковка) и следующая ступенька «ещё N шт. — по X» */
   basePrice: number; next: { more: number; price: number } | null;
 };
-export type CartQuote = { lines: CartLineView[]; missing: string[]; subtotal: number };
+/** npFreeFrom — шаг 3.4: бесплатная доставка НП от суммы (0 — нет), для полосы «ще N ₴ до безкоштовної доставки». */
+export type CartQuote = { lines: CartLineView[]; missing: string[]; subtotal: number; npFreeFrom: number };
 
 const langOf = (l: unknown): ShopLang => (isShopLang(l) ? l : "uk");
 
@@ -34,7 +35,7 @@ const langOf = (l: unknown): ShopLang => (isShopLang(l) ? l : "uk");
 export async function quoteCartAction(lang: unknown, items: unknown): Promise<CartQuote> {
   const l = langOf(lang);
   const client = await getClient();
-  const q = await quoteCart(items, { clientId: client?.id });
+  const [q, settings] = await Promise.all([quoteCart(items, { clientId: client?.id }), loadCheckoutSettings()]);
   const lines = q.lines.map((x) => {
     const nx = nextQtyPrice(x.tiers, x.qty);
     return {
@@ -43,7 +44,7 @@ export async function quoteCartAction(lang: unknown, items: unknown): Promise<Ca
       basePrice: x.basePrice, next: nx ? { more: nx.minQty - x.qty, price: nx.unitPrice } : null,
     };
   });
-  return { lines, missing: q.missing, subtotal: Math.round(lines.reduce((a, x) => a + x.price * x.qty, 0) * 100) / 100 };
+  return { lines, missing: q.missing, subtotal: Math.round(lines.reduce((a, x) => a + x.price * x.qty, 0) * 100) / 100, npFreeFrom: settings.delivery.np ? settings.npFreeFrom : 0 };
 }
 
 export type CheckoutQuote = CartQuote & {

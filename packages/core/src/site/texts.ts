@@ -9,6 +9,7 @@ import { BOT_TEXTS } from "./texts-bot";
 import { ACCOUNT_TEXTS } from "./texts-account";
 import { PLUS_TEXTS } from "./texts-plus";
 import { PAY_TEXTS } from "./texts-pay";
+import { NP_TEXTS } from "./texts-np";
 
 export type Lang = "uk" | "ru";
 export type DbLocale = "UK" | "RU";
@@ -313,14 +314,14 @@ export const NEW_TEXTS: TextEntry[] = [
   t("qty.inc", "Карточка товара в списке", "Кнопка «+» у количества (для незрячих)", "Більше", "Больше"),
 
   // --- Корзина (новое)
-  t("cart.freeShipping.left", "Корзина", "Полоса «до бесплатной доставки»; {n} — сколько ещё добрать (включится, когда вы зададите порог)", "Ще {n} ₴ до безкоштовної доставки", "Ещё {n} ₴ до бесплатной доставки"),
+  t("cart.freeShipping.left", "Корзина", "Полоса «до бесплатной доставки»; {n} — сколько ещё добрать (порог — «Сайт → Оформление заказа → Бесплатная доставка от»)", "Ще {n} ₴ до безкоштовної доставки", "Ещё {n} ₴ до бесплатной доставки"),
 ];
 
 const legacy = (): TextEntry[] =>
   Object.keys(LEGACY_UK).map((key) => ({ key, group: legacyGroup(key), uk: LEGACY_UK[key], ru: LEGACY_RU[key] ?? LEGACY_UK[key] }));
 
 /** Все тексты: сначала новые (витрина), потом перенесённые из прототипа. */
-export const TEXT_ENTRIES: TextEntry[] = [...NEW_TEXTS, ...BOT_TEXTS, ...ACCOUNT_TEXTS, ...PLUS_TEXTS, ...PAY_TEXTS, ...legacy()];
+export const TEXT_ENTRIES: TextEntry[] = [...NEW_TEXTS, ...BOT_TEXTS, ...ACCOUNT_TEXTS, ...PLUS_TEXTS, ...PAY_TEXTS, ...NP_TEXTS, ...legacy()];
 export const TEXT_BY_KEY: ReadonlyMap<string, TextEntry> = new Map(TEXT_ENTRIES.map((e) => [e.key, e]));
 export const isKnownTextKey = (key: string) => TEXT_BY_KEY.has(key);
 

@@ -91,7 +91,7 @@ export type SendReport = { sent: number; noChannel: number; failed: number; dev:
  * Отправить покупателю выбранные шаблоны и/или свой текст. Каждое сообщение — строка Outbox (audience=client) и запись в истории заказа.
  * ТТН и суммы подставляются на момент отправки (поэтому вызывать ПОСЛЕ сохранения статуса/ТТН).
  */
-export async function sendOrderMessages(orderId: string, p: { templateIds?: string[]; customText?: string }, who: string): Promise<SendReport> {
+export async function sendOrderMessages(orderId: string, p: { templateIds?: string[]; customText?: string; customTitle?: string }, who: string): Promise<SendReport> {
   const report: SendReport = { sent: 0, noChannel: 0, failed: 0, dev: 0 };
   const o = await orderForMessages(orderId);
   if (!o) return report;
@@ -101,7 +101,7 @@ export async function sendOrderMessages(orderId: string, p: { templateIds?: stri
   const tpls = ids.length ? await prisma.orderStatusTemplate.findMany({ where: { id: { in: ids } }, orderBy: [{ sort: "asc" }, { id: "asc" }] }) : [];
   const messages = tpls.map((t) => ({ title: t.titleRu, text: renderTemplate(lang === "ru" ? t.textRu : t.textUk, vars) }));
   const custom = p.customText?.trim().slice(0, 2000);
-  if (custom) messages.push({ title: "свой текст", text: custom });
+  if (custom) messages.push({ title: p.customTitle ?? "свой текст", text: custom });
   for (const m of messages) {
     const r: NotifyResult = await notifyClient({ orderId, tgId: o.client.tgId, text: m.text, who });
     if (r === "SENT") report.sent++;

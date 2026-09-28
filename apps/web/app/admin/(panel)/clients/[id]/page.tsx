@@ -6,7 +6,7 @@ import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { statusChip } from "../../orders/status-chip";
-import { saveClientAction } from "../actions";
+import { saveClientAction, setBlacklistAction } from "../actions";
 import { tierChip } from "../tier-chip";
 import { listTasks } from "@handyman/db/service";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
@@ -94,6 +94,25 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
           </div>
         </fieldset>
         {canEdit ? <SubmitButton primary pendingText="Сохраняю…">Сохранить</SubmitButton> : <p className="adm-muted">Менять данные клиента может сотрудник с правом «Клиенты: контакты, личная скидка».</p>}
+      </form>
+
+      <form action={setBlacklistAction} className="adm-card">
+        <h2 style={{ marginTop: 0 }}>
+          Чёрный список {c.blacklisted ? <span className="adm-chip bad">да</span> : <span className="adm-chip">нет</span>}
+          {c.npRefusals > 0 && <span className="adm-chip warn" style={{ marginLeft: 6 }}>отказов от посылок: {c.npRefusals}</span>}
+        </h2>
+        <input type="hidden" name="id" value={c.id} />
+        <p className="adm-muted" style={{ marginTop: 0 }}>
+          В чёрном списке на сайте можно только полную оплату (онлайн или на карту) — без предоплаты с остатком при получении.
+          {c.blacklistedAt && <> С {day(c.blacklistedAt)}.</>}
+        </p>
+        <fieldset disabled={!canEdit} style={{ border: 0, padding: 0, margin: 0 }}>
+          <div className="adm-row">
+            <label className="adm-check"><input type="checkbox" name="blacklisted" defaultChecked={c.blacklisted} /> в чёрном списке</label>
+            <input name="blacklistNote" className="adm-input" style={{ flex: "1 1 260px" }} defaultValue={c.blacklistNote ?? ""} maxLength={300} placeholder="Почему (видят сотрудники): «не забрал 2 посылки»" aria-label="Почему в чёрном списке" />
+            {canEdit && <SubmitButton pendingText="…">Сохранить</SubmitButton>}
+          </div>
+        </fieldset>
       </form>
 
       <section className="adm-card">

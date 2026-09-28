@@ -11,6 +11,7 @@ import { formatPrice } from "../format";
 import { StockBadge } from "../ui";
 import { btn } from "../ui";
 import { useShopCart } from "./cart-context";
+import { FreeShippingBar, npEstText, savedNpCity, useNpEstimate } from "../np-estimate";
 import { cartStore, useCart } from "./store";
 
 export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
@@ -85,9 +86,23 @@ export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
         <span>{labels.subtotal}</span>
         <b className="hm-price">{subtotal == null ? labels.loading : formatPrice(subtotal)}</b>
       </div>
+      {data && subtotal != null && <FreeShippingBar subtotal={subtotal} freeFrom={data.npFreeFrom} labels={labels.np} />}
+      <CartNpLine />
       {footer?.(true)}
     </div>
   );
+}
+
+/** Шаг 3.4: «Нова Пошта в Київ: ~85 ₴, завтра» — если покупатель уже выбирал город в оформлении (в этом браузере). */
+function CartNpLine() {
+  const { lang, labels } = useShopCart();
+  const lines = useCart();
+  const [city, setCity] = useState<{ ref: string; name: string } | null>(null);
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- город читается из localStorage только в браузере
+  useEffect(() => setCity(savedNpCity()), []);
+  const est = useNpEstimate(city?.ref, lines);
+  const text = est && city ? npEstText(est, city.name, lang, labels.np) : null;
+  return text ? <p className="hm-cart-note" data-np-est>{text}</p> : null;
 }
 
 /** Большая корзина на странице /cart. */

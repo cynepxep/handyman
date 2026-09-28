@@ -1,13 +1,14 @@
 // Нова Пошта: справочник городов и отделений/почтоматов для оформления заказа (запросы только с сервера).
-// Поиск городов и отделений работает и без ключа; ключ («Интеграции» или NOVAPOSHTA_KEY в .env) понадобится для ТТН (шаг 3.4).
+// Поиск городов и отделений работает и без ключа; ключ («Интеграции» или NOVAPOSHTA_KEY в .env) нужен для ТТН и статусов (шаг 3.4, np-shipments.ts).
 // Кэш в памяти сервера на сутки: весь список отделений города (у Одеси ~1800 точек) грузится один раз.
 // Если НП не отвечает — функции возвращают null, и в оформлении поля работают как обычный текст.
 // В тестах сеть не нужна: setNovaPoshtaFetch() подставляет заглушку.
 
 import { secret } from "./integrations";
 
-const API = "https://api.novaposhta.ua/v2.0/json/";
 const DAY = 24 * 60 * 60 * 1000;
+/** Адрес API (для проверки на подставном сервере — NOVAPOSHTA_BASE). */
+const apiUrl = () => (process.env.NOVAPOSHTA_BASE?.trim() || "https://api.novaposhta.ua/v2.0/json/");
 
 type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body: string; signal?: AbortSignal }) => Promise<{ json(): Promise<unknown> }>;
 let fetchImpl: FetchLike = (url, init) => fetch(url, init);
@@ -17,28 +18,40 @@ export function setNovaPoshtaFetch(f: FetchLike | null) {
   fetchImpl = f ?? ((url, init) => fetch(url, init));
   cities.clear();
   points.clear();
+  for (const fn of resetHooks) fn();
+}
+const resetHooks: Array<() => void> = [];
+/** Другие модули НП (ТТН, стоимость) сбрасывают свои кэши вместе со справочником. */
+export const onNovaPoshtaReset = (fn: () => void) => void resetHooks.push(fn);
+
+export type NpResult = { ok: true; data: unknown[]; body: unknown } | { ok: false; body: unknown; network: boolean };
+
+/** Запрос к API НП: modelName + calledMethod + methodProperties. Ключ — из «Интеграций» (или .env). Сеть недоступна — network: true. */
+export async function npRequest(modelName: string, calledMethod: string, methodProperties: Record<string, unknown>, timeoutMs = 8000): Promise<NpResult> {
+  try {
+    const res = await fetchImpl(apiUrl(), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ apiKey: await secret("novaposhta.apiKey"), modelName, calledMethod, methodProperties }),
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const j = (await res.json()) as NpResponse<unknown>;
+    if (!j?.success || !Array.isArray(j.data)) {
+      console.error("[novaposhta]", calledMethod, "ошибка:", (Array.isArray(j?.errors) ? j.errors : []).join("; ").slice(0, 200));
+      return { ok: false, body: j, network: false };
+    }
+    return { ok: true, data: j.data, body: j };
+  } catch (e) {
+    console.error("[novaposhta]", calledMethod, "не отвечает:", e instanceof Error ? e.message : e);
+    return { ok: false, body: null, network: true };
+  }
 }
 
 type NpResponse<T> = { success?: boolean; data?: T[]; errors?: string[] };
 
 async function call<T>(calledMethod: string, methodProperties: Record<string, string>): Promise<T[] | null> {
-  try {
-    const res = await fetchImpl(API, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ apiKey: await secret("novaposhta.apiKey"), modelName: "Address", calledMethod, methodProperties }),
-      signal: AbortSignal.timeout(8000),
-    });
-    const j = (await res.json()) as NpResponse<T>;
-    if (!j?.success || !Array.isArray(j.data)) {
-      console.error("[novaposhta]", calledMethod, "ошибка:", (j?.errors ?? []).join("; ").slice(0, 200));
-      return null;
-    }
-    return j.data;
-  } catch (e) {
-    console.error("[novaposhta]", calledMethod, "не отвечает:", e instanceof Error ? e.message : e);
-    return null;
-  }
+  const r = await npRequest("Address", calledMethod, methodProperties);
+  return r.ok ? (r.data as T[]) : null;
 }
 
 /** Небольшой кэш с ограничением размера (старые записи вытесняются). */

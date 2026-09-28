@@ -28,7 +28,9 @@ import { compatBlocks, productQtyPrices, productReviews, watchState } from "@/li
 import { CompatSections, QtyPrices, ReviewsSection } from "@/components/shop/product-plus";
 import { CallbackButton, CompareButton, WatchButton } from "@/components/shop/plus";
 import type { TierKey } from "@handyman/core/shop";
-import { callbackLabels } from "@/lib/shop/cart-labels";
+import { callbackLabels, npEstLabels } from "@/lib/shop/cart-labels";
+import { NpEstimateLine } from "@/components/shop/np-estimate";
+import { loadCheckoutSettings } from "@handyman/db/orders";
 
 const SPECS_VISIBLE = 8;
 
@@ -67,9 +69,10 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
   const isTool = isToolCategory(p.categoryId);
   const client = await getClient();
   // шаг 5.6: цены от количества, совместимость, отзывы, подписки «повідомити»
-  const [place, similar, tiers, compat, reviews, watch, stats] = await Promise.all([
+  const [place, similar, tiers, compat, reviews, watch, stats, checkout] = await Promise.all([
     productPlace(c.menu, p.categoryId), similarProducts(p, lang), productQtyPrices(p.id, p.price, (client?.tier as TierKey | undefined) ?? null),
     compatBlocks(p.id, lang), productReviews(p.id), watchState(client ? { id: client.id, tgId: client.tgId } : null, p.id), getCategoryStats(),
+    loadCheckoutSettings(), // шаг 3.4: «безкоштовна доставка від …»
   ]);
   const watchKind = p.stock === "order" ? "STOCK" : "PRICE";
   // «Мій інструмент» (шаг 5.5): отметка и ссылки на подходящие расходники (диски его диаметра, батареи его серии)
@@ -196,7 +199,15 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
           <ul className="hm-product-trust">
             <li><Icon name="shield" size={22} /><span><b>{t("trust.warranty.title")}</b> {t("trust.warranty.text")}</span></li>
             <li><Icon name="back" size={22} /><span><b>{t("trust.return.title")}</b> {t("trust.return.text")}</span></li>
-            <li><Icon name="truck" size={22} /><span><b>{t("trust.delivery.title")}</b> {t("trust.delivery.text")}</span></li>
+            <li>
+              <Icon name="truck" size={22} />
+              <span>
+                <NpEstimateLine
+                  lang={lang} sku={p.sku} labels={npEstLabels(t)} freeFrom={checkout.delivery.np ? checkout.npFreeFrom : 0}
+                  fallback={<><b>{t("trust.delivery.title")}</b> {t("trust.delivery.text")}</>}
+                />
+              </span>
+            </li>
           </ul>
 
           {help.length > 0 && (

@@ -713,3 +713,13 @@ a.hm-promo:hover { box-shadow: 0 0 0 2px var(--c-primary), 0 8px 22px rgba(30, 3
 .hm-compare-buy { margin-top: 8px; }
 .hm-compare-buy .hm-btn { min-height: var(--tap); padding: 0 12px; font-size: .9rem; }
 .hm-compare .hm-check { align-items: center; min-height: var(--tap); }
+
+/* Шаг 3.4: доставка Новой Почтой — полоса «до бесплатной доставки», строка стоимости и срока */
+.hm-freebar { display: grid; gap: 6px; font-size: .9rem; }
+.hm-freebar p { margin: 0; }
+.hm-freebar-track { height: 8px; border-radius: 99px; background: var(--c-chip); overflow: hidden; }
+.hm-freebar-track i { display: block; height: 100%; background: var(--c-primary); border-radius: inherit; }
+.hm-freebar.is-done p { color: var(--c-success); font-weight: 600; }
+.hm-freebar.is-done .hm-freebar-track i { background: var(--c-success); }
+.hm-np-est { font-size: .9rem; color: var(--c-muted); margin: 0; }
+.hm-np-free { display: block; color: var(--c-success); }

@@ -200,7 +200,10 @@ export async function linkTelegramPhone(p: TgProfile & { phone: string }): Promi
       await moveCabinet(tx, byTg.id, byPhone.id); // избранное, «Мій інструмент», корзина (шаг 5.5)
       await tx.client.update({ where: { id: byTg.id }, data: { tgId: null, refCode: null } });
       await tx.client.delete({ where: { id: byTg.id } });
-      await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null, referredById: byPhone.referredById ?? byTg.referredById } });
+      await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null, referredById: byPhone.referredById ?? byTg.referredById,
+        // шаг 3.4: отказы от посылок и чёрный список не теряются при объединении
+        npRefusals: byPhone.npRefusals + byTg.npRefusals, blacklisted: byPhone.blacklisted || byTg.blacklisted,
+        blacklistNote: byPhone.blacklistNote ?? byTg.blacklistNote, blacklistedAt: byPhone.blacklistedAt ?? byTg.blacklistedAt } });
       await tx.clientAudit.create({ data: { clientId: byPhone.id, who: "Telegram", field: "Telegram", oldValue: null, newValue: p.username ? `@${p.username}` : String(p.tgId) } });
       await recalcClient(tx, byPhone.id);
       return { id: byPhone.id, merged: true, created: false };

@@ -15,6 +15,7 @@ import type { PickupPoint } from "@handyman/core/shop/warehouse";
 import { formatPrice } from "../format";
 import { StockBadge, btn, type StockLabels } from "../ui";
 import { Combo } from "./combo";
+import { npEstText, useNpEstimate, type NpEstLabels } from "../np-estimate";
 import { PhoneInput } from "./phone-input";
 import { cartStore, useCart } from "./store";
 
@@ -34,6 +35,8 @@ export type CheckoutLabels = {
   total: string; payNow: string; later: string; payLater: string;
   place: string; sending: string; agree: string; loading: string; empty: string; toCatalog: string; gone: string;
   stock: StockLabels;
+  /** шаг 3.4: стоимость и срок НП, «Безкоштовно (Нова Пошта)» */
+  npEst: NpEstLabels; npFree: string;
 };
 
 export type CheckoutOptions = { pay: Pay[]; delivery: Delivery[] };
@@ -125,6 +128,9 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
   }, [key, lang, pay, done]);
 
   const canSkipCall = quote?.canSkipCall ?? true;
+  // шаг 3.4: стоимость и срок НП в выбранный город (и «бесплатно» от суммы — то же правило, что при заказе)
+  const est = useNpEstimate(delivery === "np" && !done ? cityRef : null, lines, pay);
+  const estText = est ? npEstText(est, city, lang, labels.npEst) : null;
 
   if (!lines.length && !done) {
     return (
@@ -256,6 +262,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
                         {errText("npPoint")}
                       </div>
                     </div>
+                    {estText && <p className="hm-np-est" aria-live="polite" data-np-est>{estText}</p>}
                   </div>
                 )}
               </>
@@ -352,7 +359,15 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
         <div className="hm-sum" aria-live="polite">
           <div><span>{labels.subtotal}</span><span>{t ? formatPrice(t.subtotal) : labels.loading}</span></div>
           {t && t.discountPct > 0 && <div><span>{labels.discount} {t.discountPct}%</span><span>−{formatPrice(t.subtotal - t.total)}</span></div>}
-          <div><span>{labels.shipping}</span><span>{delivery === "pickup" ? labels.shippingFree : labels.shippingTariff}</span></div>
+          <div>
+            <span>{labels.shipping}</span>
+            <span>
+              {delivery === "pickup" ? labels.shippingFree
+                : delivery === "np" && est?.free ? labels.npFree
+                : delivery === "np" && est?.cost != null ? labels.npEst.cost.replace("{sum}", formatPrice(est.cost))
+                : labels.shippingTariff}
+            </span>
+          </div>
           <div className="is-total"><span>{labels.total}</span><span>{t ? formatPrice(t.total) : "…"}</span></div>
           {t && (t.dueNow > 0 ? (
             <>

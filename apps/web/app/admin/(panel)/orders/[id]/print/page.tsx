@@ -5,6 +5,7 @@ import { loadContacts } from "@handyman/db/site-content";
 import { DELIVERY_RU, NP_TYPE_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { orderReservations, ownStockOf } from "@handyman/db/stock";
+import { loadNpSettings, orderShipments } from "@handyman/db/np-shipments";
 import { PrintButton } from "./print-button";
 
 export const dynamic = "force-dynamic";
@@ -12,16 +13,22 @@ export const dynamic = "force-dynamic";
 const uah = (n: number) => `${n.toLocaleString("uk-UA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} грн`;
 const dayUk = (d: Date) => d.toLocaleDateString("uk-UA", { timeZone: "Europe/Kyiv", day: "2-digit", month: "2-digit", year: "numeric" });
 
-/** Печатные формы заказа: счёт покупателю (укр.) и комплектовочный лист для склада. Печать — кнопкой или Ctrl+P, меню админки не печатается. */
+/**
+ * Печатные формы заказа: счёт покупателю (укр.), комплектовочный лист для склада и (шаг 3.4) наша наклейка на посылку — для тестовой ТТН
+ * или номера, вписанного вручную (настоящую наклейку НП печатает кнопка «Наклейка» в заказе). Печать — кнопкой или Ctrl+P.
+ */
 export default async function PrintPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ doc?: string }> }) {
   await requirePermission("orders.view");
   const { id } = await params;
-  const doc = (await searchParams).doc === "packing" ? "packing" : "invoice";
+  const raw = (await searchParams).doc;
+  const doc = raw === "packing" || raw === "label" ? raw : "invoice";
   const o = await getOrderDetail(id);
   if (!o) notFound();
-  const [seller, contacts, own, held] = await Promise.all([
+  const [seller, contacts, own, held, shipments, nps] = await Promise.all([
     loadSeller(), loadContacts(), ownStockOf(o.items.map((i) => i.productId).filter((x): x is string => Boolean(x))), orderReservations(o.id),
+    orderShipments(o.id), loadNpSettings(),
   ]);
+  const sh = shipments.find((x) => x.active);
   const total = o.total.toNumber();
   const due = Math.max(0, total - Math.max(o.dueNow.toNumber(), o.paidAmount.toNumber()));
 
@@ -30,11 +37,26 @@ export default async function PrintPage({ params, searchParams }: { params: Prom
       <div className="adm-row no-print" style={{ marginBottom: 16 }}>
         <Link className="adm-link" href={`/admin/orders/${o.id}`}>← К заказу</Link>
         <PrintButton />
-        <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=${doc === "invoice" ? "packing" : "invoice"}`}>{doc === "invoice" ? "Комплектовочный лист" : "Счёт"}</Link>
+        {doc !== "invoice" && <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=invoice`}>Счёт</Link>}
+        {doc !== "packing" && <Link className="adm-btn" href={`/admin/orders/${o.id}/print?doc=packing`}>Комплектовочный лист</Link>}
         {doc === "invoice" && !seller.name && <span className="adm-chip warn">Реквизиты продавца не заполнены — <Link className="adm-link" href="/admin/orders/seller">заполнить</Link></span>}
       </div>
 
-      {doc === "invoice" ? (
+      {doc === "label" ? (
+        <article className="adm-print-label">
+          <p style={{ margin: 0, fontSize: 13 }}>Нова Пошта · {o.no}{sh?.stub ? " · ТЕСТ" : ""}</p>
+          <p className="adm-print-ttn">{sh?.ttn ?? o.ttn ?? "ТТН ще немає"}</p>
+          <p><b>Відправник:</b> {nps.senderName || seller.name || "Handyman"}{nps.cityName ? `, ${nps.cityName}` : ""}{nps.warehouseName ? `, ${nps.warehouseName}` : ""}
+            {(nps.senderPhone || contacts.phones[0]) && <>, тел. {nps.senderPhone ? formatPhone(nps.senderPhone) : contacts.phones[0]}</>}</p>
+          <p><b>Одержувач:</b> {o.recipientName || o.client.name || "—"}{o.recipientPhone && `, ${formatPhone(o.recipientPhone)}`}<br />
+            {o.city}{o.npWarehouseRef && `, ${o.npWarehouseRef}`}</p>
+          <p>
+            {sh?.weight ? `${sh.weight} кг · ` : ""}місць: {sh?.seats ?? 1}
+            {sh && sh.cod.toNumber() > 0 ? <> · <b>накладений платіж {uah(sh.cod.toNumber())}</b></> : null}
+            {sh?.payer === "Sender" ? " · доставку сплачує відправник" : ""}
+          </p>
+        </article>
+      ) : doc === "invoice" ? (
         <article>
           <h1 style={{ marginBottom: 2 }}>Рахунок № {o.no}</h1>
           <p style={{ marginTop: 0 }}>від {dayUk(o.createdAt)}</p>

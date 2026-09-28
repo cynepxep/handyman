@@ -50,6 +50,11 @@ export default async function CheckoutSettingsPage({ searchParams }: { searchPar
             <input id="fullPayDiscountPct" name="fullPayDiscountPct" className="adm-input" inputMode="decimal" defaultValue={String(s.fullPayDiscountPct)} />
             <span className="adm-muted">0 — без скидки (как вы решили). Действует для «полной оплаты» и «по реквизитам».</span>
           </div>
+          <div className="adm-field">
+            <label htmlFor="npFreeFrom">Бесплатная доставка Новой Почтой от суммы, ₴</label>
+            <input id="npFreeFrom" name="npFreeFrom" className="adm-input" inputMode="numeric" defaultValue={String(s.npFreeFrom)} />
+            <span className="adm-muted">0 — выключено. Заказ на эту сумму и больше — доставку НП оплачивает магазин (ТТН с плательщиком «магазин»); в корзине — полоса «ещё N ₴ до бесплатной доставки».</span>
+          </div>
         </div>
 
         <h2>Способы доставки</h2>

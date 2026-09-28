@@ -8,7 +8,7 @@ export type DraftContacts = { addressUk: string; addressRu: string; hoursUk: str
 const money = (n: number) => `${Math.round(n).toLocaleString("uk-UA").replace(/ /g, " ")} ₴`;
 
 type Words = {
-  deliveryH: string; np: string; npWays: string; pickup: (addr: string, hours: string) => string; courier: string;
+  deliveryH: string; np: string; npWays: string; npFree: (sum: string) => string; pickup: (addr: string, hours: string) => string; courier: string;
   termsH: string; local: string; supplier: string; order: string;
   payH: string; prepay: (sum: string) => string; prepayNone: string; full: string; card: string; fullDisc: (p: number) => string;
   after: string; unknown: string;
@@ -18,6 +18,7 @@ const UK: Words = {
   deliveryH: "## Доставка",
   np: "**Нова Пошта** — по всій Україні, за тарифами перевізника.",
   npWays: "Можна отримати у відділенні або поштоматі Нової Пошти.",
+  npFree: (s) => `Від ${s} — доставка Новою Поштою безкоштовна.`,
   pickup: (a, h) => `**Самовивіз з магазину** — ${a}.${h ? ` Графік: ${h}.` : ""} Зателефонуємо, коли замовлення буде готове.`,
   courier: "**Кур’єр по Одесі** — час і вартість доставки узгодить менеджер.",
   termsH: "## Терміни",
@@ -38,6 +39,7 @@ const RU: Words = {
   deliveryH: "## Доставка",
   np: "**Новая Почта** — по всей Украине, по тарифам перевозчика.",
   npWays: "Можно получить в отделении или почтомате Новой Почты.",
+  npFree: (s) => `От ${s} — доставка Новой Почтой бесплатная.`,
   pickup: (a, h) => `**Самовывоз из магазина** — ${a}.${h ? ` График: ${h}.` : ""} Позвоним, когда заказ будет готов.`,
   courier: "**Курьер по Одессе** — время и стоимость доставки согласует менеджер.",
   termsH: "## Сроки",
@@ -56,7 +58,7 @@ const RU: Words = {
 
 function build(w: Words, s: CheckoutSettings, address: string, hours: string): string {
   const out: string[] = [w.deliveryH, ""];
-  if (s.delivery.np) out.push(`- ${w.np} ${w.npWays}`);
+  if (s.delivery.np) out.push(`- ${w.np} ${w.npWays}${s.npFreeFrom > 0 ? ` ${w.npFree(money(s.npFreeFrom))}` : ""}`);
   if (s.delivery.pickup) out.push(`- ${w.pickup(address.trim() || w.unknown, hours.replace(/\s*\n\s*/g, "; ").trim())}`);
   if (s.delivery.courier) out.push(`- ${w.courier}`);
   out.push("", w.termsH, "", `- ${w.local}`, `- ${w.supplier}`, `- ${w.order}`, "", w.payH, "");

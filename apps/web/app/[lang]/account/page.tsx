@@ -51,7 +51,10 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
     loadLoyalty(),
     prisma.order.findMany({
       where: { clientId: client.id, isTest: false }, orderBy: { createdAt: "desc" }, take: 30,
-      select: { no: true, status: true, total: true, ttn: true, createdAt: true, _count: { select: { items: true } } },
+      select: {
+        no: true, status: true, total: true, ttn: true, createdAt: true, _count: { select: { items: true } },
+        shipments: { where: { active: true, stub: false }, select: { state: true }, take: 1 }, // шаг 3.4: где посылка
+      },
     }),
     prisma.client.count({ where: { referredById: client.id } }),
     client.refCode ? client.refCode : ensureRefCode(client.id).catch(() => null),
@@ -108,6 +111,9 @@ export default async function AccountPage({ params }: PageProps<"/[lang]/account
                     <div className="hm-muted">
                       {t("account.order.ttn", { ttn: o.ttn })}{" "}
                       <a className="hm-link" href={`https://novaposhta.ua/tracking/?cargo_number=${encodeURIComponent(o.ttn)}`} target="_blank" rel="noopener">{t("account.order.track")}</a>
+                      {["created", "transit", "arrived", "received"].includes(o.shipments[0]?.state ?? "") && (
+                        <div>{t("account.order.ttnState", { state: t(`np.state.${o.shipments[0].state}`) })}</div>
+                      )}
                     </div>
                   )}
                 </div>

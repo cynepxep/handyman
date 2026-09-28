@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import type { OrderStatus } from "@handyman/db";
-import { ORDER_STATUSES, placeManualOrder, saveSeller, setOrderStatus, setOrderTtn } from "@handyman/db/orders";
+import { ORDER_STATUSES, placeManualOrder, saveSeller, setOrderStatus } from "@handyman/db/orders";
 import { sendOrderMessages } from "@handyman/db/messages";
 import { retryOutbox } from "@handyman/db/notify";
 import { MONO_PENDING, unpaidOf, validateInvoiceAmount, validateManualOrder, validateManualReceipt, validateRefund, validateSeller } from "@handyman/core/shop";
@@ -58,13 +58,6 @@ export async function setStatusAction(formData: FormData): Promise<void> {
     rep.failed && `ошибка отправки: ${rep.failed}`,
   ].filter(Boolean);
   redirect(back(id, rep.failed ? "error" : "ok", `Сохранено. Сообщения: ${parts.join("; ")}.`));
-}
-
-export async function setTtnAction(formData: FormData): Promise<void> {
-  const session = await requirePermission("orders.edit");
-  const id = String(formData.get("id") ?? "");
-  await setOrderTtn(id, String(formData.get("ttn") ?? ""), session.name || session.username);
-  redirect(back(id, "ok", "ТТН сохранена."));
 }
 
 /** Повторить неудачную отправку сообщения. */

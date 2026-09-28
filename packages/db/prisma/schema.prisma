@@ -526,6 +526,11 @@ model Client {
   cart              Json? // Этап 5.5: общая корзина сайт ↔ Mini App ([{ sku, qty }]), только у вошедших
   cartVersion       Int       @default(0) // растёт при каждой записи корзины (браузер помнит, какую версию видел)
   cartUpdatedAt     DateTime?
+  // шаг 3.4: отказы от посылок Новой Почты и чёрный список (только полная оплата, без предоплаты с остатком при получении)
+  npRefusals        Int       @default(0)
+  blacklisted       Boolean   @default(false)
+  blacklistNote     String?
+  blacklistedAt     DateTime?
   createdAt         DateTime  @default(now())
 
   orders       Order[]
@@ -663,6 +668,7 @@ model Order {
   createdBy      String? // шаг 4.3: сотрудник, оформивший заказ по звонку (source = manual)
   shopDeliveryCost Decimal      @default(0) @db.Decimal(10, 2) // шаг 4.5: доставка за счёт магазина (для прибыли)
   doneAt         DateTime? // шаг 4.5: когда стал «Выполнен» (месяц выручки); при уходе из «Выполнен» — пусто
+  npFreeShipping Boolean        @default(false) // шаг 3.4: сумма дошла до «бесплатная доставка НП от …» на момент заказа — доставку оплачивает магазин
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -674,6 +680,7 @@ model Order {
   invoices       PayInvoice[]
   receipts       FiscalReceipt[]
   partnerRefs    PartnerReferral[]
+  shipments      NpShipment[]
 
   @@index([clientId])
   @@index([status])
@@ -820,6 +827,43 @@ model FiscalReceipt {
 
   @@index([orderId])
   @@index([status, nextTryAt])
+}
+
+// Шаг 3.4: посылка Новой Почты по заказу — ТТН создана кнопкой из заказа (есть ref — можно печатать и удалять) или номер вписан вручную.
+// Статус спрашиваем у НП в фоновых задачах (nextCheckAt), по нему заказ сам становится «Отправлен» / «Выполнен». active = текущая посылка заказа.
+// state: created (создана, ещё не сдана) | transit | arrived (в отделении) | received | refused (отказ / не забрал) | deleted | unknown (номер не найден)
+model NpShipment {
+  id           String    @id @default(cuid())
+  orderId      String
+  order        Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  ttn          String
+  ref          String? // Ref документа в НП
+  manual       Boolean   @default(false)
+  stub         Boolean   @default(false) // тестовая ТТН (НП не подключена, не production) — в НП не существует
+  active       Boolean   @default(true)
+  payer        String    @default("Recipient") // кто платит доставку: Recipient | Sender
+  cost         Decimal?  @db.Decimal(10, 2) // стоимость доставки по НП
+  cod          Decimal   @default(0) @db.Decimal(10, 2) // наложенный платёж / контроль оплаты — получатель платит за товар
+  declared     Decimal?  @db.Decimal(10, 2) // оценочная стоимость
+  weight       Float?
+  seats        Int       @default(1)
+  estDate      DateTime? // ориентировочная дата доставки
+  state        String    @default("created")
+  statusCode   String?
+  statusText   String?
+  arrivedAt    DateTime?
+  receivedAt   DateTime?
+  refusedAt    DateTime?
+  stuckAlertAt DateTime? // тревога «лежит в отделении N дней» уже отправлена
+  checkedAt    DateTime?
+  nextCheckAt  DateTime? // когда спросить НП снова; null — посылка закрыта
+  createdBy    String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([orderId])
+  @@index([nextCheckAt])
+  @@index([ttn])
 }
 
 model Recommendation {

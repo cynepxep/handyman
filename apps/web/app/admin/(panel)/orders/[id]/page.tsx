@@ -8,16 +8,18 @@ import { orderDeliveryCostAction } from "../../finance/actions";
 import { listTasks } from "@handyman/db/service";
 import { monoMode, orderInvoices } from "@handyman/db/payments";
 import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts";
+import { loadNpSettings, npMode, orderShipments, orderWeightKg } from "@handyman/db/np-shipments";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
-import { retryMessageAction, setStatusAction, setTtnAction } from "../actions";
+import { retryMessageAction, setStatusAction } from "../actions";
 import { statusChip } from "../status-chip";
 import { CopyButton, StatusForm } from "./status-form";
 import { PaymentsBlock } from "./payments-block";
 import { ReceiptsBlock } from "./receipts-block";
+import { NpBlock } from "./np-block";
 
 export const dynamic = "force-dynamic";
 
@@ -41,9 +43,10 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const later = o.total.toNumber() - o.dueNow.toNumber();
   const canHistory = session.permissions.includes("orders.history");
   const canFinance = session.permissions.includes("finance.view");
-  const [tpl, clientMsgs, held, profit, tasks, invoices, mono, receipts, rmode, receiptable] = await Promise.all([
+  const [tpl, clientMsgs, held, profit, tasks, invoices, mono, receipts, rmode, receiptable, shipments, npm, nps, weight] = await Promise.all([
     canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id), canFinance ? orderProfitOf(o.id) : null,
     listTasks({ orderId: o.id }), orderInvoices(o.id), monoMode(), orderReceipts(o.id), receiptMode(), receiptableOf(o.id),
+    orderShipments(o.id), npMode(), loadNpSettings(), orderWeightKg(o.id),
   ]);
 
   return (
@@ -97,15 +100,15 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
             {o.dueNow.toNumber() > 0 && later > 0.005 && <> · сейчас {money(o.dueNow)}, при получении {money(later)}</>}
           </p>
           {o.paidAmount.toNumber() > 0 && <p><span className="adm-chip ok">оплачено картой {money(o.paidAmount)}</span></p>}
-          <form action={setTtnAction} className="adm-row" style={{ marginTop: 8 }}>
-            <input type="hidden" name="id" value={o.id} />
-            <label htmlFor="ttn">ТТН</label>
-            <input id="ttn" name="ttn" className="adm-input" defaultValue={o.ttn ?? ""} inputMode="numeric" placeholder="20450000000000" disabled={!canEdit} />
-            {canEdit && <SubmitButton pendingText="…">Сохранить</SubmitButton>}
-          </form>
+          {o.npFreeShipping && <p><span className="adm-chip ok">бесплатная доставка НП (за наш счёт)</span></p>}
+          <p>ТТН: {o.ttn ? <b><a className="adm-link" href="#np">{o.ttn}</a></b> : <a className="adm-link" href="#np">{o.delivery === "NOVA_POSHTA" ? "создать в блоке «Нова Пошта» ↓" : "—"}</a>}</p>
         </section>
       </div>
 
+      <NpBlock
+        order={o} shipments={shipments} mode={npm} settings={nps} weightKg={weight} canEdit={canEdit} isOwner={session.roleKey === "owner"}
+        canSettings={session.permissions.includes("settings.edit")}
+      />
       <PaymentsBlock
         order={o} invoices={invoices} mode={mono} canEdit={canEdit} canRefund={session.permissions.includes("payments.refund")} isOwner={session.roleKey === "owner"}
       />

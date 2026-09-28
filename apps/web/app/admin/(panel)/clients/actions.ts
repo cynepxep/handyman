@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { saveLoyalty, updateClient } from "@handyman/db/clients";
+import { setBlacklist } from "@handyman/db/np-shipments";
 import { normalizePhone, validateClientEdit, type LoyaltyLevel } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { shopChanged } from "@/lib/shop/cache";
@@ -32,4 +33,13 @@ export async function saveLevelsAction(formData: FormData): Promise<void> {
   await saveLoyalty({ enabled: formData.get("enabled") === "on", levels, wholesalePct: num("wholesalePct") }, session.name || session.username);
   shopChanged();
   redirect(`/admin/clients/levels?ok=${encodeURIComponent("Сохранено. Уровни клиентов пересчитаны.")}`);
+}
+
+/** Шаг 3.4: чёрный список (отказы от посылок) — только полная оплата на сайте. */
+export async function setBlacklistAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("clients.edit");
+  const id = String(formData.get("id") ?? "");
+  const on = formData.get("blacklisted") === "on";
+  await setBlacklist(id, on, String(formData.get("blacklistNote") ?? ""), session.name || session.username);
+  redirect(back(id, "ok", on ? "Покупатель в чёрном списке: на сайте — только полная оплата." : "Покупатель не в чёрном списке."));
 }
