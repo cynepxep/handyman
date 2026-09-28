@@ -87,8 +87,14 @@ test("отмена загрузки: созданные удаляются (за
   if (!dbReady) return t.skip(skipMsg);
   // Ошибка владельца: файл Milwaukee загружен как Vitals. Товары Vitals стали «Под заказ», у одного товара сменилась цена.
   await prisma.product.update({ where: { sku: "000237651" }, data: { price: 1599 } });
-  const wrongFeed = milFeed(`<offer id="9" available="true"><vendorCode>000237651</vendorCode><name>Пила ланцюгова Vitals Master AKZ 1815gk BL Premium</name><price>1700</price><categoryId>2</categoryId></offer>`)
+  const wrongFeed = milFeed(`<offer id="9" available="true"><vendorCode>000237651</vendorCode><name>Пила ланцюгова Vitals Master AKZ 1815gk BL Premium</name><price>1700</price><categoryId>2</categoryId><picture>https://milwaukee.example/saw-1.jpg</picture><param name="Напруга">18 В</param></offer>`)
     .replace(/MW-00/g, "WR-00").replace("DW-001", "WR-DW").replace("NB-001", "WR-NB");
+  const lists = (id: string) => Promise.all([
+    prisma.productImage.findMany({ where: { product: { sku: id } }, orderBy: { sort: "asc" }, select: { url: true, sort: true } }),
+    prisma.productAttribute.findMany({ where: { product: { sku: id } }, orderBy: { sort: "asc" }, select: { key: true, value: true } }),
+  ]);
+  const [picsBefore, paramsBefore] = await lists("000237651");
+  assert.ok(picsBefore.length > 1 && paramsBefore.length > 1, "у товара Vitals есть свои фото и характеристики");
   const runId = await load(vitalsId, wrongFeed);
   const run = await imp.getRun(runId);
   const s = run!.summary as { created: number; missing: number };
@@ -96,6 +102,9 @@ test("отмена загрузки: созданные удаляются (за
   assert.ok(s.missing >= 15, "товары Vitals стали «пропавшими»");
   const saw = await prisma.product.findUniqueOrThrow({ where: { sku: "000237651" } });
   assert.equal(saw.price.toNumber(), 1700);
+  const [picsWrong, paramsWrong] = await lists("000237651");
+  assert.deepEqual(picsWrong.map((p) => p.url), ["https://milwaukee.example/saw-1.jpg"], "чужой файл заменил фото");
+  assert.deepEqual(paramsWrong, [{ key: "Напруга", value: "18 В" }]);
 
   // пока есть более поздняя загрузка — старую не отменить
   const info = await undo.undoInfo(runId);
@@ -123,6 +132,7 @@ test("отмена загрузки: созданные удаляются (за
   assert.ok(out.restored >= 15);
   assert.ok(out.keptChanged >= 1);
   assert.equal((await prisma.product.findUniqueOrThrow({ where: { sku: "000237651" } })).price.toNumber(), 1599, "цена вернулась");
+  assert.deepEqual(await lists("000237651"), [picsBefore, paramsBefore], "фото и характеристики вернулись");
   const stillMissing = await prisma.product.findMany({ where: { supplierId: vitalsId, missingFromFeedSince: { not: null } } });
   assert.deepEqual(stillMissing.map((p) => [p.id, p.missingFromFeedSince?.toISOString()]), [[other.id, touched.toISOString()]]);
   await prisma.product.update({ where: { id: other.id }, data: { missingFromFeedSince: null } });

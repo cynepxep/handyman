@@ -1,10 +1,10 @@
 // Фото товаров: свои копии на нашем сервере по каждому поставщику (каталогу) и фирменный стиль фото (светлый фон, товар «парит»).
 // Кнопки скачивают недостающие и делают стиль; новые фото после импорта докачиваются сами. Пока копии нет — показывается фото поставщика.
 import { prisma } from "@handyman/db";
-import { lastRuns, mediaDir, mediaStats, photoStyleOn } from "@handyman/db/media";
+import { lastRuns, mediaDir, mediaSources, mediaStats, photoStyleOn } from "@handyman/db/media";
 import { requirePermission } from "@/lib/auth";
 import { AutoRefresh, SubmitButton } from "../import/client-bits";
-import { startMediaAction, startStyleAction, stopMediaAction, togglePhotoStyleAction } from "./actions";
+import { checkFilesAction, startMediaAction, startStyleAction, stopMediaAction, togglePhotoStyleAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -38,9 +38,10 @@ function RunInfo({ run, label }: { run?: Run; label: string }) {
 export default async function MediaPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   await requirePermission("import.run");
   const { ok, error } = await searchParams;
-  const [suppliers, stats, runs, styleOn, samples] = await Promise.all([
+  const [suppliers, stats, sources, runs, styleOn, samples] = await Promise.all([
     prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
     mediaStats(),
+    mediaSources(),
     lastRuns(),
     photoStyleOn(),
     prisma.productImage.findMany({
@@ -50,11 +51,12 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
   ]);
   const rows = [
     ...suppliers.map((s) => ({ key: s.id, name: s.name })),
-    ...(stats.some((x) => x.supplierId === null) ? [{ key: "none", name: "Без поставщика (добавлены вручную)" }] : []),
+    ...(stats.some((x) => x.supplierId === null) || sources.has(null) ? [{ key: "none", name: "Без поставщика (добавлены вручную)" }] : []),
   ].map((r) => {
     const st = stats.find((x) => (x.supplierId ?? "none") === r.key) ?? { total: 0, local: 0, errors: 0, bytes: 0, styled: 0 };
     const sid = r.key === "none" ? "" : r.key;
-    return { ...r, ...st, dl: runs.get(`${sid}|download`), style: runs.get(`${sid}|style`) };
+    const src = sources.get(sid || null) ?? { products: 0, hosts: [] };
+    return { ...r, ...st, ...src, dl: runs.get(`${sid}|download`), style: runs.get(`${sid}|style`) };
   });
   const live = (x?: Run) => x?.status === "running" && !x.interrupted;
   const anyRunning = rows.some((r) => live(r.dl) || live(r.style));
@@ -90,7 +92,7 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
       <div className="adm-table-wrap">
         <table className="adm-table">
           <thead>
-            <tr><th>Поставщик</th><th className="num">Фото</th><th className="num">У нас</th><th className="num">В стиле</th><th className="num">Место</th><th>Скачивание</th><th>Фирменный стиль</th></tr>
+            <tr><th>Поставщик</th><th className="num">Товаров</th><th className="num">Фото</th><th className="num">У нас</th><th className="num">В стиле</th><th className="num">Место</th><th>Скачивание</th><th>Фирменный стиль</th></tr>
           </thead>
           <tbody>
             {rows.map((r) => {
@@ -98,8 +100,20 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
               const toStyle = r.local - r.styled;
               return (
                 <tr key={r.key}>
-                  <td><b>{r.name}</b>{r.errors ? <div className="adm-muted">не удалось скачать: {r.errors}</div> : null}</td>
-                  <td className="num">{r.total}</td>
+                  <td>
+                    <b>{r.name}</b>
+                    {r.hosts.length > 0 && (
+                      <div className="adm-muted" style={{ fontSize: 13 }}>
+                        откуда фото: {r.hosts.slice(0, 4).map((h) => `${h.host} — ${h.photos}`).join(", ")}{r.hosts.length > 4 ? ` и ещё ${r.hosts.length - 4}` : ""}
+                      </div>
+                    )}
+                    {r.errors ? <div className="adm-muted">не удалось скачать: {r.errors}</div> : null}
+                  </td>
+                  <td className="num">{r.products}</td>
+                  <td className="num">
+                    {r.total}
+                    {r.products > 0 && r.total > 0 && <div className="adm-muted" style={{ fontSize: 13 }}>≈ {(r.total / r.products).toFixed(1).replace(".", ",")} на товар</div>}
+                  </td>
                   <td className="num">{r.local}{r.total ? ` (${Math.round((r.local / r.total) * 100)}%)` : ""}</td>
                   <td className="num">{r.styled}</td>
                   <td className="num">{r.bytes ? mb(r.bytes) : "—"}</td>
@@ -145,6 +159,16 @@ export default async function MediaPage({ searchParams }: { searchParams: Promis
           </div>
         </section>
       )}
+
+      <section className="adm-card" style={{ marginTop: 16 }}>
+        <h2 style={{ marginTop: 0 }}>Фото не показываются на сайте?</h2>
+        <p className="adm-muted" style={{ marginTop: 0 }}>
+          Так бывает, если папку с фото удалили или перенесли, или сайт запущен из другой папки: в базе записано «фото у нас», а файла нет.
+          Кнопка проверит каждое фото: где файла нет — сайт сразу покажет фото поставщика, а копия скачается заново. Сайт и сам докачивает
+          такое фото, когда его открывает покупатель.
+        </p>
+        <form action={checkFilesAction}><SubmitButton pendingText="Проверяю…">Проверить файлы на диске</SubmitButton></form>
+      </section>
 
       <p className="adm-muted" style={{ marginTop: 12 }}>
         Всего своих копий: {mb(totalBytes)}. Папка на этом компьютере: <code>{mediaDir()}</code> — при переезде на сервер её нужно скопировать туда

@@ -5,6 +5,7 @@
 
 import fs from "node:fs/promises";
 import { prisma, Prisma } from "./client";
+import { imageRows } from "./media";
 
 /** Ошибка, текст которой можно показать владельцу как есть. */
 export class UndoUserError extends Error {
@@ -177,11 +178,31 @@ async function restoreUpdated(runId: string, who: string) {
     );
     const groups = new Map<string, { ids: string[]; data: Record<string, unknown> }>();
     const priceLogs: Prisma.PriceLogCreateManyInput[] = [];
+    // фото и характеристики: сейчас у товара — те, что поставила загрузка? тогда возвращаем прежние
+    const lists = await currentLists(rows.filter((r) => hasLists(r.after)).map((r) => r.productId));
+    const put = { pictureIds: [] as string[], pictures: [] as Prisma.ProductImageCreateManyInput[], paramIds: [] as string[], params: [] as Prisma.ProductAttributeCreateManyInput[] };
     for (const row of rows) {
       const cur = current.get(row.productId);
       if (!cur) continue;
       const before = (row.before ?? {}) as Record<string, unknown>;
       const after = (row.after ?? {}) as Record<string, unknown>;
+      let listsBack = false;
+      if (Array.isArray(after.pictures)) {
+        if (sameJson(lists.pictures.get(row.productId) ?? [], after.pictures)) {
+          put.pictureIds.push(row.productId);
+          const urls = Array.isArray(before.pictures) ? (before.pictures as string[]) : [];
+          put.pictures.push(...imageRows(urls).map((r) => ({ ...r, productId: row.productId })));
+          listsBack = true;
+        } else keptChanged++;
+      }
+      if (Array.isArray(after.params)) {
+        if (sameJson(lists.params.get(row.productId) ?? [], after.params)) {
+          put.paramIds.push(row.productId);
+          const params = Array.isArray(before.params) ? (before.params as Array<{ name: string; value: string }>) : [];
+          put.params.push(...params.map((a, sort) => ({ productId: row.productId, key: a.name, value: a.value, sort })));
+          listsBack = true;
+        } else keptChanged++;
+      }
       const data: Record<string, unknown> = {};
       for (const [k, v] of Object.entries(after)) {
         if (!RESTORABLE.has(k)) continue;
@@ -194,7 +215,10 @@ async function restoreUpdated(runId: string, who: string) {
         if (k === "price" && back == null) continue; // цена обязательна
         data[k] = fromJson(k, back);
       }
-      if (!Object.keys(data).length) continue;
+      if (!Object.keys(data).length) {
+        if (listsBack) restored++;
+        continue;
+      }
       if (data.price != null) {
         priceLogs.push({ productId: row.productId, oldPrice: Number(cur.price as Prisma.Decimal), newPrice: Number(data.price), source: "IMPORT", who });
       }
@@ -208,8 +232,36 @@ async function restoreUpdated(runId: string, who: string) {
       await prisma.product.updateMany({ where: { id: { in: g.ids } }, data: g.data as Prisma.ProductUpdateManyMutationInput });
     }
     if (priceLogs.length) await prisma.priceLog.createMany({ data: priceLogs });
+    if (put.pictureIds.length || put.paramIds.length) {
+      await prisma.$transaction([
+        prisma.productImage.deleteMany({ where: { productId: { in: put.pictureIds } } }),
+        prisma.productImage.createMany({ data: put.pictures }),
+        prisma.productAttribute.deleteMany({ where: { productId: { in: put.paramIds } } }),
+        prisma.productAttribute.createMany({ data: put.params }),
+      ]);
+    }
   }
   return { restored, keptChanged };
+}
+
+const hasLists = (after: unknown) => {
+  const a = (after ?? {}) as Record<string, unknown>;
+  return Array.isArray(a.pictures) || Array.isArray(a.params);
+};
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Фото (адреса у поставщика) и характеристики товаров сейчас — в том же виде, как их пишет журнал загрузки. */
+async function currentLists(ids: string[]) {
+  const pictures = new Map<string, string[]>();
+  const params = new Map<string, Array<{ name: string; value: string }>>();
+  if (!ids.length) return { pictures, params };
+  const [imgs, attrs] = await Promise.all([
+    prisma.productImage.findMany({ where: { productId: { in: ids } }, orderBy: { sort: "asc" }, select: { productId: true, url: true } }),
+    prisma.productAttribute.findMany({ where: { productId: { in: ids } }, orderBy: { sort: "asc" }, select: { productId: true, key: true, value: true } }),
+  ]);
+  for (const i of imgs) pictures.set(i.productId, [...(pictures.get(i.productId) ?? []), i.url]);
+  for (const a of attrs) params.set(a.productId, [...(params.get(a.productId) ?? []), { name: a.key, value: a.value }]);
+  return { pictures, params };
 }
 
 /** Удалить опустевшие категории, которые создала загрузка (сначала самые глубокие). */
