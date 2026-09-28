@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ORDER_STATUSES, listOrders } from "@handyman/db/orders";
-import { DELIVERY_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone, parseOrderFilters, type OrderFilters } from "@handyman/core/shop";
+import { DELIVERY_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, parseOrderFilters, type OrderFilters } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { statusChip } from "./status-chip";
@@ -108,6 +108,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   <Link className="adm-link" href={`/admin/orders/${o.id}`}><b>{o.no}</b></Link>
                   <div className="adm-muted">{o.createdAt.toLocaleString("ru-RU", { timeZone: "Europe/Kyiv", dateStyle: "short", timeStyle: "short" })}</div>
                   {o.isTest && <span className="adm-chip">тест</span>} {o.source === "one_click" && <span className="adm-chip warn">1 клик</span>}
+                  {o.suspicious && <span className="adm-chip bad" title={SUSPICIOUS_RU[o.suspicious] ?? o.suspicious}>⚠ подозрительный</span>}
                   {o.source === "manual" && <span className="adm-chip">по звонку</span>}
                 </td>
                 <td>

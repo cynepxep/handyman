@@ -25,7 +25,7 @@ export function proxy(request: NextRequest) {
   // Этап 5: приглашение друга (…?ref=КОД) — запоминаем на 30 дней, засчитаем при входе или первом заказе
   const ref = request.nextUrl.searchParams.get("ref");
   if (ref && /^[A-Za-z0-9]{4,16}$/.test(ref) && !request.cookies.has("hm_ref")) {
-    res.cookies.set("hm_ref", ref.toUpperCase(), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 30 * 86400 });
+    res.cookies.set("hm_ref", ref.toUpperCase(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 86400 });
   }
   return res;
 }

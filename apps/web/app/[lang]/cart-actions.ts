@@ -2,7 +2,6 @@
 
 // Действия корзины и оформления, которые вызывает браузер. Цены, наличие, суммы и проверку формы делает сервер;
 // из браузера приходят только артикулы, количество и введённые покупателем данные.
-import { headers } from "next/headers";
 import { computeTotals, canSkipCall, nextQtyPrice, type PayChoice, type StockLevel } from "@handyman/core/shop";
 import { isShopLang, paths, shopHref, type ShopLang } from "@handyman/core/site";
 import { clientDiscountFor, loadCheckoutSettings, placeOneClick, placeOrder, quoteCart } from "@handyman/db/orders";
@@ -12,6 +11,7 @@ import { getStaffSession } from "@/lib/auth";
 import { getShopContent } from "@/lib/shop/content";
 import { getClient, refCodeFromCookie } from "@/lib/client-auth";
 import { logError } from "@handyman/db/errors";
+import { guardForm } from "@/lib/antispam";
 
 /** Этап 5: приглашение засчитываем, если это первый заказ покупателя (и его ещё никто не пригласил). */
 async function creditReferral(orderNo: string) {
@@ -64,24 +64,6 @@ export async function checkoutQuoteAction(lang: unknown, items: unknown, pay: un
   };
 }
 
-// ---------- защита от спама: не больше 5 заказов за 10 минут с одного адреса (в памяти сервера) ----------
-
-const WINDOW_MS = 10 * 60 * 1000;
-const LIMIT = 5;
-const hits = new Map<string, number[]>();
-
-async function tooMany(): Promise<boolean> {
-  const h = await headers();
-  const ip = (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "local").trim();
-  const now = Date.now();
-  const list = (hits.get(ip) ?? []).filter((ts) => now - ts < WINDOW_MS);
-  if (list.length >= LIMIT) return true;
-  list.push(now);
-  hits.set(ip, list);
-  if (hits.size > 5000) hits.clear(); // не даём таблице расти бесконечно
-  return false;
-}
-
 /** Заказ сотрудника (вошёл в админку) помечается тестовым: не учитывается в статистике и не уйдёт в CRM. */
 async function isStaff(): Promise<boolean> {
   try {
@@ -93,17 +75,21 @@ async function isStaff(): Promise<boolean> {
 
 export type PlaceOrderResult = { ok: true; url: string } | { ok: false; errors: Record<string, string>; message?: string };
 
-/** Оформить заказ. Ошибки — сразу текстом на языке сайта. `website` — скрытое поле-ловушка для ботов. */
+/**
+ * Оформить заказ. Ошибки — сразу текстом на языке сайта. Защита от ботов (шаг 8.3): `website` — скрытое поле-ловушка, `fillMs` — сколько
+ * форма была открыта, не больше 5 заказов за 10 минут с одного адреса (вместе с «1 клік»; счётчик в базе). Та же корзина с того же
+ * телефона за 10 минут — открывается первый заказ (placeOrder).
+ */
 export async function placeOrderAction(lang: unknown, form: Record<string, unknown>): Promise<PlaceOrderResult> {
   const l = langOf(lang);
   const { t } = await getShopContent(l);
-  if (typeof form?.website === "string" && form.website.trim()) return { ok: false, errors: {}, message: t("err.server") };
-  if (await tooMany()) return { ok: false, errors: {}, message: t("err.tooMany") };
   try {
+    const bad = await guardForm("order", form);
+    if (bad) return { ok: false, errors: {}, message: t(bad) };
     const client = await getClient();
     const r = await placeOrder(form, { lang: l, isTest: await isStaff(), clientId: client?.id });
     if (!r.ok) return { ok: false, errors: Object.fromEntries(Object.entries(r.errors).map(([k, key]) => [k, t(key ?? "err.server")])) };
-    await creditReferral(r.no);
+    if (!r.duplicate) await creditReferral(r.no);
     return { ok: true, url: shopHref(l, paths.order(r.no, r.accessKey)) };
   } catch (e) {
     logError("[checkout] заказ не создан", e);
@@ -112,15 +98,15 @@ export async function placeOrderAction(lang: unknown, form: Record<string, unkno
 }
 
 /** «Купити в 1 клік». */
-export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?: unknown; phone?: unknown; name?: unknown; website?: unknown }) {
+export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?: unknown; phone?: unknown; name?: unknown; website?: unknown; fillMs?: unknown }) {
   const l = langOf(lang);
   const { t } = await getShopContent(l);
-  if (typeof form?.website === "string" && form.website.trim()) return { ok: false as const, message: t("err.server") };
-  if (await tooMany()) return { ok: false as const, message: t("err.tooMany") };
   try {
+    const bad = await guardForm("order", form);
+    if (bad) return { ok: false as const, message: t(bad) };
     const client = await getClient();
     const r = await placeOneClick(form, { lang: l, isTest: await isStaff(), clientId: client?.id });
-    if (r.ok) await creditReferral(r.no);
+    if (r.ok && !r.duplicate) await creditReferral(r.no);
     return r.ok ? { ok: true as const, message: t("oneClick.done", { no: r.no }) } : { ok: false as const, message: t(r.error) };
   } catch (e) {
     logError("[one-click] заказ не создан", e);

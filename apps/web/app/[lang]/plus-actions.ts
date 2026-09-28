@@ -2,10 +2,10 @@
 
 // «Витрина+» (шаг 5.6): действия, которые вызывает браузер — отзыв/вопрос с фото, подписка «повідомити», «Передзвоніть мені», сравнение.
 // Из браузера приходят только введённые данные и коды товаров; цены, наличие и характеристики сервер берёт сам.
-import { headers } from "next/headers";
 import { prisma } from "@handyman/db";
 import {
-  COMPARE_MAX, REVIEW_MAX_PHOTOS, REVIEW_MAX_PHOTO_BYTES, availableQty, cleanSkuList, compareRows, stockLevel, validateReview, type CompareRow, type StockLevel,
+  COMPARE_MAX, REVIEW_MAX_PHOTOS, REVIEW_MAX_PHOTO_BYTES, availableQty, cleanSkuList, compareRows, filledTooFast, stockLevel, trapFilled, validateReview,
+  type CompareRow, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
 import { isShopLang, paths, shopHref, type ShopLang } from "@handyman/core/site";
@@ -14,14 +14,12 @@ import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import { getShopContent } from "@/lib/shop/content";
 import { getClient } from "@/lib/client-auth";
 import { logError } from "@handyman/db/errors";
+import { guardForm } from "@/lib/antispam";
+import { requestIp } from "@/lib/request-ip";
+import { rateHit } from "@handyman/db/rate-limit";
 
 const langOf = (l: unknown): ShopLang => (isShopLang(l) ? l : "uk");
 const ID = /^[a-z0-9]{8,40}$/;
-
-async function clientIp(): Promise<string> {
-  const h = await headers();
-  return (h.get("x-forwarded-for")?.split(",")[0] ?? h.get("x-real-ip") ?? "local").trim();
-}
 
 // ---------- отзыв / вопрос ----------
 
@@ -30,7 +28,9 @@ export type ReviewResult = { ok: true; message: string } | { ok: false; message:
 export async function reviewAction(lang: unknown, form: FormData): Promise<ReviewResult> {
   const l = langOf(lang);
   const { t } = await getShopContent(l);
-  if (String(form.get("website") ?? "").trim()) return { ok: false, message: t("err.server") };
+  // шаг 8.3: ловушка и «слишком быстро»; лимит (5 в час с адреса) считает createReview — после проверки формы
+  if (trapFilled(form.get("website"))) return { ok: false, message: t("err.server") };
+  if (filledTooFast(form.get("fillMs"))) return { ok: false, message: t("err.tooFast") };
   const productId = String(form.get("productId") ?? "");
   if (!ID.test(productId)) return { ok: false, message: t("err.server") };
   const raw = { kind: form.get("kind"), name: form.get("name"), text: form.get("text"), rating: form.get("rating") };
@@ -44,7 +44,7 @@ export async function reviewAction(lang: unknown, form: FormData): Promise<Revie
     const photos: string[] = [];
     for (const f of files) photos.push(await saveReviewPhoto(Buffer.from(await f.arrayBuffer())));
     const client = await getClient();
-    const r = await createReview({ productId, raw, photos, clientId: client?.id ?? null, lang: l, ip: await clientIp() });
+    const r = await createReview({ productId, raw, photos, clientId: client?.id ?? null, lang: l, ip: await requestIp() });
     if (!r.ok) return { ok: false, message: t(r.error) };
     return { ok: true, message: t(r.kind === "question" ? "questions.form.done" : "reviews.form.done") };
   } catch (e) {
@@ -63,6 +63,7 @@ export async function watchAction(productId: unknown, kind: unknown, on: unknown
   const client = await getClient();
   if (!client?.tgId || !ID.test(id)) return { ok: false, on: false };
   if (on === true) {
+    if (!(await rateHit("watch", `client:${client.id}`)).ok) return { ok: false, on: false }; // шаг 8.3: не больше 20 подписок в час
     const r = await subscribeWatch(client.id, id, k);
     return { ok: r.ok, on: r.ok };
   }
@@ -72,21 +73,13 @@ export async function watchAction(productId: unknown, kind: unknown, on: unknown
 
 // ---------- «Передзвоніть мені» ----------
 
-const cbHits = new Map<string, number[]>();
-
-export async function callbackAction(lang: unknown, form: { phone?: unknown; name?: unknown; productId?: unknown; website?: unknown }): Promise<{ ok: boolean; message: string }> {
+export async function callbackAction(lang: unknown, form: { phone?: unknown; name?: unknown; productId?: unknown; website?: unknown; fillMs?: unknown }): Promise<{ ok: boolean; message: string }> {
   const l = langOf(lang);
   const { t } = await getShopContent(l);
-  if (typeof form?.website === "string" && form.website.trim()) return { ok: false, message: t("err.server") };
-  // не больше 3 заявок за 10 минут с одного адреса (в памяти сервера)
-  const ip = await clientIp();
-  const now = Date.now();
-  const list = (cbHits.get(ip) ?? []).filter((ts) => now - ts < 10 * 60_000);
-  if (list.length >= 3) return { ok: false, message: t("err.tooMany") };
-  list.push(now);
-  cbHits.set(ip, list);
-  if (cbHits.size > 5000) cbHits.clear();
   try {
+    // шаг 8.3: ловушка, «слишком быстро», не больше 3 заявок за 10 минут с одного адреса (счётчик в базе)
+    const bad = await guardForm("callback", form);
+    if (bad) return { ok: false, message: t(bad) };
     const client = await getClient();
     const productId = typeof form.productId === "string" && ID.test(form.productId) ? form.productId : null;
     const r = await requestCallback({ phone: form.phone, name: form.name }, { productId, clientId: client?.id ?? null, lang: l });

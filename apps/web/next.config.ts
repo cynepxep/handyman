@@ -1,8 +1,12 @@
 import type { NextConfig } from "next";
 import { IMAGE_HOSTS } from "./lib/image-hosts";
+import { securityHeaders } from "./lib/security-headers";
 
 const nextConfig: NextConfig = {
   transpilePackages: ["@handyman/db", "@handyman/core"],
+  // шаг 8.3: не сообщаем, на чём сделан сайт; заголовки безопасности — lib/security-headers.ts
+  poweredByHeader: false,
+  headers: async () => securityHeaders(process.env.NODE_ENV === "production"),
   // Фото товаров: свои копии (/media/…, скачиваются в админке «Фото товаров»), пока копии нет — с сайта поставщика.
   // В обоих случаях покупателю отдаются уменьшенные (WebP/AVIF) через наш сервер с кэшем.
   images: {

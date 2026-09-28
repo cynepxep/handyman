@@ -7,6 +7,10 @@ import {
   STAFF_SESSION_TTL_MS, checkPasswordStrength, consumeRecoveryCode, generateRecoveryCodes, generateTempPassword, generateToken,
   hashPassword, verifyPassword, verifyTotp,
 } from "@handyman/core";
+import { NOTIFY_SETTING_KEY, RATE_RULES, normalizeNotify } from "@handyman/core/shop";
+import { notifyManagers } from "./notify";
+import { rateBlocked, rateHit, rateReset } from "./rate-limit";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const audit = (who: string, action: string, target?: string, details?: unknown) =>
@@ -40,14 +44,49 @@ export type LoginStep = { ok: true; session: string } | { ok: true; challenge: s
 
 const WRONG = "Неверный логин или пароль";
 
+// ---------- шаг 8.3: лимит по адресу и тревога о переборе ----------
+
+/** Тревога в Telegram (чат менеджеров) о переборе пароля — не чаще раза в час на логин/адрес; выключается галочкой «Тревоги». */
+async function securityAlert(key: string, text: string): Promise<void> {
+  try {
+    if (!normalizeNotify((await prisma.setting.findUnique({ where: { key: NOTIFY_SETTING_KEY } }))?.value).alerts) return;
+    if (!(await rateHit("securityAlert", key)).ok) return;
+    await notifyManagers(text);
+  } catch (e) {
+    logError("[staff] тревога о переборе не отправлена", e);
+  }
+}
+
+/** С этого адреса уже 5 неудачных входов за 15 минут — вход закрыт (любой логин, даже верный пароль). */
+async function ipLocked(ip: string | null | undefined): Promise<string | null> {
+  if (!ip) return null;
+  const r = await rateBlocked("adminLogin", ip);
+  return r.ok ? null : `Слишком много неудачных попыток с этого устройства. Попробуйте через ${Math.ceil(r.retryAfterSec / 60)} мин.`;
+}
+
+/** Неудачный пароль или код: засчитать адресу; пятая неудача — вход с адреса закрыт, тревога. */
+async function ipFailed(ip: string | null | undefined, username: string): Promise<void> {
+  if (!ip) return;
+  const r = await rateHit("adminLogin", ip);
+  if (r.count !== RATE_RULES.adminLogin.limit) return;
+  await audit(username || "?", "login.ip.locked", undefined, { ip });
+  await securityAlert(
+    `ip:${ip}`,
+    `🔐 Перебор паролей админки: ${r.count} неудачных попыток входа с адреса ${ip} (последний логин — «${username || "?"}»). Вход с этого адреса закрыт на ${Math.round(RATE_RULES.adminLogin.windowSec / 60)} минут.`,
+  );
+}
+
 /**
  * Шаг 1: логин и пароль. После 5 неудач подряд вход закрывается на 15 минут (защита от подбора). Если у сотрудника включён код из
  * приложения — возвращаем «вызов» (challenge), сессию выдаст шаг 2.
  */
-export async function passwordStep(username: string, password: string, userAgent: string | null): Promise<LoginStep> {
+export async function passwordStep(username: string, password: string, userAgent: string | null, ip?: string | null): Promise<LoginStep> {
+  const byIp = await ipLocked(ip);
+  if (byIp) return { ok: false, error: byIp };
   const staff = await prisma.staff.findUnique({ where: { username } });
   if (!staff || !staff.active) {
     await audit(username || "?", "login.fail", undefined, { reason: "no-user" });
+    await ipFailed(ip, username);
     return { ok: false, error: WRONG };
   }
   if (staff.lockedUntil && staff.lockedUntil > new Date()) {
@@ -59,8 +98,16 @@ export async function passwordStep(username: string, password: string, userAgent
     const lock = failed >= MAX_FAILED;
     await prisma.staff.update({ where: { id: staff.id }, data: { failedLogins: lock ? 0 : failed, lockedUntil: lock ? new Date(Date.now() + LOCK_MINUTES * 60_000) : null } });
     await audit(staff.username, lock ? "login.locked" : "login.fail", staff.id, { failed });
+    await ipFailed(ip, staff.username);
+    if (lock) {
+      await securityAlert(
+        `user:${staff.username}`,
+        `🔐 Вход «${staff.username}» в админку закрыт на ${LOCK_MINUTES} минут: ${MAX_FAILED} неверных паролей подряд${ip ? ` (последний — с адреса ${ip})` : ""}. Если это были не вы — смените пароль и включите код из приложения.`,
+      );
+    }
     return { ok: false, error: lock ? `Слишком много неудачных попыток. Вход закрыт на ${LOCK_MINUTES} минут.` : WRONG };
   }
+  if (ip) await rateReset("adminLogin", ip);
   if (staff.twoFactorSecret) {
     const token = generateToken();
     await prisma.staffLoginChallenge.deleteMany({ where: { staffId: staff.id } });
@@ -72,7 +119,9 @@ export async function passwordStep(username: string, password: string, userAgent
 }
 
 /** Шаг 2: код из приложения (или одноразовый код восстановления). До 5 попыток, 5 минут. */
-export async function codeStep(challenge: string, code: string, userAgent: string | null): Promise<{ ok: true; session: string } | { ok: false; error: string; restart?: boolean }> {
+export async function codeStep(challenge: string, code: string, userAgent: string | null, ip?: string | null): Promise<{ ok: true; session: string } | { ok: false; error: string; restart?: boolean }> {
+  const byIp = await ipLocked(ip);
+  if (byIp) return { ok: false, error: byIp, restart: true };
   const ch = await prisma.staffLoginChallenge.findUnique({ where: { token: challenge }, include: { staff: true } });
   if (!ch || ch.expiresAt < new Date() || !ch.staff.active || !ch.staff.twoFactorSecret) {
     if (ch) await prisma.staffLoginChallenge.delete({ where: { token: challenge } }).catch(() => {});
@@ -90,9 +139,15 @@ export async function codeStep(challenge: string, code: string, userAgent: strin
   }
   if (!ok) {
     const attempts = ch.attempts + 1;
+    await ipFailed(ip, ch.staff.username);
     if (attempts >= MAX_FAILED) {
       await prisma.staffLoginChallenge.delete({ where: { token: challenge } });
       await audit(ch.staff.username, "login.code.fail", ch.staffId, { attempts });
+      // пароль верный, а код — нет: возможно, пароль знает посторонний
+      await securityAlert(
+        `code:${ch.staff.username}`,
+        `🔐 «${ch.staff.username}»: верный пароль, но ${MAX_FAILED} неверных кодов из приложения подряд${ip ? ` (адрес ${ip})` : ""}. Если это были не вы — срочно смените пароль.`,
+      );
       return { ok: false, error: "Слишком много неверных кодов — войдите заново.", restart: true };
     }
     await prisma.staffLoginChallenge.update({ where: { token: challenge }, data: { attempts } });

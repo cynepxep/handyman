@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@handyman/db";
 import { codeStep, loadSecurity, passwordStep } from "@handyman/db/staff";
 import { hashPassword, STAFF_SESSION_TTL_MS, PERMISSIONS, type Permission } from "@handyman/core";
+import { requestIp } from "./request-ip";
 
 const COOKIE_NAME = "hm_staff_session";
 const CHALLENGE_COOKIE = "hm_login_challenge"; // шаг 4.7: пароль верный, ждём код из приложения
@@ -95,7 +96,7 @@ const userAgent = async () => (await headers()).get("user-agent");
 
 /** Вход, шаг 1: логин и пароль. `needCode` — дальше нужен код из приложения (вызов сохранён в куке на 5 минут). */
 export async function loginStaff(username: string, password: string): Promise<{ ok: true; needCode?: boolean } | { ok: false; error: string }> {
-  const r = await passwordStep(username, password, await userAgent());
+  const r = await passwordStep(username, password, await userAgent(), await requestIp()); // шаг 8.3: лимит неудач и по адресу
   if (!r.ok) return r;
   if ("challenge" in r) {
     (await cookies()).set(CHALLENGE_COOKIE, r.challenge, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/admin", maxAge: 300 });
@@ -110,7 +111,7 @@ export async function loginWithCode(code: string): Promise<{ ok: true } | { ok: 
   const jar = await cookies();
   const challenge = jar.get(CHALLENGE_COOKIE)?.value;
   if (!challenge) return { ok: false, error: "Время вышло — войдите заново.", restart: true };
-  const r = await codeStep(challenge, code, await userAgent());
+  const r = await codeStep(challenge, code, await userAgent(), await requestIp());
   if (!r.ok) {
     if (r.restart) jar.delete(CHALLENGE_COOKIE);
     return r;

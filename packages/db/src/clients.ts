@@ -55,13 +55,14 @@ export async function recalcAllClients(s?: LoyaltySettings): Promise<number> {
 
 export type ClientSort = "recent" | "spent" | "orders" | "name";
 
-export async function listClients(opts: { q?: string; tier?: string; sort?: string; page?: number; perPage?: number } = {}) {
+export async function listClients(opts: { q?: string; tier?: string; sort?: string; page?: number; perPage?: number; blocked?: boolean } = {}) {
   const perPage = opts.perPage ?? 40;
   const page = Math.max(1, opts.page ?? 1);
   const q = opts.q?.trim() ?? "";
   const phone = q ? normalizePhone(q) : null;
   const digits = q.replace(/\D/g, "");
   const where: Prisma.ClientWhereInput = {
+    ...(opts.blocked ? { blockedAt: { not: null } } : {}),
     ...(opts.tier && (TIER_KEYS as string[]).includes(opts.tier) ? { tier: opts.tier as ClientTier } : {}),
     ...(q
       ? {
@@ -83,6 +84,7 @@ export async function listClients(opts: { q?: string; tier?: string; sort?: stri
       where, orderBy, skip: (page - 1) * perPage, take: perPage,
       select: {
         id: true, name: true, phone: true, email: true, username: true, tgId: true, tier: true, spent: true, manualDiscountPct: true, createdAt: true, note: true,
+        blockedAt: true,
         _count: { select: { orders: true } },
         orders: { orderBy: { createdAt: "desc" }, take: 1, select: { createdAt: true, no: true } },
       },
@@ -97,7 +99,7 @@ export async function getClientDetail(id: string) {
   const c = await prisma.client.findUnique({
     where: { id },
     include: {
-      orders: { orderBy: { createdAt: "desc" }, take: 100, select: { id: true, no: true, status: true, total: true, isTest: true, createdAt: true, source: true, delivery: true, _count: { select: { items: true } } } },
+      orders: { orderBy: { createdAt: "desc" }, take: 100, select: { id: true, no: true, status: true, total: true, isTest: true, suspicious: true, createdAt: true, source: true, delivery: true, _count: { select: { items: true } } } },
       auditEntries: { orderBy: { ts: "desc" }, take: 100 },
     },
   });
@@ -167,6 +169,40 @@ export async function updateClient(id: string, v: ClientEditInput, who: string):
 
 // ---------- Telegram: единый клиент (Этап 5) ----------
 
+ // ---------- чёрный список (шаг 8.3) ----------
+
+/**
+ * Заблокировать / разблокировать покупателя. Заказы от него принимаются, но помечаются «подозрительный» и сами не уходят в KeyCRM;
+ * покупателю не сообщаем. Запись — в историю изменений клиента.
+ */
+export async function setClientBlocked(id: string, blocked: boolean, note: string, who: string): Promise<{ ok: boolean; error?: string }> {
+  const c = await prisma.client.findUnique({ where: { id }, select: { blockedAt: true, blockedNote: true } });
+  if (!c) return { ok: false, error: "Клиент не найден." };
+  const clean = note.replace(/\s+/g, " ").trim().slice(0, 300) || null;
+  if (blocked === Boolean(c.blockedAt) && (!blocked || clean === c.blockedNote)) return { ok: true };
+  await prisma.$transaction([
+    prisma.client.update({ where: { id }, data: blocked ? { blockedAt: c.blockedAt ?? new Date(), blockedNote: clean, blockedBy: who } : { blockedAt: null, blockedNote: null, blockedBy: null } }),
+    prisma.clientAudit.create({
+      data: { clientId: id, who, field: "чёрный список", oldValue: c.blockedAt ? `да${c.blockedNote ? `: ${c.blockedNote}` : ""}` : "нет", newValue: blocked ? `да${clean ? `: ${clean}` : ""}` : "нет" },
+    }),
+  ]);
+  return { ok: true };
+}
+
+/** Заблокировать номер, по которому ещё не было заказов: карточка клиента создаётся (только телефон). Возвращает id карточки. */
+export async function blockPhone(rawPhone: string, note: string, who: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  const phone = normalizePhone(rawPhone);
+  if (!phone) return { ok: false, error: "Телефон не распознан. Пример: 067 123 45 67." };
+  const c = (await prisma.client.findUnique({ where: { phone }, select: { id: true } })) ?? (await prisma.client.create({ data: { phone }, select: { id: true } }));
+  const r = await setClientBlocked(c.id, true, note, who);
+  return r.ok ? { ok: true, id: c.id } : { ok: false, error: r.error ?? "Не получилось." };
+}
+
+/** Телефон в чёрном списке? (для «Передзвоніть мені» и других форм без заказа) */
+export async function isPhoneBlocked(phone: string): Promise<boolean> {
+  return (await prisma.client.count({ where: { phone, blockedAt: { not: null } } })) > 0;
+}
+
 export type TgProfile = { tgId: bigint; name?: string | null; username?: string | null; lang?: "UK" | "RU" };
 
 /** Покупатель по Telegram (Mini App, бот): найти по tgId или создать (пока без телефона). */
@@ -200,7 +236,9 @@ export async function linkTelegramPhone(p: TgProfile & { phone: string }): Promi
       await moveCabinet(tx, byTg.id, byPhone.id); // избранное, «Мій інструмент», корзина (шаг 5.5)
       await tx.client.update({ where: { id: byTg.id }, data: { tgId: null, refCode: null } });
       await tx.client.delete({ where: { id: byTg.id } });
-      await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null, referredById: byPhone.referredById ?? byTg.referredById } });
+      await tx.client.update({ where: { id: byPhone.id }, data: { tgId: p.tgId, tgStartedAt: new Date(), username: p.username ?? byPhone.username, name: byPhone.name || p.name || null, referredById: byPhone.referredById ?? byTg.referredById,
+        // шаг 8.3: был в чёрном списке хоть один из двух — остаётся в списке
+        ...(!byPhone.blockedAt && byTg.blockedAt ? { blockedAt: byTg.blockedAt, blockedNote: byTg.blockedNote, blockedBy: byTg.blockedBy } : {}) } });
       await tx.clientAudit.create({ data: { clientId: byPhone.id, who: "Telegram", field: "Telegram", oldValue: null, newValue: p.username ? `@${p.username}` : String(p.tgId) } });
       await recalcClient(tx, byPhone.id);
       return { id: byPhone.id, merged: true, created: false };

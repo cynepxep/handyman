@@ -10,11 +10,11 @@ import { monoMode, orderInvoices } from "@handyman/db/payments";
 import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts";
 import { keycrmMode, loadKeycrmSettings, pendingNotifsOf } from "@handyman/db/keycrm";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
-import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone, keycrmStatusName } from "@handyman/core/shop";
+import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, keycrmStatusName } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
-import { retryMessageAction, setStatusAction, setTtnAction } from "../actions";
+import { clearSuspiciousAction, retryMessageAction, setStatusAction, setTtnAction } from "../actions";
 import { statusChip } from "../status-chip";
 import { CopyButton, StatusForm } from "./status-form";
 import { PaymentsBlock } from "./payments-block";
@@ -58,6 +58,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       <p className="adm-muted">
         {when(o.createdAt)} · {ORDER_SOURCE_RU[o.source ?? "site"] ?? o.source}{o.createdBy ? ` (оформил ${o.createdBy})` : ""} · язык: {o.lang === "RU" ? "русский" : "украинский"}
         {o.isTest && <> · <span className="adm-chip">тестовый заказ</span></>}
+        {o.client.blockedAt && !o.suspicious && <> · <span className="adm-chip bad">покупатель в чёрном списке</span></>}
         {o.cancelReason && <> · <span className="adm-chip bad">причина: {CANCEL_REASON_RU[o.cancelReason] ?? o.cancelReason}</span></>}
       </p>
       <div className="adm-row" style={{ marginBottom: 8 }}>
@@ -67,6 +68,19 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       </div>
       {error && <p className="adm-flash err" role="alert">{error}</p>}
       {ok && <p className="adm-flash ok">{ok}</p>}
+      {o.suspicious && (
+        <form action={clearSuspiciousAction} className="adm-flash err" role="status">
+          <b>⚠ Подозрительный заказ</b> — {SUSPICIOUS_RU[o.suspicious] ?? o.suspicious}
+          {o.client.blockedNote ? ` («${o.client.blockedNote}»)` : ""}. Покупателю об этом не сообщается, в KeyCRM заказ сам не уходит.{" "}
+          <Link className="adm-link" href={`/admin/clients/${o.clientId}`}>Карточка клиента</Link>
+          {canEdit && (
+            <>
+              <input type="hidden" name="id" value={o.id} />{" "}
+              <SubmitButton pendingText="Снимаю…">Заказ проверен — снять отметку</SubmitButton>
+            </>
+          )}
+        </form>
+      )}
       <KeycrmPending orderId={o.id} pending={pending} canEdit={canEdit} />
 
       <div className="adm-grid2">

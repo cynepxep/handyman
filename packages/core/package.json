@@ -15,7 +15,8 @@
     "./telegram": "./src/shop/telegram-logic.ts",
     "./integrations": "./src/integrations.ts",
     "./backups": "./src/backups.ts",
-    "./errors": "./src/errors.ts"
+    "./errors": "./src/errors.ts",
+    "./launch-check": "./src/launch-check.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

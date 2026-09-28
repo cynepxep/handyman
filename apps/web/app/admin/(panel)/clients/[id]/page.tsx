@@ -6,7 +6,7 @@ import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { statusChip } from "../../orders/status-chip";
-import { saveClientAction } from "../actions";
+import { blockClientAction, saveClientAction } from "../actions";
 import { tierChip } from "../tier-chip";
 import { listTasks } from "@handyman/db/service";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
@@ -40,6 +40,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         {c.email && <> · {c.email}</>}
         {c.tgId != null && <> · Telegram{c.username ? ` @${c.username}` : ""}</>}
         {" "}· клиент с {day(c.createdAt)} · язык: {c.lang === "RU" ? "русский" : "украинский"}
+        {c.blockedAt && <> · <span className="adm-chip bad">чёрный список</span></>}
       </p>
       {error && <p className="adm-flash err" role="alert">{error}</p>}
       {ok && <p className="adm-flash ok">{ok}</p>}
@@ -96,6 +97,36 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
         {canEdit ? <SubmitButton primary pendingText="Сохраняю…">Сохранить</SubmitButton> : <p className="adm-muted">Менять данные клиента может сотрудник с правом «Клиенты: контакты, личная скидка».</p>}
       </form>
 
+      <section className="adm-card" aria-labelledby="bl-h">
+        <h2 id="bl-h" style={{ marginTop: 0 }}>Чёрный список</h2>
+        {c.blockedAt ? (
+          <p style={{ marginTop: 0 }}>
+            <span className="adm-chip bad">заблокирован</span> с {when(c.blockedAt)}{c.blockedBy ? ` (${c.blockedBy})` : ""}{c.blockedNote ? ` — «${c.blockedNote}»` : ""}.
+          </p>
+        ) : null}
+        <p className="adm-muted" style={{ marginTop: 0 }}>
+          Заказы от клиента в чёрном списке принимаются, но получают отметку «подозрительный» и не уходят в KeyCRM автоматически (менеджер решает сам).
+          Покупателю об этом не сообщается. Заявки «Передзвоніть мені» с его номера — с пометкой.
+        </p>
+        {canEdit && (
+          <form action={blockClientAction} className="adm-row">
+            <input type="hidden" name="id" value={c.id} />
+            {c.blockedAt ? (
+              <>
+                <input type="hidden" name="blocked" value="0" />
+                <SubmitButton pendingText="Снимаю…">Убрать из чёрного списка</SubmitButton>
+              </>
+            ) : (
+              <>
+                <input type="hidden" name="blocked" value="1" />
+                <input name="note" className="adm-input" style={{ flex: "1 1 260px" }} maxLength={300} placeholder="Причина: например, не забирает посылки" aria-label="Причина блокировки" />
+                <SubmitButton pendingText="Блокирую…">Заблокировать</SubmitButton>
+              </>
+            )}
+          </form>
+        )}
+      </section>
+
       <section className="adm-card">
         <h2 style={{ marginTop: 0 }}>Заказы</h2>
         <div className="adm-table-wrap">
@@ -108,6 +139,7 @@ export default async function ClientPage({ params, searchParams }: { params: Pro
                     {session.permissions.includes("orders.view") ? <Link className="adm-link" href={`/admin/orders/${o.id}`}><b>{o.no}</b></Link> : <b>{o.no}</b>}
                     <div className="adm-muted">{when(o.createdAt)}</div>
                     {o.isTest && <span className="adm-chip">тест</span>} {o.source === "one_click" && <span className="adm-chip warn">1 клик</span>}
+                    {o.suspicious && <span className="adm-chip bad">⚠ подозрительный</span>}
                   </td>
                   <td className="adm-hide-sm">{DELIVERY_RU[o.delivery] ?? o.delivery}</td>
                   <td className="num">{money(o.total)}<div className="adm-muted">{o._count.items} поз.</div></td>

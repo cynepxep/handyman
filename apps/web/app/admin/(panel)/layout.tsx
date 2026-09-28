@@ -29,6 +29,7 @@ const SECTIONS: Array<{ href: string; label: string; group: string; permission?:
   { href: "/admin/notifications", label: "Уведомления", group: "Настройки", permission: "managers.edit" },
   { href: "/admin/integrations", label: "Интеграции", group: "Настройки", ownerOnly: true },
   { href: "/admin/backups", label: "Резервные копии", group: "Настройки", ownerOnly: true },
+  { href: "/admin/launch-check", label: "Проверка перед запуском", group: "Настройки", ownerOnly: true },
   { href: "/admin/staff", label: "Сотрудники", group: "Настройки", permission: "staff.manage" },
   { href: "/admin/roles", label: "Роли и права", group: "Настройки", permission: "staff.manage" },
   { href: "/admin/audit", label: "Журнал", group: "Настройки", permission: "audit.view" },

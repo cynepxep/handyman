@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ShopLang } from "@handyman/core/site/routes";
 import { checkoutQuoteAction, placeOrderAction, type CheckoutQuote } from "@/app/[lang]/cart-actions";
+import { useFillTimer } from "../fill-timer";
 import { npCitiesAction, npPointsAction } from "@/app/[lang]/np-actions";
 import type { PickupPoint } from "@handyman/core/shop/warehouse";
 import { formatPrice } from "../format";
@@ -80,6 +81,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
   const [comment, setComment] = useState("");
   const [noCall, setNoCall] = useState(false);
   const [trap, setTrap] = useState("");
+  const fillMs = useFillTimer();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [message, setMessage] = useState("");
   const [quote, setQuote] = useState<CheckoutQuote | null>(null);
@@ -144,7 +146,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
     setMessage("");
     const form = {
       firstName, lastName, phone, delivery, npType, city, npPoint, address, pay, comment, npCityRef: cityRef, npPointRef, pickupId,
-      noCallback: canSkipCall && noCall, items: lines, website: trap,
+      noCallback: canSkipCall && noCall, items: lines, website: trap, fillMs: fillMs(),
     };
     start(async () => {
       const r = await placeOrderAction(lang, form);

@@ -3,6 +3,18 @@ export async function register() {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   const { startWorker } = await import("./lib/worker");
   startWorker();
+  if (process.env.NODE_ENV === "production") void warnDangerousEnv();
+}
+
+/** Шаг 8.3: на сервере опасные значения в .env (change-me, http, временный вход) — не падаем, а пишем в журнал ошибок (/admin/errors). */
+async function warnDangerousEnv() {
+  try {
+    const { dangerousEnv } = await import("@handyman/core/launch-check");
+    const { logError } = await import("@handyman/db/errors");
+    for (const m of dangerousEnv(process.env)) logError(`[launch-check] небезопасная настройка: ${m}. Подробнее — «Проверка перед запуском» в админке`);
+  } catch (e) {
+    console.error("[launch-check]", e instanceof Error ? e.message : e);
+  }
 }
 
 /**
