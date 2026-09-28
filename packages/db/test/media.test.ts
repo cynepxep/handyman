@@ -241,3 +241,31 @@ test("«Фото товаров»: сколько товаров у постав
   assert.equal(src.hosts[0].host, "example.com");
   assert.equal(src.hosts.reduce((a, h) => a + h.photos, 0), await prisma.productImage.count());
 });
+
+test("фото: товары удалили посреди скачивания («Отменить загрузку») — скачивание не падает с ошибкой", async (t) => {
+  if (!ready || !s.ok) return t.skip(skipMsg);
+  await prisma.productImage.updateMany({ data: { localUrl: null, localError: null } });
+  const imgs = await prisma.productImage.findMany({ select: { id: true } });
+  for (const [i, im] of imgs.entries()) await prisma.productImage.update({ where: { id: im.id }, data: { url: `https://example.com/slow-${i}.jpg` } });
+  const fast = png;
+  media.setMediaFetch(async () => {
+    await new Promise((r) => setTimeout(r, 300)); // «медленный» сайт поставщика
+    return {
+      ok: true, status: 200, headers: { get: () => "image/png" },
+      arrayBuffer: async () => fast.buffer.slice(fast.byteOffset, fast.byteOffset + fast.byteLength) as ArrayBuffer,
+    };
+  });
+  try {
+    const { runId } = await media.startMediaSync({ supplierId: s.supplierId }, "test");
+    await new Promise((r) => setTimeout(r, 100));
+    await prisma.product.deleteMany({ where: { supplierId: s.supplierId } }); // пока идёт скачивание
+    let run = await media.getMediaRun(runId);
+    for (let i = 0; i < 100 && run?.status === "running"; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      run = await media.getMediaRun(runId);
+    }
+    assert.equal(run?.status, "done", run?.error ?? "");
+  } finally {
+    media.setMediaFetch(null);
+  }
+});

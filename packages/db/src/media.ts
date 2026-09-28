@@ -226,7 +226,7 @@ async function recover(url: string, styled: boolean): Promise<Recovered> {
     const r = await storeImage(img.url);
     const file = r.ok && r.localUrl === url ? await readMediaFile(url) : null;
     if (file) return { file, temporary: false };
-    await prisma.productImage.update({
+    await prisma.productImage.updateMany({
       where: { id: img.id },
       data: { localUrl: null, localBytes: null, localAt: null, localError: `файла не было на диске, скачать заново не удалось: ${r.ok ? "другой адрес" : r.error}`.slice(0, 200) },
     });
@@ -238,7 +238,7 @@ async function recover(url: string, styled: boolean): Promise<Recovered> {
   const r = local ? await storeStyled({ url: img.url, localUrl: local }) : null;
   const file = r?.ok && r.styledUrl === url ? await readMediaFile(url) : null;
   if (file) return { file, temporary: false };
-  await prisma.productImage.update({
+  await prisma.productImage.updateMany({
     where: { id: img.id },
     data: { styledUrl: null, styledAt: null, styledError: (r && !r.ok ? r.error : "файла не было на диске").slice(0, 200) },
   });
@@ -421,14 +421,15 @@ async function runSync(runId: string, where: object, kind: JobKind, limit: numbe
         : await Promise.all(part.map((img) => storeStyled(img)));
       await prisma.$transaction(part.map((img, k) => {
         const r = results[k];
+        // updateMany, а не update: товар могли удалить во время скачивания («Отменить загрузку», повторный импорт) — это не ошибка
         if (kind === "style") {
           return r.ok && "styledUrl" in r
-            ? prisma.productImage.update({ where: { id: img.id }, data: { styledUrl: r.styledUrl, styledAt: new Date(), styledError: null } })
-            : prisma.productImage.update({ where: { id: img.id }, data: { styledError: (r.ok ? "" : r.error).slice(0, 200) } });
+            ? prisma.productImage.updateMany({ where: { id: img.id }, data: { styledUrl: r.styledUrl, styledAt: new Date(), styledError: null } })
+            : prisma.productImage.updateMany({ where: { id: img.id }, data: { styledError: (r.ok ? "" : r.error).slice(0, 200) } });
         }
         return r.ok && "localUrl" in r
-          ? prisma.productImage.update({ where: { id: img.id }, data: { localUrl: r.localUrl, localBytes: r.bytes, localAt: new Date(), localError: null } })
-          : prisma.productImage.update({ where: { id: img.id }, data: { localError: (r.ok ? "" : r.error).slice(0, 200) } });
+          ? prisma.productImage.updateMany({ where: { id: img.id }, data: { localUrl: r.localUrl, localBytes: r.bytes, localAt: new Date(), localError: null } })
+          : prisma.productImage.updateMany({ where: { id: img.id }, data: { localError: (r.ok ? "" : r.error).slice(0, 200) } });
       }));
       part.forEach((img, k) => {
         const r = results[k];
