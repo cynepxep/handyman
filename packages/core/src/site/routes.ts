@@ -96,3 +96,17 @@ export const paths = {
  * /account — 404. Код кабинета остаётся; уведомления о заказах менеджерам в Telegram от этого не зависят. Включить — true.
  */
 export const CLIENT_CABINET_ON = false;
+
+/** Раздел витрины, который подсвечивается в шапке и нижней панели телефона («вы здесь»). */
+export type ShopSection = "catalog" | "search" | "cart" | "favorites" | "account";
+
+/** В каком разделе покупатель по адресу страницы (можно с /ru и ?запросом). Каталог — и разделы, и задачи, и товар. */
+export function shopSection(path: string): ShopSection | null {
+  const p = stripLang(path).replace(/[?#].*$/, "");
+  if (/^\/(?:catalog|task|product)(?:\/|$)/.test(p)) return "catalog";
+  if (p === "/search") return "search";
+  if (p === "/cart" || p === "/checkout") return "cart";
+  if (p === "/favorites") return "favorites";
+  if (p === "/account" || p.startsWith("/account/")) return "account";
+  return null;
+}

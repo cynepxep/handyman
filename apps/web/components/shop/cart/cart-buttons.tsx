@@ -6,6 +6,7 @@ import { btn } from "../ui";
 import { Icon } from "../icons";
 import { CartCount, useShopCart } from "./cart-context";
 import { useCart } from "./store";
+import { activeProps, useShopSection } from "../nav-active";
 
 export function AddToCartButton({ sku, label, block, variant = "primary", className, qty }: {
   sku: string; label: string; block?: boolean; variant?: "primary" | "secondary" | "ghost"; className?: string; qty?: number;
@@ -38,9 +39,10 @@ export function OneClickButton({ sku, name, label, block }: { sku: string; name:
 export function HeaderCart() {
   const { labels, cartHref, openCart } = useShopCart();
   const n = useCart().reduce((a, l) => a + l.qty, 0);
+  const on = useShopSection() === "cart";
   return (
     <Link
-      className="hm-cart"
+      {...activeProps(on, "hm-cart")}
       href={cartHref}
       aria-label={labels.openCart.replace("{n}", String(n))}
       onClick={(e) => {
@@ -57,10 +59,11 @@ export function HeaderCart() {
 /** Корзина в нижней панели телефона. */
 export function BottomCart({ label }: { label: string }) {
   const { cartHref, openCart } = useShopCart();
+  const on = useShopSection() === "cart";
   return (
     <Link
       href={cartHref}
-      className="hm-bottom-cart"
+      {...activeProps(on, "hm-bottom-cart")}
       onClick={(e) => {
         e.preventDefault();
         openCart();

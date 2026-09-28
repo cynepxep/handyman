@@ -13,6 +13,7 @@ import { BottomCart, HeaderCart } from "./cart/cart-buttons";
 import { HeaderFav } from "./fav-store";
 import { CallbackButton } from "./plus";
 import { callbackLabels } from "@/lib/shop/cart-labels";
+import { SectionLink } from "./nav-active";
 
 /** Ссылка на мессенджер или звонок: снаружи сайта — в новой вкладке. */
 function ContactPill({ href, icon, label }: { href: string; icon: string; label: string }) {
@@ -64,17 +65,17 @@ export async function SiteHeader({ c, loggedIn }: { c: ShopContent; loggedIn: bo
           <span>{t("meta.siteName")}</span>
           <span className="hm-vh"> — {t("header.home")}</span>
         </Link>
-        <Link className={`${btn("primary")} hm-catalog-btn`} href={shopHref(lang, paths.catalog())}>
+        <SectionLink section="catalog" className={`${btn("primary")} hm-catalog-btn`} href={shopHref(lang, paths.catalog())}>
           <Icon name="menu" size={20} />
           {t("header.catalog")}
-        </Link>
+        </SectionLink>
         <SearchBox lang={lang} labels={labels} popular={popular} />
         <span className="hm-head-icons">
           {/* Кабинет: на телефоне он в нижней панели, здесь — с планшета и шире. Гостю — «Увійти» (та же страница покажет вход). */}
-          {CLIENT_CABINET_ON && <Link className={`hm-cart hm-headacc${loggedIn ? " is-in" : ""}`} href={shopHref(lang, paths.account())} aria-label={t(loggedIn ? "header.account" : "header.login")}>
+          {CLIENT_CABINET_ON && <SectionLink section="account" className={`hm-cart hm-headacc${loggedIn ? " is-in" : ""}`} href={shopHref(lang, paths.account())}>
             <Icon name="user" size={24} />
             <span className="hm-headacc-text">{t(loggedIn ? "header.account" : "header.login")}</span>
-          </Link>}
+          </SectionLink>}
           <HeaderFav href={shopHref(lang, paths.favorites())} label={t("fav.header")} />
           <HeaderCart />
         </span>
@@ -141,10 +142,10 @@ export function BottomNav({ c }: { c: ShopContent }) {
   const { t, lang } = c;
   return (
     <nav className={`hm-bottomnav${CLIENT_CABINET_ON ? "" : " hm-bottomnav-3"}`} aria-label={t("nav.label")}>
-      <Link href={shopHref(lang, paths.catalog())}><Icon name="menu" size={22} />{t("nav.catalog")}</Link>
+      <SectionLink section="catalog" href={shopHref(lang, paths.catalog())}><Icon name="menu" size={22} />{t("nav.catalog")}</SectionLink>
       <FocusSearchButton label={t("nav.search")} />
       <BottomCart label={t("nav.cart")} />
-      {CLIENT_CABINET_ON && <Link href={shopHref(lang, paths.account())}><Icon name="user" size={22} />{t("nav.account")}</Link>}
+      {CLIENT_CABINET_ON && <SectionLink section="account" href={shopHref(lang, paths.account())}><Icon name="user" size={22} />{t("nav.account")}</SectionLink>}
     </nav>
   );
 }

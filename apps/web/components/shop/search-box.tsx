@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { paths, shopHref, type ShopLang } from "@handyman/core/site/routes";
 import { formatPrice } from "./format";
 import { Icon } from "./icons";
+import { useShopSection } from "./nav-active";
 
 export const SEARCH_INPUT_ID = "site-search";
 const HISTORY_KEY = "hm.searchHistory";
@@ -41,6 +42,7 @@ function writeHistory(list: string[]) {
 
 export function SearchBox({ lang, labels, popular }: { lang: ShopLang; labels: SearchLabels; popular: string[] }) {
   const router = useRouter();
+  const onSearchPage = useShopSection() === "search";
   const listId = useId();
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
@@ -159,7 +161,7 @@ export function SearchBox({ lang, labels, popular }: { lang: ShopLang; labels: S
 
   return (
     <form
-      className="hm-search"
+      className={`hm-search${onSearchPage ? " is-active" : ""}`}
       role="search"
       action={shopHref(lang, "/search")}
       onSubmit={onSubmit}

@@ -5,6 +5,7 @@ import { createContext, useContext } from "react";
 import { shopHref, switchLang, type ShopLang } from "@handyman/core/site/routes";
 import { Icon } from "./icons";
 import { SEARCH_INPUT_ID } from "./search-box";
+import { activeProps, useShopSection } from "./nav-active";
 
 /**
  * УКР / РУС. Адрес другой версии берётся в момент нажатия из адресной строки: так переключатель ведёт на ту же страницу
@@ -27,9 +28,11 @@ export function LangSwitch({ lang, label }: { lang: ShopLang; label: string }) {
 
 /** Кнопка «Пошук» в нижней панели телефона: поднимает к полю поиска в шапке и ставит в него курсор. */
 export function FocusSearchButton({ label }: { label: string }) {
+  const on = useShopSection() === "search";
   return (
     <button
       type="button"
+      {...activeProps(on)}
       onClick={() => {
         window.scrollTo({ top: 0, behavior: "smooth" });
         document.getElementById(SEARCH_INPUT_ID)?.focus({ preventScroll: true });
