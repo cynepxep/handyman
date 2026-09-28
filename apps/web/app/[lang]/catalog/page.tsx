@@ -74,7 +74,8 @@ export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog
                   ))}
                 </ul>
               </details>
-              <div className="hm-menu-card">
+              {/* hidden: на телефоне карточки нет, даже если браузер взял старый файл стилей; показывает её только медиазапрос ≥ 700 px в shop.css */}
+              <div className="hm-menu-card" hidden>
                 <Link className="hm-menu-head" href={groupHref}>
                   {img}
                   {title}

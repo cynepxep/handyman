@@ -446,7 +446,7 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
   .hm-menu { display: block; columns: 2; column-gap: var(--gap); }
   .hm-menu-group { break-inside: avoid; margin-bottom: var(--gap); }
   .hm-menu-acc { display: none; }
-  .hm-menu-card { display: block; }
+  .hm-menu-card, .hm-menu-card[hidden] { display: block; }
   .hm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .hm-rail { margin: 0; padding-left: 0; padding-right: 0; }
   .hm-footer-in { grid-template-columns: 2fr 1fr 1fr; }
