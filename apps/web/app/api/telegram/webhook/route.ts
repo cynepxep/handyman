@@ -2,6 +2,7 @@
 // Telegram присылает сюда сообщения; без правильного секрета в заголовке — отказ.
 import { NextResponse, type NextRequest } from "next/server";
 import { handleUpdate, webhookSecret } from "@handyman/db/bot";
+import { logError } from "@handyman/db/errors";
 
 export async function POST(req: NextRequest) {
   const secret = await webhookSecret();
@@ -9,7 +10,7 @@ export async function POST(req: NextRequest) {
   try {
     await handleUpdate(await req.json());
   } catch (e) {
-    console.error("[bot:webhook]", e instanceof Error ? e.message : e);
+    logError("[bot:webhook]", e instanceof Error ? e.message : e);
   }
   return NextResponse.json({ ok: true }); // Telegram не повторяет, если ответ 200
 }

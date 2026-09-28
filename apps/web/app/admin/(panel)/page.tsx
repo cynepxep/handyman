@@ -11,6 +11,7 @@ import { SubmitButton } from "./import/client-bits";
 import { rebuildSearchAction } from "./search-actions";
 import { statusChip } from "./orders/status-chip";
 import { Stat } from "./reports/bits";
+import { HealthCard } from "./errors/health-card";
 
 export const dynamic = "force-dynamic";
 
@@ -136,6 +137,8 @@ export default async function AdminHome({ searchParams }: { searchParams: Promis
           )}
         </div>
       </div>
+      {/* шаг 8.2: база, поиск, фоновые задачи, диск, копия, ошибки */}
+      {can("errors.view") && <HealthCard />}
       {can("texts.edit") && <p className="adm-muted">Тексты можно менять и прямо на сайте: откройте сайт в этом же браузере и нажмите «✎ Редагувати тексти» внизу слева.</p>}
     </>
   );

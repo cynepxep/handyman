@@ -12,6 +12,7 @@ import { catalogChanged } from "@/lib/shop/cache";
 import {
   PlusUserError, addPackaging, addPriceBreak, addToCompatGroup, createCompatGroup, deleteQtyRule, removeFromCompatGroup,
 } from "@handyman/db/storefront-plus";
+import { logError } from "@handyman/db/errors";
 
 const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
 
@@ -24,7 +25,7 @@ async function run(page: string, fn: () => Promise<string>): Promise<never> {
   } catch (e) {
     kind = "error";
     message = e instanceof ProductUserError ? e.message : `Непредвиденная ошибка: ${e instanceof Error ? e.message : String(e)}`;
-    if (!(e instanceof ProductUserError)) console.error("[products]", e);
+    if (!(e instanceof ProductUserError)) logError("[products]", e);
   }
   redirect(withParam(page, kind, message));
 }

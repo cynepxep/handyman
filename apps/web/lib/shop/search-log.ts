@@ -4,6 +4,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { logSearch } from "@handyman/db/search-stats";
 import { hasSessionCookie } from "@/lib/auth";
+import { logError } from "@handyman/db/errors";
 
 const SAME_QUERY_MS = 6 * 3600_000;
 const DAY_MS = 24 * 3600_000;
@@ -28,6 +29,6 @@ export async function logSearchSafely(q: string, results: number): Promise<void>
     if (perIp.size > 20_000) perIp.clear();
     await logSearch(q, results);
   } catch (e) {
-    console.error("[search] не удалось записать запрос", e instanceof Error ? e.message : e);
+    logError("[search] не удалось записать запрос", e instanceof Error ? e.message : e);
   }
 }

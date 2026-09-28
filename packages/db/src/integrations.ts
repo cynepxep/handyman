@@ -10,6 +10,7 @@ import {
   readTelegramCheck, readTurboSmsCheck, sealSecret, secretKey, validateField, type CheckResult, type IntegrationId, type SecretKey,
 } from "@handyman/core/integrations";
 import { prisma, Prisma } from "./client";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 
@@ -103,7 +104,7 @@ export async function secret(full: SecretKey): Promise<string> {
     const v = (await stored()).get(full)?.value;
     if (v) return v;
   } catch (e) {
-    console.error("[integrations] не прочитал ключи из базы:", e instanceof Error ? e.message.split("\n")[0] : e);
+    logError("[integrations] не прочитал ключи из базы:", e instanceof Error ? e.message.split("\n")[0] : e);
   }
   return envOf(full);
 }

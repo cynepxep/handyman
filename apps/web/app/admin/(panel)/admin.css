@@ -227,3 +227,14 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
   .adm-nav-wrap { display: none; }
   .adm-mnav { display: block; }
 }
+
+/* «Ошибки» и «Здоровье сайта» (шаг 8.2) */
+.adm-health { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.adm-health li { overflow-wrap: anywhere; }
+.adm-errors { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.adm-errors > li { margin: 0; }
+.adm-errors summary { cursor: pointer; overflow-wrap: anywhere; }
+.adm-err-msg { display: block; margin-top: 4px; font-weight: 600; }
+.adm-err-dl { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 10px 0; font-size: 14px; }
+.adm-err-dl dd { margin: 0; overflow-wrap: anywhere; }
+.adm-err-stack { background: var(--adm-soft); border: 1px solid var(--adm-line); border-radius: 8px; padding: 10px; font-size: 12px; max-height: 320px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }

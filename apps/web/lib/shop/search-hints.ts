@@ -9,6 +9,7 @@ import { orderedByCategory, topQueries } from "@handyman/db/search-stats";
 import { getCategoryStats } from "./catalog";
 import type { ShopContent } from "./content";
 import { TAG_CATALOG, TAG_SHOP, cached } from "./cache";
+import { logError } from "@handyman/db/errors";
 
 /** Данные подсказок (настройки, частые запросы, заказы по категориям) — кэш на 10 минут, сброс при правке в админке. */
 const loadHintData = cached(
@@ -40,7 +41,7 @@ export const getSearchHints = cache(async (c: ShopContent): Promise<SearchHint[]
       });
     return mergeHints({ pinned, popular, fromOrders, hidden, max });
   } catch (e) {
-    console.error("[shop] подсказки поиска: беру только заданные вручную", e);
+    logError("[shop] подсказки поиска: беру только заданные вручную", e);
     return pinned.slice(0, 8).map((text) => ({ text }));
   }
 });

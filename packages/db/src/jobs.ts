@@ -1,7 +1,7 @@
 // Фоновые задачи (шаг 4.8): раз в минуту `runJobs()` смотрит, что пора сделать — ежедневная сводка, отчёт по понедельникам,
 // напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений, опрос оплат monobank (шаг 3.2),
 // кассовые чеки Checkbox и закрытие смены в 23:00 (шаг 3.3), передача заказов в KeyCRM и их статусы (шаг 3.5), ночная резервная копия
-// и еженедельная проверка восстановления (шаг 8.1, идут в фоне). Запускается вместе с сайтом
+// и еженедельная проверка восстановления (шаг 8.1, идут в фоне), тревоги и чистка журнала ошибок (шаг 8.2). Запускается вместе с сайтом
 // (apps/web/instrumentation.ts). «Один раз» гарантирует база: отметка `job:<ключ>` в Setting — даже при нескольких копиях сайта.
 
 import { prisma, Prisma } from "./client";
@@ -16,6 +16,8 @@ import { pollInvoices } from "./payments";
 import { closeShift, processReceipts, receiptMode } from "./receipts";
 import { processKeycrm } from "./keycrm";
 import { runBackupJobs } from "./backups";
+import { alertErrors, logError, pruneErrors } from "./errors";
+import { markJobsRun } from "./health";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -97,18 +99,20 @@ export type JobsReport = {
   keycrm: number;
   /** шаг 8.1: что запущено в фоне — ночная копия или проверка восстановления */
   backup: "backup" | "check" | null;
+  /** шаг 8.2: о скольких группах ошибок отправлена тревога */
+  errorAlerts: number;
 };
 
-/** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль). */
+/** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль и журнал ошибок). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, keycrm: 0, backup: null };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, keycrm: 0, backup: null, errorAlerts: 0 };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
     try {
       await fn();
     } catch (e) {
-      console.error(`[jobs] ${name}:`, e instanceof Error ? e.message : e);
+      logError(`[jobs:${name}]`, e);
     }
   };
 
@@ -190,11 +194,20 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
     rep.backup = await runBackupJobs(now);
   });
 
+  await step("errors", async () => {
+    // шаг 8.2: новые ошибки и всплески — сообщение в Telegram (не чаще раза в час на группу); группы старше 30 дней — удалить
+    if (s.alerts) rep.errorAlerts = await alertErrors((text) => notifyManagers(text), now);
+    await pruneErrors(now);
+  });
+
   await step("retry", async () => {
     // сообщения, которые не ушли из-за сбоя сети/Telegram: до 3 попыток, не чаще раза в 5 минут
     const stuck = await prisma.outbox.findMany({ where: { state: "FAILED", attempts: { lt: 3 }, createdAt: { lte: new Date(now.getTime() - 5 * 60_000), gte: new Date(now.getTime() - 24 * 3600_000) } }, take: 10 });
     for (const m of stuck) if ((await retryOutbox(m.id)) === "SENT") rep.retried++;
   });
+
+  // шаг 8.2: «фоновые задачи живы» — для «здоровья» сайта
+  await step("heartbeat", () => markJobsRun(now));
 
   return rep;
 }

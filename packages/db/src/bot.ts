@@ -14,6 +14,7 @@ import { notifyManagers } from "./notify";
 import { TelegramError, tg, type TgMessage, type TgUpdate } from "./telegram";
 import { subscribeWatch } from "./storefront-plus";
 import { secret } from "./integrations";
+import { logError } from "./errors";
 
 const money = (n: number) => `${n.toLocaleString("uk-UA", { maximumFractionDigits: 2 }).replace(/ /g, " ")} ₴`;
 
@@ -194,7 +195,7 @@ export async function pollOnce(owner: string, waitSec = 25): Promise<number> {
     try {
       await handleUpdate(u);
     } catch (e) {
-      console.error("[bot] ошибка обработки:", e instanceof Error ? e.message : e);
+      logError("[bot] ошибка обработки:", e instanceof Error ? e.message : e);
     }
     const next = { offset: u.update_id + 1 } as unknown as Prisma.InputJsonValue;
     await prisma.setting.upsert({ where: { key: OFFSET_KEY }, update: { value: next }, create: { key: OFFSET_KEY, value: next } });

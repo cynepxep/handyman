@@ -19,6 +19,7 @@ import { notifyManagers } from "./notify";
 import { loadCheckoutSettings, setOrderStatus } from "./orders";
 import { sendAutoMessages, sendOrderMessages } from "./messages";
 import { queuePaymentReceiptTx, receiptMode, sendReceipt } from "./receipts";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -148,7 +149,7 @@ async function createInvoice(orderId: string, p: { kind: InvoiceKind; amount: nu
     const res = await mono("/api/merchant/invoice/create", { method: "POST", body });
     const r = readCreateResponse(res.status, res.body);
     if (!r.ok) {
-      console.error(`[payments] счёт для ${o.no} не создан: ${r.error}`);
+      logError(`[payments] счёт для ${o.no} не создан: ${r.error}`);
       throw new PaymentError(r.error);
     }
     id = r.invoiceId;
@@ -197,7 +198,7 @@ export async function payFromSite(no: string, key: string, origin: string): Prom
     const inv = await createInvoice(o.id, { kind: target.kind, amount: target.amount, who: "сайт", origin });
     return { ok: true, pageUrl: inv.pageUrl, stub: inv.stub };
   } catch (e) {
-    console.error("[payments] оплата с сайта:", e instanceof Error ? e.message : e);
+    logError("[payments] оплата с сайта:", e instanceof Error ? e.message : e);
     return { ok: false, reason: "error" };
   }
 }
@@ -269,18 +270,18 @@ export async function applyInvoiceState(d: MonoInvoiceData, source: string): Pro
     return { orderId: inv.orderId, no: inv.order.no, delta, paid: orderPaid, total, status: inv.order.status, isTest: inv.order.isTest, kind: inv.kind, receiptId };
   });
   if (!res || res.delta === 0) return res;
-  if (res.receiptId) await sendReceipt(res.receiptId).catch((e) => console.error("[payments] чек не отправлен (повторит фоновая задача)", e));
+  if (res.receiptId) await sendReceipt(res.receiptId).catch((e) => logError("[payments] чек не отправлен (повторит фоновая задача)", e));
   const test = res.isTest ? "🧪 ТЕСТ · " : "";
   if (res.delta > 0) {
     if (res.status === "NEW" || res.status === "NO_ANSWER") {
       await setOrderStatus(res.orderId, "PAID", "monobank");
-      await sendAutoMessages(res.orderId, "PAID", "monobank").catch((e) => console.error("[payments] автосообщение не отправлено", e));
+      await sendAutoMessages(res.orderId, "PAID", "monobank").catch((e) => logError("[payments] автосообщение не отправлено", e));
     }
     await notifyManagers(`${test}💳 Оплачено ${res.no}: ${money(res.delta)} (${INVOICE_KIND_RU[res.kind as InvoiceKind] ?? res.kind}). Всего оплачено ${money(res.paid)} из ${money(res.total)}`, res.orderId)
-      .catch((e) => console.error("[payments] уведомление не сохранено", e));
+      .catch((e) => logError("[payments] уведомление не сохранено", e));
   } else {
     await notifyManagers(`${test}↩️ Возврат по ${res.no}: ${money(-res.delta)}. Оплачено теперь ${money(res.paid)} из ${money(res.total)}`, res.orderId)
-      .catch((e) => console.error("[payments] уведомление не сохранено", e));
+      .catch((e) => logError("[payments] уведомление не сохранено", e));
   }
   return res;
 }
@@ -305,14 +306,14 @@ export async function refreshOrderPayments(no: string, key: string): Promise<voi
   const o = await prisma.order.findUnique({ where: { no }, select: { id: true, accessKey: true } });
   if (!o || !key || o.accessKey !== key) return;
   const open = await prisma.payInvoice.findMany({ where: { orderId: o.id, stub: false, status: { in: MONO_PENDING } }, select: { id: true }, take: 5 });
-  for (const i of open) await refreshInvoice(i.id, "проверка покупателем").catch((e) => console.error("[payments]", e instanceof Error ? e.message : e));
+  for (const i of open) await refreshInvoice(i.id, "проверка покупателем").catch((e) => logError("[payments]", e instanceof Error ? e.message : e));
 }
 
 /** Уведомление mono (/api/pay/mono): подпись → разбор → применить. Возвращает HTTP-код ответа. */
 export async function handleMonoWebhook(raw: string, sign: string | null): Promise<number> {
   if (!raw || raw.length > 100_000) return 400;
   if (!(await verifyMonoSignature(raw, sign ?? ""))) {
-    console.error("[payments] уведомление mono с неверной подписью — отклонено");
+    logError("[payments] уведомление mono с неверной подписью — отклонено");
     return 403;
   }
   let body: unknown;
@@ -344,7 +345,7 @@ export async function pollInvoices(now = new Date()): Promise<number> {
       await refreshInvoice(r.id, "опрос monobank");
       n++;
     } catch (e) {
-      console.error(`[payments] опрос ${tail(r.id)}:`, e instanceof Error ? e.message : e);
+      logError(`[payments] опрос ${tail(r.id)}:`, e instanceof Error ? e.message : e);
     }
   }
   // срок вышел — больше не спрашиваем

@@ -1170,3 +1170,29 @@ model ProductWatch {
   @@index([notifiedAt])
   @@index([productId])
 }
+
+// Журнал ошибок (шаг 8.2): одна строка — группа одинаковых ошибок (по «отпечатку»: откуда + где + текст без чисел + место в коде).
+// Тексты уже замаскированы (без токенов, телефонов, имён и адресов). Хранится 30 дней после последнего раза (чистка в runJobs).
+// windowAt/windowCount — сколько раз за текущие 10 минут (для тревоги «всплеск»); alertedAt — когда в последний раз слали тревогу.
+model ErrorLog {
+  id          String    @id @default(cuid())
+  fingerprint String    @unique
+  source      String // page | action | route | proxy | jobs | service | browser (ERROR_SOURCE_RU в core/src/errors.ts)
+  where       String    @default("")
+  message     String
+  stack       String    @default("")
+  url         String    @default("")
+  digest      String    @default("")
+  count       Int       @default(1)
+  firstAt     DateTime  @default(now())
+  lastAt      DateTime  @default(now())
+  windowAt    DateTime  @default(now())
+  windowCount Int       @default(1)
+  alertedAt   DateTime?
+  reopenedAt  DateTime? // снова появилась после «Закрыть»
+  closedAt    DateTime?
+  closedBy    String?
+
+  @@index([closedAt, lastAt])
+  @@index([lastAt])
+}

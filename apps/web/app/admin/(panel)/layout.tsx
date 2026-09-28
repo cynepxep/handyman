@@ -32,6 +32,7 @@ const SECTIONS: Array<{ href: string; label: string; group: string; permission?:
   { href: "/admin/staff", label: "Сотрудники", group: "Настройки", permission: "staff.manage" },
   { href: "/admin/roles", label: "Роли и права", group: "Настройки", permission: "staff.manage" },
   { href: "/admin/audit", label: "Журнал", group: "Настройки", permission: "audit.view" },
+  { href: "/admin/errors", label: "Ошибки", group: "Настройки", permission: "errors.view" },
 ];
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {

@@ -91,6 +91,7 @@ export function imageRows(urls: string[]): Array<{ url: string; sort: number; lo
 
 export { photoStyleOn, pickImage } from "./photo-choice";
 import { photoStyleOn } from "./photo-choice";
+import { logError } from "./errors";
 
 /** Включить/выключить фирменный стиль на сайте; поиск пересобирается (в нём адрес первого фото карточки). */
 export async function setPhotoStyle(on: boolean, who: string): Promise<void> {
@@ -205,7 +206,7 @@ export function recoverMediaFile(localUrl: string): Promise<Recovered> {
   let job = recovering.get(localUrl);
   if (!job) {
     job = recoverSlot(() => recover(localUrl, !!m[1])).catch((e) => {
-      console.error("[media] не удалось восстановить фото", localUrl, e);
+      logError("[media] не удалось восстановить фото", localUrl, e);
       return null;
     }).finally(() => recovering.delete(localUrl));
     recovering.set(localUrl, job);
@@ -383,7 +384,7 @@ async function startJob(kind: JobKind, scope: MediaScope, who: string, where: ob
   if (!total) return { runId: run.id, total };
   active.add(run.id);
   void runSync(run.id, where, kind, total).catch(async (e) => {
-    console.error("[media] скачивание фото прервано:", e);
+    logError("[media] скачивание фото прервано:", e);
     await prisma.mediaSyncRun.update({ where: { id: run.id }, data: { status: "failed", error: String(e instanceof Error ? e.message : e).slice(0, 300), finishedAt: new Date() } }).catch(() => {});
   }).finally(() => active.delete(run.id));
   return { runId: run.id, total };
@@ -464,7 +465,7 @@ async function runSync(runId: string, where: object, kind: JobKind, limit: numbe
   // скачали новые фото, а фирменный стиль на сайте включён — сразу сделать им стиль
   if (kind === "download" && done > 0 && (await photoStyleOn())) {
     const run = await prisma.mediaSyncRun.findUnique({ where: { id: runId }, select: { supplierId: true, who: true } });
-    if (run) await startPhotoStyle({ supplierId: run.supplierId }, run.who, { onlyNew: true }).catch((e) => console.error("[media] стиль после скачивания", e));
+    if (run) await startPhotoStyle({ supplierId: run.supplierId }, run.who, { onlyNew: true }).catch((e) => logError("[media] стиль после скачивания", e));
   }
 }
 

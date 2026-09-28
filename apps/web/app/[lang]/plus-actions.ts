@@ -13,6 +13,7 @@ import { PlusUserError, createReview, requestCallback, saveReviewPhoto, subscrib
 import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import { getShopContent } from "@/lib/shop/content";
 import { getClient } from "@/lib/client-auth";
+import { logError } from "@handyman/db/errors";
 
 const langOf = (l: unknown): ShopLang => (isShopLang(l) ? l : "uk");
 const ID = /^[a-z0-9]{8,40}$/;
@@ -48,7 +49,7 @@ export async function reviewAction(lang: unknown, form: FormData): Promise<Revie
     return { ok: true, message: t(r.kind === "question" ? "questions.form.done" : "reviews.form.done") };
   } catch (e) {
     if (e instanceof PlusUserError) return { ok: false, message: photoErr };
-    console.error("[reviews] не сохранён", e);
+    logError("[reviews] не сохранён", e);
     return { ok: false, message: t("err.server") };
   }
 }
@@ -91,7 +92,7 @@ export async function callbackAction(lang: unknown, form: { phone?: unknown; nam
     const r = await requestCallback({ phone: form.phone, name: form.name }, { productId, clientId: client?.id ?? null, lang: l });
     return r.ok ? { ok: true, message: t("callback.done", { phone: r.phone }) } : { ok: false, message: t(r.error) };
   } catch (e) {
-    console.error("[callback] заявка не сохранена", e);
+    logError("[callback] заявка не сохранена", e);
     return { ok: false, message: t("err.server") };
   }
 }

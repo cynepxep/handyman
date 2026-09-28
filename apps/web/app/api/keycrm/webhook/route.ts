@@ -3,6 +3,7 @@
 // X-Webhook-Secret или Authorization: Bearer. Без верного секрета — 403.
 import { NextResponse, type NextRequest } from "next/server";
 import { handleKeycrmWebhook } from "@handyman/db/keycrm";
+import { logError } from "@handyman/db/errors";
 
 function secretOf(req: NextRequest): string | null {
   const q = req.nextUrl.searchParams.get("secret");
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
   try {
     code = await handleKeycrmWebhook(await req.text(), secretOf(req));
   } catch (e) {
-    console.error("[keycrm:webhook]", e instanceof Error ? e.message : e);
+    logError("[keycrm:webhook]", e instanceof Error ? e.message : e);
   }
   // 5xx — KeyCRM может повторить позже; 4xx — повторять бессмысленно
   return NextResponse.json({ ok: code === 200 }, { status: code });

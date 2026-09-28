@@ -18,6 +18,7 @@ import { secret } from "./integrations";
 import { loadTextOverrides } from "./site-content";
 import { notifyManagers } from "./notify";
 import { sendOrderMessages } from "./messages";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -217,9 +218,9 @@ export async function sendReceipt(id: string, now = new Date()): Promise<Receipt
 
 async function failAttempt(id: string, e: unknown, now: Date): Promise<ReceiptStatus> {
   const why = e instanceof ReceiptError ? e.message : "Непредвиденная ошибка при отправке чека.";
-  if (!(e instanceof ReceiptError)) console.error("[receipts]", e);
+  if (!(e instanceof ReceiptError)) logError("[receipts]", e);
   const r = await prisma.fiscalReceipt.findUniqueOrThrow({ where: { id }, include: { order: { select: { no: true, isTest: true } } } });
-  console.error(`[receipts] чек ${tail(id)} (${r.order.no}), попытка ${r.attempts}: ${why}`);
+  logError(`[receipts] чек ${tail(id)} (${r.order.no}), попытка ${r.attempts}: ${why}`);
   if (r.attempts < RECEIPT_MAX_ATTEMPTS) {
     await prisma.fiscalReceipt.update({ where: { id }, data: { status: "queued", error: why, nextTryAt: new Date(now.getTime() + receiptRetryDelayMin(r.attempts) * 60_000) } });
     return "queued";
@@ -235,7 +236,7 @@ async function giveUp(r: { id: string; orderId: string; kind: string; amount: Pr
   await notifyManagers(
     `${r.order.isTest ? "🧪 ТЕСТ · " : ""}🧾❗ Чек по ${r.order.no} на ${money(r.amount.toNumber())} не создан: ${why} Откройте заказ → «Кассовые чеки» → «Повторить».`,
     r.orderId,
-  ).catch((e) => console.error("[receipts] тревога не сохранена", e));
+  ).catch((e) => logError("[receipts] тревога не сохранена", e));
   return "error";
 }
 
@@ -257,7 +258,7 @@ async function applyReceipt(id: string, got: CheckboxReceipt, now = new Date()):
       },
     }),
   ]);
-  if (url) await sendReceiptToClient(id, "Checkbox", true).catch((e) => console.error("[receipts] ссылка покупателю не отправлена", e));
+  if (url) await sendReceiptToClient(id, "Checkbox", true).catch((e) => logError("[receipts] ссылка покупателю не отправлена", e));
   return "done";
 }
 
@@ -268,7 +269,7 @@ async function pollReceipt(id: string, now: Date): Promise<void> {
     if (got) await applyReceipt(id, got, now);
     else await prisma.fiscalReceipt.update({ where: { id }, data: { nextTryAt: new Date(now.getTime() + 60_000) } });
   } catch (e) {
-    console.error(`[receipts] проверка чека ${tail(id)}:`, e instanceof Error ? e.message : e);
+    logError(`[receipts] проверка чека ${tail(id)}:`, e instanceof Error ? e.message : e);
     await prisma.fiscalReceipt.update({ where: { id }, data: { nextTryAt: new Date(now.getTime() + 5 * 60_000) } });
   }
 }
@@ -296,7 +297,7 @@ export async function processReceipts(now = new Date()): Promise<number> {
       else await sendReceipt(r.id, now);
       n++;
     } catch (e) {
-      console.error(`[receipts] ${tail(r.id)}:`, e instanceof Error ? e.message : e);
+      logError(`[receipts] ${tail(r.id)}:`, e instanceof Error ? e.message : e);
     }
   }
   return n;

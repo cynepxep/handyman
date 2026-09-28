@@ -5,6 +5,7 @@
 // В тестах сеть не нужна: setNovaPoshtaFetch() подставляет заглушку.
 
 import { secret } from "./integrations";
+import { logError } from "./errors";
 
 const API = "https://api.novaposhta.ua/v2.0/json/";
 const DAY = 24 * 60 * 60 * 1000;
@@ -31,12 +32,12 @@ async function call<T>(calledMethod: string, methodProperties: Record<string, st
     });
     const j = (await res.json()) as NpResponse<T>;
     if (!j?.success || !Array.isArray(j.data)) {
-      console.error("[novaposhta]", calledMethod, "ошибка:", (j?.errors ?? []).join("; ").slice(0, 200));
+      logError("[novaposhta]", calledMethod, "ошибка:", (j?.errors ?? []).join("; ").slice(0, 200));
       return null;
     }
     return j.data;
   } catch (e) {
-    console.error("[novaposhta]", calledMethod, "не отвечает:", e instanceof Error ? e.message : e);
+    logError("[novaposhta]", calledMethod, "не отвечает:", e instanceof Error ? e.message : e);
     return null;
   }
 }
