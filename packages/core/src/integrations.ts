@@ -25,7 +25,7 @@ export type IntegrationDef = {
   required: string[];
 };
 
-export type IntegrationId = "telegram" | "novaposhta" | "mono" | "checkbox" | "keycrm" | "sms";
+export type IntegrationId = "telegram" | "novaposhta" | "mono" | "checkbox" | "keycrm" | "sms" | "backup";
 
 export const INTEGRATIONS: IntegrationDef[] = [
   {
@@ -91,6 +91,20 @@ export const INTEGRATIONS: IntegrationDef[] = [
     ],
     required: ["token", "sender"],
   },
+  {
+    id: "backup",
+    title: "Резервные копии: второе хранилище (облако)",
+    what: "Вторая копия базы, ключа шифрования и фото — в облачном хранилище (любое S3-совместимое: Cloudflare R2, Backblaze B2, Wasabi, Amazon S3…). Выгружается каждую ночь после копии на сервере; спасает, если сломается весь сервер. Список копий — в разделе «Резервные копии».",
+    stub: "Копии хранятся только на этом компьютере/сервере: если он сломается целиком, пропадут и они.",
+    fields: [
+      { key: "endpoint", label: "Адрес хранилища (endpoint)", env: "BACKUP_S3_ENDPOINT", secret: false, hint: "Например https://<ID аккаунта>.r2.cloudflarestorage.com или https://s3.eu-central-003.backblazeb2.com — есть в кабинете хранилища." },
+      { key: "bucket", label: "Корзина (bucket)", env: "BACKUP_S3_BUCKET", secret: false, hint: "Создайте в хранилище отдельную приватную корзину, например handyman-backups." },
+      { key: "accessKey", label: "Ключ доступа (Access Key ID)", env: "BACKUP_S3_ACCESS_KEY", secret: true },
+      { key: "secretKey", label: "Секретный ключ (Secret Access Key)", env: "BACKUP_S3_SECRET_KEY", secret: true, hint: "Показывается один раз при создании ключа. Ключу достаточно доступа только к этой корзине." },
+      { key: "region", label: "Регион", env: "BACKUP_S3_REGION", secret: false, hint: "Необязательно: для R2 и Backblaze определяется по адресу; для Amazon S3 — например eu-central-1." },
+    ],
+    required: ["endpoint", "bucket", "accessKey", "secretKey"],
+  },
 ];
 
 export const integrationById = (id: string) => INTEGRATIONS.find((i) => i.id === id) ?? null;
@@ -145,7 +159,21 @@ export function validateField(id: IntegrationId, field: string, raw: string): st
   if (id === "keycrm" && (field === "sourceId" || field === "npServiceId") && !/^\d{1,9}$/.test(v)) return field === "sourceId" ? "Источник KeyCRM — число." : "ID службы доставки — число.";
   if (id === "keycrm" && field === "webhookSecret" && weakWebhookSecret(v)) return "Секрет вебхука — не короче 16 знаков, только латинские буквы, цифры, «-» и «_», и не шаблон «change-me».";
   if (id === "sms" && field === "sender" && v.length > 11) return "Имя отправителя SMS — до 11 знаков.";
+  if (id === "backup" && field === "endpoint" && !validStorageEndpoint(v)) return "Адрес хранилища — вида https://… (как в кабинете хранилища), без названия корзины в конце.";
+  if (id === "backup" && field === "bucket" && !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(v)) return "Название корзины — 3–63 знака: маленькие латинские буквы, цифры, «-» и «.».";
+  if (id === "backup" && field === "region" && !/^[a-z0-9-]{2,40}$/.test(v)) return "Регион — латинские буквы, цифры и «-», например eu-central-1.";
   return null;
+}
+
+/** Адрес хранилища копий: https (http — только для своего компьютера, например MinIO в Docker), без пути. */
+export function validStorageEndpoint(v: string): boolean {
+  try {
+    const u = new URL(v);
+    const local = ["localhost", "127.0.0.1", "[::1]"].includes(u.hostname);
+    return (u.protocol === "https:" || (u.protocol === "http:" && local)) && (u.pathname === "/" || u.pathname === "") && !u.search && !u.username;
+  } catch {
+    return false;
+  }
 }
 
 /** Секрет вебхука, который нельзя принимать: короткий, с символами, ломающими адрес, или шаблон из .env.example («change-me-too»). */

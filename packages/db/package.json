@@ -36,7 +36,9 @@
     "./receipts": "./src/receipts.ts",
     "./suppliers": "./src/suppliers.ts",
     "./import-undo": "./src/import-undo.ts",
-    "./keycrm": "./src/keycrm.ts"
+    "./keycrm": "./src/keycrm.ts",
+    "./backups": "./src/backups.ts",
+    "./offsite": "./src/offsite.ts"
   },
   "scripts": {
     "generate": "prisma generate",
@@ -47,6 +49,9 @@
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "search:reindex": "dotenv -e ../../.env -- tsx scripts/reindex.ts",
+    "backup:now": "dotenv -e ../../.env -- tsx scripts/backup.ts now",
+    "backup:check": "dotenv -e ../../.env -- tsx scripts/backup.ts check",
+    "backup:restore": "dotenv -e ../../.env -- tsx scripts/backup.ts restore",
     "test": "dotenv -e ../../.env -- tsx --test --test-concurrency=1 test/*.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },

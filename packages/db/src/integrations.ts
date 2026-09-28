@@ -15,7 +15,8 @@ const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 
 // ---------- ключ шифрования ----------
 
-function projectRoot(): string {
+/** Корень проекта (папка с pnpm-workspace.yaml). */
+export function projectRoot(): string {
   let dir = process.cwd();
   for (let i = 0; i < 6; i++) {
     if (existsSync(/*turbopackIgnore: true*/ join(/*turbopackIgnore: true*/ dir, "pnpm-workspace.yaml"))) return dir;
@@ -46,6 +47,17 @@ function key(): Buffer {
     console.info(`[integrations] создан ключ шифрования ${file} — сохраните его вместе с резервной копией базы`);
   }
   return (masterKey = deriveKey(readFileSync(/*turbopackIgnore: true*/ file, "utf8")));
+}
+
+/**
+ * Содержимое ключа шифрования — для резервной копии (шаг 8.1): SECRETS_KEY или файл ключа (создаётся, если его ещё нет).
+ * Без него ключи «Интеграций» из копии базы не расшифровать. Никуда, кроме копии, не выводить.
+ */
+export function secretsKeyMaterial(): { material: string; source: "SECRETS_KEY" | "file" } {
+  const fromEnv = process.env.SECRETS_KEY?.trim();
+  if (fromEnv) return { material: fromEnv, source: "SECRETS_KEY" };
+  key();
+  return { material: readFileSync(/*turbopackIgnore: true*/ secretsKeyFile(), "utf8").trim(), source: "file" };
 }
 
 /** Где ключ шифрования (для подсказки владельцу). */
@@ -255,6 +267,9 @@ async function runCheck(id: IntegrationId): Promise<CheckResult> {
       const r = await call("https://openapi.keycrm.app/v1/order/source?limit=50", { method: "GET", headers: { Authorization: `Bearer ${await v("apiKey")}` } });
       return readKeycrmCheck(r.status, r.body, await v("sourceId"));
     }
+    case "backup":
+      // шаг 8.1: второе хранилище копий (S3) отвечает XML, а не JSON — своя проверка; модуль грузится лениво (он сам импортирует этот)
+      return (await import("./offsite")).checkOffsite();
     case "sms": {
       const r = await call("https://api.turbosms.ua/user/balance.json", { method: "POST", headers: { Authorization: `Bearer ${await v("token")}` }, body: {} });
       return readTurboSmsCheck(r.status, r.body);
