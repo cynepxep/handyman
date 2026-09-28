@@ -35,7 +35,7 @@ export function contactLinks(c: ShopContent, callLabel: string) {
   ].filter((x): x is { href: string; icon: string; label: string } => x !== null);
 }
 
-export async function SiteHeader({ c }: { c: ShopContent }) {
+export async function SiteHeader({ c, loggedIn }: { c: ShopContent; loggedIn: boolean }) {
   const { t, lang } = c;
   const phone = c.contacts.phones[0];
   const links = contactLinks(c, t("header.help.call"));
@@ -70,6 +70,11 @@ export async function SiteHeader({ c }: { c: ShopContent }) {
         </Link>
         <SearchBox lang={lang} labels={labels} popular={popular} />
         <span className="hm-head-icons">
+          {/* Кабинет: на телефоне он в нижней панели, здесь — с планшета и шире. Гостю — «Увійти» (та же страница покажет вход). */}
+          <Link className={`hm-cart hm-headacc${loggedIn ? " is-in" : ""}`} href={shopHref(lang, paths.account())} aria-label={t(loggedIn ? "header.account" : "header.login")}>
+            <Icon name="user" size={24} />
+            <span className="hm-headacc-text">{t(loggedIn ? "header.account" : "header.login")}</span>
+          </Link>
           <HeaderFav href={shopHref(lang, paths.favorites())} label={t("fav.header")} />
           <HeaderCart />
         </span>

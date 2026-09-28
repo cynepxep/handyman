@@ -632,6 +632,12 @@ a.hm-promo:hover { box-shadow: 0 0 0 2px var(--c-primary), 0 8px 22px rgba(30, 3
 .hm-head-icons { grid-area: cart; display: inline-flex; align-items: center; gap: 4px; }
 .hm-head-icons .hm-cart { grid-area: auto; }
 .hm-headfav { color: var(--c-text); }
+/* кнопка кабинета в шапке: на телефоне скрыта (есть «Кабінет» в нижней панели), подпись — на широком экране; вошёл — зелёная точка */
+.hm-headacc { display: none; color: var(--c-text); font-weight: 600; padding-inline: 6px; }
+.hm-headacc-text { display: none; }
+.hm-headacc.is-in::after { content: ""; position: absolute; top: 8px; left: 22px; width: 9px; height: 9px; border-radius: 50%; background: var(--c-success); border: 2px solid var(--c-surface); }
+@media (min-width: 700px) { .hm-headacc { display: inline-flex; } }
+@media (min-width: 1000px) { .hm-headacc-text { display: inline; } }
 .hm-fav { position: absolute; top: 6px; right: 6px; z-index: 2; width: var(--tap); height: var(--tap); display: grid; place-items: center; border: 0; border-radius: 50%; background: rgba(255, 255, 255, .85); color: var(--c-muted); cursor: pointer; transition: color .15s, transform .15s; }
 .hm-fav:hover { color: var(--c-accent); }
 .hm-fav.is-on { color: var(--c-accent); }

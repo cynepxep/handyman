@@ -59,7 +59,7 @@ export default async function ShopRootLayout({ children, params }: LayoutProps<"
       <body className="hm-body">
         <a className="hm-skip" href="#main">{c.t("header.skip")}</a>
         <ShopCartProvider lang={lang} labels={cartUiLabels(c.t)} cartHref={shopHref(lang, paths.cart())} checkoutHref={shopHref(lang, paths.checkout())}>
-          <SiteHeader c={c} />
+          <SiteHeader c={c} loggedIn={Boolean(client)} />
           <ShopTextsProvider lang={lang} texts={pickTexts(c.texts, CLIENT_TEXT_KEYS)}>
             <main id="main" className="hm-main" tabIndex={-1}>{children}</main>
           </ShopTextsProvider>
