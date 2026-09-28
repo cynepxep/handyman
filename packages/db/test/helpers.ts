@@ -13,6 +13,8 @@ process.env.MEILI_INDEX_PRODUCTS = "products_test"; // отдельный пои
 // Тесты никогда не пишут в настоящий Telegram, даже если в .env есть токен бота.
 process.env.BOT_TOKEN = "";
 process.env.ADMIN_CHAT_ID = "";
+// Ночные резервные копии из runJobs в тестах не делаются (тест копий включает их сам, в своей временной папке).
+process.env.HM_BACKUPS = "off";
 
 export const sampleText = fs.readFileSync(path.join(here, "../../core/test/fixtures/vitals-sample.xml"), "utf8");
 export const skipMsg = "нет подключения к тестовой базе handyman_test (запустите pnpm infra:up)";

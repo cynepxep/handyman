@@ -17,6 +17,9 @@
     "db:generate": "pnpm --filter @handyman/db run generate",
     "db:seed": "pnpm --filter @handyman/db run seed",
     "db:studio": "pnpm --filter @handyman/db run studio",
-    "search:reindex": "pnpm --filter @handyman/db run search:reindex"
+    "search:reindex": "pnpm --filter @handyman/db run search:reindex",
+    "backup:now": "pnpm --filter @handyman/db run backup:now",
+    "backup:check": "pnpm --filter @handyman/db run backup:check",
+    "backup:restore": "pnpm --filter @handyman/db run backup:restore"
   }
 }

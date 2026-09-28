@@ -13,7 +13,8 @@
     "./shop": "./src/shop/index.ts",
     "./shop/warehouse": "./src/shop/warehouse.ts",
     "./telegram": "./src/shop/telegram-logic.ts",
-    "./integrations": "./src/integrations.ts"
+    "./integrations": "./src/integrations.ts",
+    "./backups": "./src/backups.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

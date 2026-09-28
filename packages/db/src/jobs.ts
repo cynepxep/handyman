@@ -1,6 +1,7 @@
 // Фоновые задачи (шаг 4.8): раз в минуту `runJobs()` смотрит, что пора сделать — ежедневная сводка, отчёт по понедельникам,
 // напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений, опрос оплат monobank (шаг 3.2),
-// кассовые чеки Checkbox и закрытие смены в 23:00 (шаг 3.3), передача заказов в KeyCRM и их статусы (шаг 3.5). Запускается вместе с сайтом
+// кассовые чеки Checkbox и закрытие смены в 23:00 (шаг 3.3), передача заказов в KeyCRM и их статусы (шаг 3.5), ночная резервная копия
+// и еженедельная проверка восстановления (шаг 8.1, идут в фоне). Запускается вместе с сайтом
 // (apps/web/instrumentation.ts). «Один раз» гарантирует база: отметка `job:<ключ>` в Setting — даже при нескольких копиях сайта.
 
 import { prisma, Prisma } from "./client";
@@ -14,6 +15,7 @@ import { runWatches } from "./storefront-plus";
 import { pollInvoices } from "./payments";
 import { closeShift, processReceipts, receiptMode } from "./receipts";
 import { processKeycrm } from "./keycrm";
+import { runBackupJobs } from "./backups";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -93,11 +95,13 @@ export async function weeklyReportText(s: NotifySettings, now = new Date()): Pro
 export type JobsReport = {
   daily: boolean; weekly: boolean; reminders: number; alerts: number; retried: number; watches: number; payments: number; receipts: number; shiftClosed: boolean;
   keycrm: number;
+  /** шаг 8.1: что запущено в фоне — ночная копия или проверка восстановления */
+  backup: "backup" | "check" | null;
 };
 
 /** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, keycrm: 0 };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, keycrm: 0, backup: null };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
@@ -179,6 +183,11 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
   await step("keycrm", async () => {
     // шаг 3.5: заказы из очереди KeyCRM (повторы после сбоев) и статусы из KeyCRM, пока вебхук не доходит
     rep.keycrm = await processKeycrm(now);
+  });
+
+  await step("backup", async () => {
+    // шаг 8.1: ночная копия с 03:30 и проверка восстановления раз в неделю — в фоне (копия большой базы идёт минуты)
+    rep.backup = await runBackupJobs(now);
   });
 
   await step("retry", async () => {
