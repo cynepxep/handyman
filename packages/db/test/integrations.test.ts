@@ -102,7 +102,7 @@ test("проверка подключения: ответ сервиса по-ч
   assert.ok(calls.at(-1)!.body!.includes("env-np-key-1234567890"), "ключ из .env");
 
   const mono = await integ.checkIntegration("mono", "Власник");
-  assert.deepEqual([mono.ok, mono.message], [false, "Не заполнено: Токен мерчанта (X-Token). Пока работает заглушка."]);
+  assert.deepEqual([mono.ok, mono.message], [false, "Не заполнено: Токен мерчанта (X-Token). Впишите значение в поле выше и нажмите «Сохранить» — пока работает заглушка."]);
   await integ.saveIntegration("mono", { token: "mono-token-abcdefghijklmnop" }, "Власник");
   const slow = await integ.checkIntegration("mono", "Власник");
   assert.match(slow.message, /не ответил за 10 секунд/);

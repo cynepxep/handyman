@@ -7,36 +7,36 @@ import { requireOwner } from "@/lib/auth";
 
 const back = (id: string, kind: "ok" | "error", text: string) => `/admin/integrations?${kind}=${encodeURIComponent(text)}&s=${encodeURIComponent(id)}#${encodeURIComponent(id)}`;
 
-/** «Сохранить»: пустые поля не трогаем (ключ остаётся прежним). Сразу после сохранения — проверка подключения. */
-export async function saveIntegrationAction(formData: FormData): Promise<void> {
+/**
+ * Обе кнопки формы сначала сохраняют введённое (пустые поля не трогаем — ключ остаётся прежним), потом проверяют подключение.
+ * Раньше «Проверить подключение» введённое не сохраняла: владелец вставлял ключ, жал проверку и видел «Не заполнено… заглушка».
+ * `requireSomething` — «Сохранить» с пустой формой: сказать, что сохранять нечего.
+ */
+async function saveAndCheck(formData: FormData, requireSomething: boolean): Promise<void> {
   const s = await requireOwner();
+  const who = s.name || s.username;
   const id = String(formData.get("id") ?? "");
   const d = integrationById(id);
   if (!d) redirect("/admin/integrations");
   const values = Object.fromEntries(d.fields.map((f) => [f.key, String(formData.get(`f_${f.key}`) ?? "")]));
   let changed: string[];
   try {
-    changed = await saveIntegration(id, values, s.name || s.username);
+    changed = await saveIntegration(id, values, who);
   } catch (e) {
     if (e instanceof IntegrationError) redirect(back(id, "error", e.message));
     throw e;
   }
-  if (!changed.length) redirect(back(id, "error", "Ничего не введено — сохранять нечего."));
-  const check = await checkIntegration(id, s.name || s.username);
-  redirect(back(id, check.ok ? "ok" : "error", `Сохранено. ${check.message}`));
+  if (!changed.length && requireSomething) redirect(back(id, "error", "Ничего не введено — сохранять нечего."));
+  const check = await checkIntegration(id, who);
+  redirect(back(id, check.ok ? "ok" : "error", `${changed.length ? "Сохранено. " : ""}${check.message}`));
+}
+
+export async function saveIntegrationAction(formData: FormData): Promise<void> {
+  await saveAndCheck(formData, true);
 }
 
 export async function checkIntegrationAction(formData: FormData): Promise<void> {
-  const s = await requireOwner();
-  const id = String(formData.get("id") ?? "");
-  let r;
-  try {
-    r = await checkIntegration(id, s.name || s.username);
-  } catch (e) {
-    if (e instanceof IntegrationError) redirect(back(id, "error", e.message));
-    throw e;
-  }
-  redirect(back(id, r.ok ? "ok" : "error", r.message));
+  await saveAndCheck(formData, false);
 }
 
 /** «Удалить из базы»: сервис снова берёт значение из .env или работает заглушкой. */
