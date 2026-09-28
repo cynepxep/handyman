@@ -1,8 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { setPhotoStyle, startMediaSync, startPhotoStyle, stopMediaSync } from "@handyman/db/media";
-import { shopChanged } from "@/lib/shop/cache";
+import { checkMediaFiles, photoStyleOn, setPhotoStyle, startMediaSync, startPhotoStyle, stopMediaSync } from "@handyman/db/media";
+import { catalogChanged, shopChanged } from "@/lib/shop/cache";
 import { requirePermission } from "@/lib/auth";
 
 const back = (kind: "ok" | "error", text: string) => `/admin/media?${kind}=${encodeURIComponent(text)}`;
@@ -33,4 +33,23 @@ export async function togglePhotoStyleAction(on: boolean): Promise<void> {
   await setPhotoStyle(on, session.username);
   shopChanged();
   redirect(back("ok", on ? "Фирменный стиль фото включён — на сайте уже видно (где стиль ещё не сделан — обычное фото)." : "Фирменный стиль выключен — на сайте обычные фото."));
+}
+
+/** «Проверить файлы на диске»: фото, чьих файлов нет, снова показываются с сайта поставщика и сразу скачиваются заново. */
+export async function checkFilesAction(): Promise<void> {
+  const session = await requirePermission("import.run");
+  const r = await checkMediaFiles();
+  const lost = r.missingLocal + r.missingStyled;
+  if (lost) {
+    catalogChanged(); // фото плиток разделов на сайте
+    const styleOn = await photoStyleOn();
+    for (const supplierId of r.suppliers) {
+      // скачивание само делает стиль скачанным, если стиль включён; стиль без пропавшей копии — отдельно
+      await startMediaSync({ supplierId }, session.username);
+      if (styleOn) await startPhotoStyle({ supplierId }, session.username, { onlyNew: true });
+    }
+  }
+  redirect(lost
+    ? back("ok", `Проверено ${r.checked} фото. Файлов не было на диске: своих копий ${r.missingLocal}, в фирменном стиле ${r.missingStyled}. Пока сайт показывает фото поставщика; скачиваю заново.`)
+    : back("ok", `Проверено ${r.checked} фото — все файлы на месте.`));
 }

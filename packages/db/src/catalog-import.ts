@@ -596,7 +596,11 @@ async function executeApply(runId: string, approved: ReadonlySet<string>, who: s
         }
         if (ops.length) await prisma.$transaction(ops);
         const cur = existing.get(p.sku);
-        if (cur && Object.keys(p.changes).length) undo.push({ runId, productId: p.productId, kind: "updated", ...undoDiff(cur, p.changes) });
+        // фото и характеристики тоже в журнал: иначе отмена загрузки чужого файла оставит товарам чужие фото
+        const diff: Record<string, unknown> = { ...p.changes };
+        if (p.replacePictures) diff.pictures = p.replacePictures;
+        if (p.replaceParams) diff.params = p.replaceParams;
+        if (cur && Object.keys(diff).length) undo.push({ runId, productId: p.productId, kind: "updated", ...undoDiff(cur, diff) });
         updated++;
       }
     } catch (e) {

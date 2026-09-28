@@ -188,3 +188,56 @@ test("фирменный стиль: товар на однотонном фон
   await media.setPhotoStyle(false, "test");
   assert.equal(await media.photoStyleOn(), false);
 });
+
+test("файла нет на диске (папку фото удалили или перенесли): сайт скачивает заново, «Проверить файлы» снимает отметки", async (t) => {
+  if (!ready || !s.ok) return t.skip(skipMsg);
+  // свежие рабочие адреса у всех фото и свои копии
+  const imgs = await prisma.productImage.findMany({ orderBy: { id: "asc" }, select: { id: true } });
+  for (const [i, im] of imgs.entries()) {
+    await prisma.productImage.update({ where: { id: im.id }, data: { url: `https://example.com/lost-${i}.jpg`, localUrl: null, localError: null, styledUrl: null } });
+  }
+  const dl = await media.startMediaSync({ supplierId: s.supplierId }, "test");
+  for (let i = 0; i < 300 && (await media.getMediaRun(dl.runId))?.status === "running"; i++) await new Promise((r) => setTimeout(r, 100));
+  assert.equal(await prisma.productImage.count({ where: { localUrl: null } }), 0);
+
+  // папку с фото удалили целиком
+  fs.rmSync(DIR, { recursive: true, force: true });
+  const [a, b, c] = await prisma.productImage.findMany({ orderBy: { id: "asc" }, take: 3 });
+  assert.equal(await media.readMediaFile(a.localUrl!), null);
+  // покупатель открыл страницу — фото скачано заново и отдано
+  const before = calls;
+  const got = await media.recoverMediaFile(a.localUrl!);
+  assert.ok(got && got.file.length > 100 && !got.temporary);
+  assert.equal(calls, before + 1);
+  assert.ok(await media.readMediaFile(a.localUrl!), "файл снова на диске");
+  // два запроса одного фото одновременно — одно скачивание
+  const [x, y] = await Promise.all([media.recoverMediaFile(b.localUrl!), media.recoverMediaFile(b.localUrl!)]);
+  assert.ok(x && y);
+  assert.equal(calls, before + 2);
+  // сайт поставщика не отдаёт фото — адрес копии снимается, сайт покажет фото поставщика
+  await prisma.productImage.update({ where: { id: c.id }, data: { url: "https://example.com/broken-lost.jpg" } });
+  assert.equal(await media.recoverMediaFile(c.localUrl!), null);
+  const cc = await prisma.productImage.findUniqueOrThrow({ where: { id: c.id } });
+  assert.equal(cc.localUrl, null);
+  assert.match(cc.localError ?? "", /не было на диске/);
+  // чужие адреса не восстанавливаются
+  assert.equal(await media.recoverMediaFile("/media/../../.env"), null);
+  assert.equal(await media.recoverMediaFile("/media/ab/ab" + "0".repeat(38) + ".webp"), null);
+
+  // «Проверить файлы на диске»: у остальных файлов нет — отметки сняты, скачивание запускается заново
+  const r = await media.checkMediaFiles();
+  const total = imgs.length;
+  assert.equal(r.checked, total - 1, "фото без копии не проверяется");
+  assert.equal(r.missingLocal, total - 3, "два восстановлены, одно уже без копии");
+  assert.deepEqual(r.suppliers, [s.supplierId]);
+  assert.equal(await prisma.productImage.count({ where: { localUrl: { not: null } } }), 2);
+  assert.equal((await media.checkMediaFiles()).missingLocal, 0, "повторная проверка — всё на месте");
+});
+
+test("«Фото товаров»: сколько товаров у поставщика и с каких сайтов их фото", async (t) => {
+  if (!ready || !s.ok) return t.skip(skipMsg);
+  const src = (await media.mediaSources()).get(s.supplierId)!;
+  assert.equal(src.products, await prisma.product.count({ where: { supplierId: s.supplierId } }));
+  assert.equal(src.hosts[0].host, "example.com");
+  assert.equal(src.hosts.reduce((a, h) => a + h.photos, 0), await prisma.productImage.count());
+});

@@ -173,6 +173,129 @@ export async function storeStyled(img: { url: string; localUrl: string | null })
   }
 }
 
+// ---------- файла нет на диске: восстановить ----------
+
+// Файл своей копии мог пропасть: папку фото удалили или перенесли, сайт запущен из другой папки (storage/ не хранится в git),
+// переезд на сервер без копирования папки. Тогда сайт не показывает пустое место, а скачивает фото у поставщика заново.
+type Recovered = { file: Buffer; /** отдана обычная копия вместо фото в стиле — не хранить в кэше браузера */ temporary: boolean } | null;
+const recovering = new Map<string, Promise<Recovered>>();
+const RECOVER_AT_ONCE = 6;
+let recoverSlots = RECOVER_AT_ONCE;
+const recoverQueue: Array<() => void> = [];
+async function recoverSlot<T>(fn: () => Promise<T>): Promise<T> {
+  if (recoverSlots > 0) recoverSlots--;
+  else await new Promise<void>((go) => recoverQueue.push(go));
+  try {
+    return await fn();
+  } finally {
+    const next = recoverQueue.shift();
+    if (next) next();
+    else recoverSlots++;
+  }
+}
+
+/**
+ * Файла по адресу /media/… нет на диске — восстановить: своя копия скачивается у поставщика заново, фото в фирменном стиле
+ * делается заново (если не получилось — отдаётся обычная своя копия). Возвращает содержимое для ответа или null (показать нечего).
+ * Не получилось скачать — адрес своей копии у фото убирается: сайт покажет фото поставщика, а «Скачать недостающие» повторит.
+ */
+export function recoverMediaFile(localUrl: string): Promise<Recovered> {
+  const m = SAFE.exec(localUrl);
+  if (!m || m[1] === "rv") return Promise.resolve(null); // фото из отзывов у поставщика не взять
+  let job = recovering.get(localUrl);
+  if (!job) {
+    job = recoverSlot(() => recover(localUrl, !!m[1])).catch((e) => {
+      console.error("[media] не удалось восстановить фото", localUrl, e);
+      return null;
+    }).finally(() => recovering.delete(localUrl));
+    recovering.set(localUrl, job);
+  }
+  return job;
+}
+
+async function recover(url: string, styled: boolean): Promise<Recovered> {
+  const img = await prisma.productImage.findFirst({
+    where: styled ? { styledUrl: url } : { localUrl: url },
+    select: { id: true, url: true, localUrl: true, productId: true, sort: true },
+  });
+  if (!img) return null;
+  const firstPhoto = async () => {
+    if (img.sort === 0) await reindexSafely(() => reindexProducts([img.productId])); // карточка в поиске — с новым адресом фото
+  };
+  if (!styled) {
+    const r = await storeImage(img.url);
+    const file = r.ok && r.localUrl === url ? await readMediaFile(url) : null;
+    if (file) return { file, temporary: false };
+    await prisma.productImage.update({
+      where: { id: img.id },
+      data: { localUrl: null, localBytes: null, localAt: null, localError: `файла не было на диске, скачать заново не удалось: ${r.ok ? "другой адрес" : r.error}`.slice(0, 200) },
+    });
+    await firstPhoto();
+    return null;
+  }
+  let local = img.localUrl;
+  if (local && !(await readMediaFile(local))) local = (await recover(local, false)) ? local : null;
+  const r = local ? await storeStyled({ url: img.url, localUrl: local }) : null;
+  const file = r?.ok && r.styledUrl === url ? await readMediaFile(url) : null;
+  if (file) return { file, temporary: false };
+  await prisma.productImage.update({
+    where: { id: img.id },
+    data: { styledUrl: null, styledAt: null, styledError: (r && !r.ok ? r.error : "файла не было на диске").slice(0, 200) },
+  });
+  await firstPhoto();
+  const plain = local ? await readMediaFile(local) : null;
+  return plain ? { file: plain, temporary: true } : null;
+}
+
+/**
+ * «Проверить файлы на диске»: у каких фото в базе записана своя копия (или стиль), а файла нет.
+ * Такие отметки снимаются (сайт сразу показывает фото поставщика или обычную копию), и их можно скачать заново.
+ */
+export async function checkMediaFiles(): Promise<{ checked: number; missingLocal: number; missingStyled: number; suppliers: Array<string | null> }> {
+  let checked = 0;
+  const lostLocal: string[] = [];
+  const lostStyled: string[] = [];
+  const products = new Set<string>();
+  const suppliers = new Set<string | null>();
+  let cursor: string | undefined;
+  for (;;) {
+    const rows = await prisma.productImage.findMany({
+      where: { OR: [{ localUrl: { not: null } }, { styledUrl: { not: null } }], ...(cursor ? { id: { gt: cursor } } : {}) },
+      orderBy: { id: "asc" }, take: 2000,
+      select: { id: true, localUrl: true, styledUrl: true, sort: true, productId: true, product: { select: { supplierId: true } } },
+    });
+    if (!rows.length) break;
+    cursor = rows[rows.length - 1].id;
+    for (const r of rows) {
+      checked++;
+      const gone = (u: string | null) => {
+        const p = u ? mediaFilePath(u) : null;
+        return !!u && (!p || !existsSync(/*turbopackIgnore: true*/ p));
+      };
+      const noLocal = gone(r.localUrl);
+      const noStyled = gone(r.styledUrl);
+      if (noLocal) lostLocal.push(r.id);
+      if (noStyled) lostStyled.push(r.id);
+      if (noLocal || noStyled) {
+        suppliers.add(r.product.supplierId);
+        if (r.sort === 0) products.add(r.productId);
+      }
+    }
+  }
+  for (let i = 0; i < lostLocal.length; i += 1000) {
+    await prisma.productImage.updateMany({
+      where: { id: { in: lostLocal.slice(i, i + 1000) } },
+      data: { localUrl: null, localBytes: null, localAt: null, localError: null },
+    });
+  }
+  for (let i = 0; i < lostStyled.length; i += 1000) {
+    await prisma.productImage.updateMany({ where: { id: { in: lostStyled.slice(i, i + 1000) } }, data: { styledUrl: null, styledAt: null, styledError: null } });
+  }
+  const ids = [...products];
+  for (let i = 0; i < ids.length; i += 200) await reindexSafely(() => reindexProducts(ids.slice(i, i + 200)));
+  return { checked, missingLocal: lostLocal.length, missingStyled: lostStyled.length, suppliers: [...suppliers] };
+}
+
 // ---------- фоновое скачивание по поставщику ----------
 
 export type MediaScope = { supplierId: string | null };
@@ -185,6 +308,22 @@ export function setMediaBatchSize(n: number) {
 }
 
 const supplierWhere = (supplierId: string | null) => ({ product: { supplierId } });
+
+/** Сколько товаров у каждого поставщика и откуда (с каких сайтов) их фото — чтобы было видно, чьи фото к кому попали. */
+export async function mediaSources() {
+  const [products, hosts] = await Promise.all([
+    prisma.product.groupBy({ by: ["supplierId"], _count: { _all: true } }),
+    prisma.$queryRaw<Array<{ supplierId: string | null; host: string | null; n: bigint }>>`
+      SELECT p."supplierId", lower(substring(i.url from '^[a-zA-Z]+://([^/:?#]+)')) AS host, COUNT(*) AS n
+      FROM "ProductImage" i JOIN "Product" p ON p.id = i."productId"
+      GROUP BY 1, 2 ORDER BY 3 DESC`,
+  ]);
+  const out = new Map<string | null, { products: number; hosts: Array<{ host: string; photos: number }> }>();
+  const get = (id: string | null) => out.get(id) ?? out.set(id, { products: 0, hosts: [] }).get(id)!;
+  for (const p of products) get(p.supplierId).products = p._count._all;
+  for (const h of hosts) get(h.supplierId).hosts.push({ host: h.host ?? "без адреса сайта", photos: Number(h.n) });
+  return out;
+}
 
 /** Сколько фото у поставщика: всего, уже у нас, ошибок, объём своих копий, сколько в фирменном стиле (текущей версии). */
 export async function mediaStats() {
