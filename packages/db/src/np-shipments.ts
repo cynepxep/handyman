@@ -7,9 +7,9 @@
 import { prisma, Prisma } from "./client";
 import {
   NP_SETTING_KEY, NP_STATE_RU, NP_STUB_CODES, autoOrderStatus, counterpartyProps, isStuck, npErrorText,
-  npNextCheck, npPhone, npPrintUrl, npStateOf, npToday, parcelWeightKg, parseNpSettings, readCounterparty, readRefList,
+  npNextCheck, npPhone, npPrintUrl, npStateOf, npToday, parcelWeight, parseNpSettings, readCounterparty, readRefList,
   readTracking, readTtnSave, refusalStats, senderMissing, shouldBlacklist, ttnProps, weightKgFromAttr, firstNameOf,
-  type NpParcelForm, type NpSettings, type NpState, type TtnForm,
+  type NpParcelForm, type NpSettings, type NpState, type ParcelWeight, type TtnForm,
 } from "@handyman/core/shop";
 import { fillText, resolveTexts } from "@handyman/core/site";
 import { secret } from "./integrations";
@@ -142,12 +142,11 @@ export async function productWeights(productIds: string[]): Promise<Map<string, 
   return out;
 }
 
-/** Вес посылки заказа (по характеристикам товаров, иначе — вес по умолчанию из настроек). */
-export async function orderWeightKg(orderId: string, s?: NpSettings): Promise<number> {
-  const settings = s ?? (await loadNpSettings());
-  const items = await prisma.orderItem.findMany({ where: { orderId }, select: { productId: true, qty: true } });
+/** Вес посылки заказа по характеристикам товаров. Нет веса хоть у одного товара — kg = null: менеджер взвешивает и вписывает сам. */
+export async function orderWeight(orderId: string): Promise<ParcelWeight> {
+  const items = await prisma.orderItem.findMany({ where: { orderId }, select: { productId: true, name: true, qty: true } });
   const w = await productWeights(items.map((i) => i.productId ?? ""));
-  return parcelWeightKg(items.map((i) => ({ kg: i.productId ? w.get(i.productId) ?? null : null, qty: i.qty })), settings.weightKg);
+  return parcelWeight(items.map((i) => ({ name: i.name, kg: i.productId ? w.get(i.productId) ?? null : null, qty: i.qty })));
 }
 
 // ---------- ТТН ----------

@@ -1,7 +1,7 @@
 // Блок «Нова Пошта» в карточке заказа (шаг 3.4): отделение получателя (исправить), ТТН кнопкой (вес, места, кто платит доставку,
 // наложенный платёж), печать наклейки, статус посылки, удаление, номер вручную; тестовые статусы, пока НП не подключена.
 import Link from "next/link";
-import { NP_STATE_RU, PAY_MODE_RU, defaultTtnForm, senderMissing, type NpSettings, type NpState } from "@handyman/core/shop";
+import { NP_STATE_RU, PAY_MODE_RU, defaultTtnForm, senderMissing, type NpSettings, type NpState, type ParcelWeight } from "@handyman/core/shop";
 import type { NpMode } from "@handyman/db/np-shipments";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
@@ -23,13 +23,13 @@ const when = (d: Date) => d.toLocaleString("ru-RU", { timeZone: "Europe/Kyiv", d
 const day = (d: Date) => d.toLocaleDateString("ru-RU", { timeZone: "Europe/Kyiv", day: "numeric", month: "long" });
 const chip = (s: string) => (s === "received" ? "adm-chip ok" : s === "refused" || s === "unknown" ? "adm-chip bad" : s === "arrived" ? "adm-chip warn" : "adm-chip");
 
-export function NpBlock({ order: o, shipments, mode, settings, weightKg, canEdit, isOwner, canSettings }: {
-  order: Order; shipments: Shipment[]; mode: NpMode; settings: NpSettings; weightKg: number; canEdit: boolean; isOwner: boolean; canSettings: boolean;
+export function NpBlock({ order: o, shipments, mode, settings, weight, canEdit, isOwner, canSettings }: {
+  order: Order; shipments: Shipment[]; mode: NpMode; settings: NpSettings; weight: ParcelWeight; canEdit: boolean; isOwner: boolean; canSettings: boolean;
 }) {
   const active = shipments.find((s) => s.active);
   const old = shipments.filter((s) => !s.active);
   const closed = ["CANCELLED", "RETURNED"].includes(o.status);
-  const def = defaultTtnForm({ payMode: o.payMode, total: o.total.toNumber(), dueNow: o.dueNow.toNumber(), paidAmount: o.paidAmount.toNumber(), npFreeShipping: o.npFreeShipping }, settings, weightKg);
+  const def = defaultTtnForm({ payMode: o.payMode, total: o.total.toNumber(), dueNow: o.dueNow.toNumber(), paidAmount: o.paidAmount.toNumber(), npFreeShipping: o.npFreeShipping }, settings, weight.kg);
   const missing = mode === "live" ? senderMissing(settings) : [];
   const fromList = Boolean(o.npCityRef && o.npPointRef);
 
@@ -142,8 +142,21 @@ export function NpBlock({ order: o, shipments, mode, settings, weightKg, canEdit
               Чтобы создавать ТТН, заполните {canSettings ? <Link className="adm-link" href="/admin/np?tab=settings">«Нова Пошта → Настройки»</Link> : "«Нова Пошта → Настройки»"}: {missing.join(", ")}.
             </p>
           )}
+          {weight.kg == null ? (
+            <p className="adm-flash err" role="alert" style={{ margin: "0 0 8px" }}>
+              ⚖️ Вес неизвестен — в характеристиках нет веса у {weight.missing.length === 1 ? "товара" : "товаров"}: {weight.missing.join("; ")}.
+              Взвесьте посылку и впишите <b>реальный вес</b>.{weight.knownKg > 0 ? ` Остальные товары по характеристикам — ${weight.knownKg.toLocaleString("ru-RU")} кг.` : ""}
+            </p>
+          ) : (
+            <p className="adm-muted" style={{ margin: "0 0 8px", fontSize: 13 }}>Вес посчитан по характеристикам товаров (+10 % на коробку) — если посылка тяжелее, исправьте.</p>
+          )}
           <div className="adm-row">
-            <label>Вес, кг <input name="weight" className="adm-input" style={{ width: 80 }} inputMode="decimal" defaultValue={String(def.weight)} required /></label>
+            <label>Вес, кг{" "}
+              <input
+                name="weight" className={weight.kg == null ? "adm-input adm-input-bad" : "adm-input"} style={{ width: 90 }} inputMode="decimal"
+                defaultValue={def.weight == null ? "" : String(def.weight)} placeholder={def.weight == null ? "?" : undefined} required aria-invalid={weight.kg == null || undefined}
+              />
+            </label>
             <label>Мест <input name="seats" className="adm-input" style={{ width: 60 }} inputMode="numeric" defaultValue={String(def.seats)} required /></label>
             <span>Габариты, см
               <input name="dimL" className="adm-input" style={{ width: 60 }} inputMode="numeric" aria-label="Длина" placeholder="Д" defaultValue={def.dims?.l ?? ""} />

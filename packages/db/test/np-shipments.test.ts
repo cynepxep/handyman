@@ -128,7 +128,15 @@ test("без ключа (не production): тестовая ТТН, тестов
   stub();
   assert.equal(await np.npMode(), "stub");
   const o = await place();
-  assert.equal(await np.orderWeightKg(o.id), 2.7, "вес из характеристики «Вага» × 1,1");
+  assert.deepEqual(await np.orderWeight(o.id), { kg: 2.7, knownKg: 2.7, missing: [] }, "вес из характеристики «Вага» × 1,1");
+  // у товара нет веса в характеристиках — вес не подставляется, менеджер вписывает сам
+  const noWeight = await prisma.product.findFirstOrThrow({ where: { visible: true, supplierAvailable: true, id: { not: productId } } });
+  await prisma.productAttribute.deleteMany({ where: { productId: noWeight.id, OR: [{ key: { startsWith: "Вага" } }, { key: { startsWith: "Маса" } }] } });
+  const o2 = await place({ items: [{ sku, qty: 1 }, { sku: noWeight.sku, qty: 1 }] });
+  const w2 = await np.orderWeight(o2.id);
+  assert.equal(w2.kg, null);
+  assert.equal(w2.knownKg, 2.7);
+  assert.deepEqual(w2.missing, [noWeight.nameUk]);
   const r = await np.createTtn(o.id, ttnForm(), "Менеджер");
   assert.equal(r.stub, true);
   assert.match(r.ttn, /^99\d{12}$/);

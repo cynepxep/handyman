@@ -102,7 +102,8 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 ТТН кнопкой / вручную, статусы посылок в `runJobs` (шаг «np») → «Отправлен»/«Выполнен» через `setOrderStatus`, отказы → `Client.npRefusals`/`blacklisted`
 (чёрный список — в `placeOrder` только `full`/`card`). `Order.ttn` — главный номер, посылки — `NpShipment` (`active` — текущая). Запросы к НП — только
 `npRequest` (`novaposhta.ts`; в тестах `setNovaPoshtaFetch`, подставной сервер — `NOVAPOSHTA_BASE`). Без ключа и не в production — тестовые ТТН (`npMode() === "stub"`).
-Бесплатная доставка — `CheckoutSettings.npFreeFrom` → `Order.npFreeShipping`. **Стоимость и срок доставки покупателю не считать** (решение владельца):
+Бесплатная доставка — `CheckoutSettings.npFreeFrom` → `Order.npFreeShipping`. Вес посылки — `orderWeight()` (по «Вага» товаров); **веса по умолчанию нет**: неизвестен — красная плашка, менеджер вписывает сам.
+**Стоимость и срок доставки покупателю не считать** (решение владельца):
 на витрине — «за тарифом», условия наложенного платежа (тексты `np.cod.*`) и полоса бесплатной доставки (`components/shop/np-delivery.tsx`).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).

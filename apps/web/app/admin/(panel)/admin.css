@@ -185,6 +185,7 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-print-label p { margin: 0 0 3mm; }
 .adm-print-ttn { font-size: 22pt; font-weight: 700; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 .adm-np-ttn { border: 1px solid var(--adm-line); border-radius: 10px; padding: 10px 12px; }
+.adm-input-bad { border-color: var(--adm-bad); box-shadow: 0 0 0 2px color-mix(in srgb, var(--adm-bad) 20%, transparent); }
 .adm-np-form label { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 @media print {
   .adm-bar, .no-print { display: none !important; }

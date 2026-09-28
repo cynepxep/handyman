@@ -29,8 +29,7 @@ export type NpSettings = {
   cityName: string;
   warehouseRef: string;
   warehouseName: string;
-  /** посылка по умолчанию */
-  weightKg: number;
+  /** посылка по умолчанию (веса по умолчанию нет — решение владельца: неизвестен вес — менеджер вписывает реальный) */
   seats: number;
   dims: NpDims | null;
   description: string;
@@ -51,7 +50,7 @@ export type NpSettings = {
 export const DEFAULT_NP_SETTINGS: NpSettings = {
   senderRef: "", senderName: "", contactRef: "", contactName: "", senderPhone: "",
   cityRef: "", cityName: "", warehouseRef: "", warehouseName: "",
-  weightKg: 2, seats: 1, dims: null, description: "Електроінструмент",
+  seats: 1, dims: null, description: "Електроінструмент",
   senderPayMethod: "Cash", codKind: "money", labelFormat: "100x100",
   autoStatuses: true, arrivedMessage: true, stuckDays: 3, refusalsToBlacklist: 1,
 };
@@ -82,7 +81,7 @@ export function parseNpSettings(raw: unknown): NpSettings {
     senderRef: ref(o.senderRef), senderName: str(o.senderName, 120),
     contactRef: ref(o.contactRef), contactName: str(o.contactName, 120), senderPhone: /^\+380\d{9}$/.test(String(o.senderPhone)) ? String(o.senderPhone) : "",
     cityRef: ref(o.cityRef), cityName: str(o.cityName, 120), warehouseRef: ref(o.warehouseRef), warehouseName: str(o.warehouseName, 200),
-    weightKg: numIn(o.weightKg, d.weightKg, 0.1, 1000), seats: Math.round(numIn(o.seats, d.seats, 1, 20)), dims: dimsOf(o.dims),
+    seats: Math.round(numIn(o.seats, d.seats, 1, 20)), dims: dimsOf(o.dims),
     description: str(o.description, 100) || d.description,
     senderPayMethod: pick(o.senderPayMethod, ["Cash", "NonCash"] as const, d.senderPayMethod),
     codKind: pick(o.codKind, ["money", "control"] as const, d.codKind),
@@ -103,13 +102,11 @@ export function senderMissing(s: NpSettings): string[] {
   return miss;
 }
 
-export type NpParcelForm = Pick<NpSettings, "weightKg" | "seats" | "dims" | "description" | "senderPayMethod" | "codKind" | "labelFormat" | "autoStatuses" | "arrivedMessage" | "stuckDays" | "refusalsToBlacklist">;
+export type NpParcelForm = Pick<NpSettings, "seats" | "dims" | "description" | "senderPayMethod" | "codKind" | "labelFormat" | "autoStatuses" | "arrivedMessage" | "stuckDays" | "refusalsToBlacklist">;
 
 /** Форма «посылка по умолчанию и правила» (без отправителя — он выбирается из списков кабинета НП). Ошибки — по-русски. */
 export function validateNpParcelForm(input: Record<string, string | undefined>): { ok: true; value: NpParcelForm } | { ok: false; error: string } {
   const n = (k: string) => Number(String(input[k] ?? "").replace(/\s/g, "").replace(",", "."));
-  const weightKg = n("weightKg");
-  if (!Number.isFinite(weightKg) || weightKg < 0.1 || weightKg > 1000) return { ok: false, error: "Вес посылки — от 0,1 до 1000 кг." };
   const seats = n("seats");
   if (!Number.isInteger(seats) || seats < 1 || seats > 20) return { ok: false, error: "Мест в посылке — целое число от 1 до 20." };
   const dl = String(input.dimL ?? "").trim(), dw = String(input.dimW ?? "").trim(), dh = String(input.dimH ?? "").trim();
@@ -127,7 +124,7 @@ export function validateNpParcelForm(input: Record<string, string | undefined>):
   return {
     ok: true,
     value: {
-      weightKg: round2(weightKg), seats, dims, description,
+      seats, dims, description,
       senderPayMethod: input.senderPayMethod === "NonCash" ? "NonCash" : "Cash",
       codKind: input.codKind === "control" ? "control" : "money",
       labelFormat: pick(input.labelFormat, ["100x100", "85x85", "a4"] as const, "100x100"),
@@ -213,16 +210,22 @@ export function weightKgFromAttr(key: string, value: string): number | null {
   return n > 0.005 && n <= 300 ? Math.round(n * 1000) / 1000 : null;
 }
 
-/**
- * Вес посылки: сумма веса товаров × 1,1 (коробка), вверх до 0,1 кг. Если у части товаров вес неизвестен —
- * не меньше веса «по умолчанию» из настроек; если неизвестен у всех — вес по умолчанию.
- */
-export function parcelWeightKg(lines: Array<{ kg: number | null; qty: number }>, defaultKg: number): number {
+export type ParcelWeight = {
+  /** вес посылки, кг (сумма × 1,1 на коробку, вверх до 0,1); null — хотя бы у одного товара веса нет: менеджер взвешивает сам */
+  kg: number | null;
+  /** сколько известно по товарам с весом (подсказка менеджеру) */
+  knownKg: number;
+  /** названия товаров без веса в характеристиках */
+  missing: string[];
+};
+
+/** Вес посылки по характеристикам товаров. Веса «по умолчанию» нет: если он неизвестен хоть у одного товара — kg = null (красная плашка в заказе). */
+export function parcelWeight(lines: Array<{ name: string; kg: number | null; qty: number }>): ParcelWeight {
+  const up = (x: number) => Math.max(0.1, Math.ceil(x * 1.1 * 10) / 10);
   const known = lines.filter((l) => l.kg != null);
-  if (!known.length) return defaultKg;
-  const sum = Math.ceil(known.reduce((a, l) => a + (l.kg as number) * l.qty, 0) * 1.1 * 10) / 10;
-  const w = Math.max(0.1, sum);
-  return known.length < lines.length ? Math.max(w, defaultKg) : w;
+  const sum = known.reduce((a, l) => a + (l.kg as number) * l.qty, 0);
+  const missing = lines.filter((l) => l.kg == null).map((l) => l.name);
+  return { kg: lines.length && !missing.length ? up(sum) : null, knownKg: known.length ? up(sum) : 0, missing };
 }
 
 /**
@@ -248,11 +251,12 @@ export const shouldBlacklist = (refusals: number, threshold: number) => threshol
 
 export type TtnForm = { weight: number; seats: number; dims: NpDims | null; declared: number; payer: NpPayer; cod: number; description: string };
 
+/** Форма ТТН по умолчанию; weight = null — вес неизвестен, поле пустое (менеджер вписывает реальный). */
 export function defaultTtnForm(
   o: { payMode: string; total: number; dueNow: number; paidAmount: number; npFreeShipping: boolean },
   s: NpSettings,
-  weightKg: number,
-): TtnForm {
+  weightKg: number | null,
+): Omit<TtnForm, "weight"> & { weight: number | null } {
   return {
     weight: weightKg, seats: s.seats, dims: s.dims, declared: Math.max(1, Math.round(o.total)),
     payer: o.npFreeShipping ? "Sender" : "Recipient", cod: codDefault(o), description: s.description,
@@ -262,6 +266,7 @@ export function defaultTtnForm(
 /** Проверка формы «Создать ТТН». `maxCod` — сумма заказа (наложенный платёж не больше). */
 export function validateTtnForm(input: Record<string, string | undefined>, maxCod: number): { ok: true; value: TtnForm } | { ok: false; error: string } {
   const n = (k: string) => Number(String(input[k] ?? "").replace(/\s/g, "").replace(",", ".") || "0");
+  if (!String(input.weight ?? "").trim()) return { ok: false, error: "Впишите реальный вес посылки (кг) — взвесьте её перед созданием ТТН." };
   const weight = n("weight");
   if (!Number.isFinite(weight) || weight < 0.1 || weight > 1000) return { ok: false, error: "Вес — от 0,1 до 1000 кг." };
   const seats = n("seats");

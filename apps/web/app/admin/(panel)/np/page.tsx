@@ -245,7 +245,6 @@ async function Settings({ isOwner, mode }: { isOwner: boolean; mode: Awaited<Ret
       <form action={saveNpParcelAction} className="adm-card">
         <h2 style={{ marginTop: 0 }}>Посылка по умолчанию и правила</h2>
         <div className="adm-row">
-          <label>Вес, кг <input name="weightKg" className="adm-input" style={{ width: 80 }} inputMode="decimal" defaultValue={String(s.weightKg)} required /></label>
           <label>Мест <input name="seats" className="adm-input" style={{ width: 60 }} inputMode="numeric" defaultValue={String(s.seats)} required /></label>
           <span>Коробка, см
             <input name="dimL" className="adm-input" style={{ width: 60 }} inputMode="numeric" aria-label="Длина" placeholder="Д" defaultValue={s.dims?.l ?? ""} />
@@ -253,7 +252,7 @@ async function Settings({ isOwner, mode }: { isOwner: boolean; mode: Awaited<Ret
             <input name="dimH" className="adm-input" style={{ width: 60 }} inputMode="numeric" aria-label="Высота" placeholder="В" defaultValue={s.dims?.h ?? ""} />
           </span>
         </div>
-        <p className="adm-muted" style={{ fontSize: 13 }}>Вес подставляется из характеристик товаров («Вага»), если они есть; иначе — этот. Коробку можно не указывать.</p>
+        <p className="adm-muted" style={{ fontSize: 13 }}>Вес посылки считается по характеристикам товаров («Вага»); если у товара веса нет — в заказе красная плашка, менеджер взвешивает и вписывает сам. Коробку можно не указывать.</p>
         <div className="adm-row" style={{ marginTop: 8 }}>
           <label style={{ flex: "1 1 260px" }}>Что в посылке <input name="description" className="adm-input" style={{ width: "100%" }} defaultValue={s.description} maxLength={100} required /></label>
         </div>

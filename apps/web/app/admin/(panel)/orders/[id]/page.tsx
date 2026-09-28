@@ -8,7 +8,7 @@ import { orderDeliveryCostAction } from "../../finance/actions";
 import { listTasks } from "@handyman/db/service";
 import { monoMode, orderInvoices } from "@handyman/db/payments";
 import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts";
-import { loadNpSettings, npMode, orderShipments, orderWeightKg } from "@handyman/db/np-shipments";
+import { loadNpSettings, npMode, orderShipments, orderWeight } from "@handyman/db/np-shipments";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, formatPhone } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
@@ -46,7 +46,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const [tpl, clientMsgs, held, profit, tasks, invoices, mono, receipts, rmode, receiptable, shipments, npm, nps, weight] = await Promise.all([
     canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id), canFinance ? orderProfitOf(o.id) : null,
     listTasks({ orderId: o.id }), orderInvoices(o.id), monoMode(), orderReceipts(o.id), receiptMode(), receiptableOf(o.id),
-    orderShipments(o.id), npMode(), loadNpSettings(), orderWeightKg(o.id),
+    orderShipments(o.id), npMode(), loadNpSettings(), orderWeight(o.id),
   ]);
 
   return (
@@ -106,7 +106,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       </div>
 
       <NpBlock
-        order={o} shipments={shipments} mode={npm} settings={nps} weightKg={weight} canEdit={canEdit} isOwner={session.roleKey === "owner"}
+        order={o} shipments={shipments} mode={npm} settings={nps} weight={weight} canEdit={canEdit} isOwner={session.roleKey === "owner"}
         canSettings={session.permissions.includes("settings.edit")}
       />
       <PaymentsBlock

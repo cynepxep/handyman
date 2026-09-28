@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   DEFAULT_NP_SETTINGS, autoOrderStatus, blacklistAllowsPay, codDefault, counterpartyProps, defaultTtnForm, isNpFree, isStuck, npDate, npErrorText,
-  npFreeLeft, npNextCheck, npPrintUrl, npStateOf, npToday, parcelWeightKg, parseCheckoutSettings, parseNpSettings, readCounterparty,
+  npFreeLeft, npNextCheck, npPrintUrl, npStateOf, npToday, parcelWeight, parseCheckoutSettings, parseNpSettings, readCounterparty,
   readRefList, readTracking, readTtnSave, recipientNames, refusalStats, senderMissing, shouldBlacklist, ttnProps, validateCheckoutSettingsForm,
   validateNpParcelForm, validateTtnForm, weightKgFromAttr,
 } from "../src/shop";
@@ -12,10 +12,9 @@ import {
 const R = (n: number) => `${String(n).padStart(8, "0")}-0000-4000-8000-000000000000`;
 
 test("настройки НП: мусор → по умолчанию, коды только настоящие, чего не хватает для ТТН", () => {
-  const s = parseNpSettings({ senderRef: "abc", cityRef: R(1), weightKg: "-5", seats: 3, codKind: "control", autoStatuses: false, dims: { l: 30, w: 20, h: 10 }, senderPhone: "+380933662407" });
+  const s = parseNpSettings({ senderRef: "abc", cityRef: R(1), seats: 3, codKind: "control", autoStatuses: false, dims: { l: 30, w: 20, h: 10 }, senderPhone: "+380933662407" });
   assert.equal(s.senderRef, "");
   assert.equal(s.cityRef, R(1));
-  assert.equal(s.weightKg, DEFAULT_NP_SETTINGS.weightKg);
   assert.equal(s.seats, 3);
   assert.equal(s.codKind, "control");
   assert.equal(s.autoStatuses, false);
@@ -27,17 +26,16 @@ test("настройки НП: мусор → по умолчанию, коды 
 });
 
 test("форма настроек посылки: вес, места, размеры все три или ни одного, правила", () => {
-  const base = { weightKg: "1,5", seats: "1", description: "Інструмент", stuckDays: "3", refusalsToBlacklist: "2", autoStatuses: "on" };
+  const base = { seats: "1", description: "Інструмент", stuckDays: "3", refusalsToBlacklist: "2", autoStatuses: "on" };
   const ok = validateNpParcelForm(base);
   assert.ok(ok.ok);
   if (ok.ok) {
-    assert.equal(ok.value.weightKg, 1.5);
     assert.equal(ok.value.dims, null);
     assert.equal(ok.value.autoStatuses, true);
     assert.equal(ok.value.arrivedMessage, false);
     assert.equal(ok.value.refusalsToBlacklist, 2);
   }
-  assert.equal(validateNpParcelForm({ ...base, weightKg: "0" }).ok, false);
+  assert.equal(validateNpParcelForm({ ...base, seats: "0" }).ok, false);
   assert.equal(validateNpParcelForm({ ...base, dimL: "30" }).ok, false);
   const d = validateNpParcelForm({ ...base, dimL: "30", dimW: "20", dimH: "10" });
   assert.ok(d.ok && d.value.dims?.h === 10);
@@ -90,10 +88,11 @@ test("вес из характеристик и вес посылки", () => {
   assert.equal(weightKgFromAttr("Вага акумулятора", "0,6 кг"), null);
   assert.equal(weightKgFromAttr("Потужність", "900 Вт"), null);
   assert.equal(weightKgFromAttr("Вага", "—"), null);
-  assert.equal(parcelWeightKg([{ kg: 1.8, qty: 1 }, { kg: 0.2, qty: 5 }], 2), 3.1);
-  assert.equal(parcelWeightKg([{ kg: 0.2, qty: 1 }, { kg: null, qty: 1 }], 2), 2);
-  assert.equal(parcelWeightKg([{ kg: null, qty: 3 }], 2), 2);
-  assert.equal(parcelWeightKg([{ kg: 0.01, qty: 1 }], 2), 0.1);
+  assert.deepEqual(parcelWeight([{ name: "Болгарка", kg: 1.8, qty: 1 }, { name: "Круг", kg: 0.2, qty: 5 }]), { kg: 3.1, knownKg: 3.1, missing: [] });
+  assert.deepEqual(parcelWeight([{ name: "Круг", kg: 0.2, qty: 1 }, { name: "Бур", kg: null, qty: 1 }]), { kg: null, knownKg: 0.3, missing: ["Бур"] }, "хоть у одного нет веса — вписывает менеджер");
+  assert.deepEqual(parcelWeight([{ name: "Бур", kg: null, qty: 3 }]), { kg: null, knownKg: 0, missing: ["Бур"] });
+  assert.equal(parcelWeight([{ name: "Шайба", kg: 0.01, qty: 1 }]).kg, 0.1);
+  assert.equal(parcelWeight([]).kg, null);
 });
 
 test("наложенный платёж по умолчанию, бесплатная доставка, чёрный список", () => {
@@ -126,6 +125,8 @@ test("порог бесплатной доставки в настройках �
 });
 
 test("форма ТТН: по умолчанию из заказа и проверка", () => {
+  assert.equal(defaultTtnForm({ payMode: "FULL", total: 100, dueNow: 100, paidAmount: 0, npFreeShipping: false }, DEFAULT_NP_SETTINGS, null).weight, null, "вес неизвестен — поле пустое");
+  assert.match((validateTtnForm({ weight: "", seats: "1", declared: "100", description: "Болгарка" }, 100) as { error: string }).error, /реальный вес/);
   const d = defaultTtnForm({ payMode: "PREPAY", total: 1499.5, dueNow: 200, paidAmount: 0, npFreeShipping: true }, DEFAULT_NP_SETTINGS, 3.1);
   assert.deepEqual(d, { weight: 3.1, seats: 1, dims: null, declared: 1500, payer: "Sender", cod: 1299.5, description: "Електроінструмент" });
   const ok = validateTtnForm({ weight: "3,1", seats: "1", declared: "1500", cod: "1299.5", payer: "Sender", description: "Болгарка" }, 1499.5);
