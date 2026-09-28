@@ -11,6 +11,7 @@ import { prisma } from "@handyman/db";
 import { getStaffSession } from "@/lib/auth";
 import { getShopContent } from "@/lib/shop/content";
 import { getClient, refCodeFromCookie } from "@/lib/client-auth";
+import { logError } from "@handyman/db/errors";
 
 /** Этап 5: приглашение засчитываем, если это первый заказ покупателя (и его ещё никто не пригласил). */
 async function creditReferral(orderNo: string) {
@@ -105,7 +106,7 @@ export async function placeOrderAction(lang: unknown, form: Record<string, unkno
     await creditReferral(r.no);
     return { ok: true, url: shopHref(l, paths.order(r.no, r.accessKey)) };
   } catch (e) {
-    console.error("[checkout] заказ не создан", e);
+    logError("[checkout] заказ не создан", e);
     return { ok: false, errors: {}, message: t("err.server") };
   }
 }
@@ -122,7 +123,7 @@ export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?:
     if (r.ok) await creditReferral(r.no);
     return r.ok ? { ok: true as const, message: t("oneClick.done", { no: r.no }) } : { ok: false as const, message: t(r.error) };
   } catch (e) {
-    console.error("[one-click] заказ не создан", e);
+    logError("[one-click] заказ не создан", e);
     return { ok: false as const, message: t("err.server") };
   }
 }

@@ -13,7 +13,7 @@ const ACTION_RU: Record<string, string> = {
   "order.status": "Статус заказа", "order.manual": "Заказ по звонку", "client.edit": "Правка клиента", "stock.set": "Остаток товара", "stock.receive": "Приход на склад", "stock.inventory": "Инвентаризация",
   "stock.settings": "Минимум/закупка товара", "template.edit": "Правка шаблона", "template.create": "Новый шаблон", "template.delete": "Удалил шаблон", "shop.checkout.edit": "Настройки оформления",
   "shop.loyalty.edit": "Уровни скидок", "shop.seller.edit": "Реквизиты для счёта", "finance.settings": "Настройки финансов", "finance.expense.add": "Добавил расход", "finance.expense.delete": "Удалил расход",
-  "finance.expense.copy": "Скопировал расходы", "task.delete": "Удалил задачу",
+  "finance.expense.copy": "Скопировал расходы", "task.delete": "Удалил задачу", "errors.close": "Закрыл ошибки", "errors.reopen": "Открыл ошибку снова",
 };
 const GROUPS: Array<[string, string]> = [["", "Всё"], ["login.", "Входы"], ["security.", "Безопасность"], ["staff.", "Сотрудники"], ["order.", "Заказы"], ["client.", "Клиенты"], ["stock.", "Склад"], ["finance.", "Финансы"], ["import.", "Импорт"], ["site.", "Сайт"], ["product", "Товары"]];
 

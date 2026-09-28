@@ -38,7 +38,9 @@
     "./import-undo": "./src/import-undo.ts",
     "./keycrm": "./src/keycrm.ts",
     "./backups": "./src/backups.ts",
-    "./offsite": "./src/offsite.ts"
+    "./offsite": "./src/offsite.ts",
+    "./errors": "./src/errors.ts",
+    "./health": "./src/health.ts"
   },
   "scripts": {
     "generate": "prisma generate",

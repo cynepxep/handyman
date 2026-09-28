@@ -4,6 +4,7 @@
 import { redirect } from "next/navigation";
 import { PlusUserError, answerReview, deleteReview, moderateReview } from "@handyman/db/storefront-plus";
 import { requirePermission } from "@/lib/auth";
+import { logError } from "@handyman/db/errors";
 
 const back = (formData: FormData) => {
   const b = String(formData.get("back") ?? "");
@@ -19,7 +20,7 @@ async function run(page: string, fn: () => Promise<string>): Promise<never> {
   } catch (e) {
     kind = "error";
     message = e instanceof PlusUserError ? e.message : `Непредвиденная ошибка: ${e instanceof Error ? e.message : String(e)}`;
-    if (!(e instanceof PlusUserError)) console.error("[reviews]", e);
+    if (!(e instanceof PlusUserError)) logError("[reviews]", e);
   }
   // сбросить старые ok/error в адресе
   const clean = page.replace(/([?&])(ok|error)=[^&]*/g, "$1").replace(/[?&]+$/, "").replace(/\?&/, "?");

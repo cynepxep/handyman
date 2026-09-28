@@ -4,6 +4,7 @@ import "server-only";
 import { activeBanners, liveOf } from "@handyman/db/banners";
 import { bannerForGroup, type BannerPlacement, type BannerRow } from "@handyman/core/site";
 import { TAG_SHOP, cached } from "./cache";
+import { logError } from "@handyman/db/errors";
 
 const loadActive = cached(() => activeBanners(), "banners-active", [TAG_SHOP], 300);
 
@@ -12,7 +13,7 @@ export async function bannersFor(placement: BannerPlacement, groupId?: string | 
   try {
     return liveOf(await loadActive(), placement).filter((b) => bannerForGroup(b, groupId));
   } catch (e) {
-    console.error("[banners] не загрузились — показываем страницу без них", e instanceof Error ? e.message : e);
+    logError("[banners] не загрузились — показываем страницу без них", e instanceof Error ? e.message : e);
     return [];
   }
 }

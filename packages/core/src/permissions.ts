@@ -24,6 +24,7 @@ export const PERMISSIONS = [
   "finance.view",
   "reviews.moderate",
   "payments.refund",
+  "errors.view",
 ] as const;
 
 export type Permission = (typeof PERMISSIONS)[number];
@@ -51,6 +52,7 @@ export const PERMISSION_LABELS_RU: Record<Permission, string> = {
   "finance.view": "Финансы: прибыль, закупка, маржа, расходы",
   "reviews.moderate": "Отзывы и вопросы: проверка, ответы",
   "payments.refund": "Оплата: возврат денег покупателю (monobank)",
+  "errors.view": "Ошибки сайта и его «здоровье»",
 };
 
 interface RoleSeed {

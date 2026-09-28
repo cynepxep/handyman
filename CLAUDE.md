@@ -108,6 +108,10 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 **Этап 8**: **8.1** резервные копии (`core/src/backups.ts`, `db/src/backups.ts`, облако — `db/src/offsite.ts`; `/admin/backups`, только владелец; `docs/BACKUPS.md`):
 каждую ночь с 03:30 из `runJobs` (в фоне) — `pg_dump` + ключ шифрования + фото в `BACKUP_DIR`, хранение 14/8, проверка восстановления раз в неделю во временную базу;
 `pnpm backup:now|check|restore`. В тестах ночные копии выключены (`HM_BACKUPS=off` в `test/helpers.ts`). Новая важная таблица — в `BACKUP_CHECK_TABLES`.
+**8.2** журнал ошибок и «здоровье» (`core/src/errors.ts` — маска, отпечаток, тревоги; `db/src/errors.ts`, `db/src/health.ts`; таблица `ErrorLog`):
+ошибки страниц/действий/API — `onRequestError` в `instrumentation.ts`, браузера — `error.tsx` → `/api/client-error`; раздел «Ошибки» (`/admin/errors`, право `errors.view`),
+блок «Здоровье сайта» на `/admin`, `/api/health` (наружу только ok/error, подробности — `HEALTH_KEY` или вход). **Вместо `console.error` в серверном коде — `logError(...)`
+из `@handyman/db/errors`** (те же аргументы, метка `[модуль]` в начале; пишет и в консоль, и в журнал). Тревога о новых ошибках и чистка 30 дней — в `runJobs`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -164,7 +168,7 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 337 проверок (core 203 + интеграционные db 134). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 350 проверок (core 211 + интеграционные db 139). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

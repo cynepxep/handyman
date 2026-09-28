@@ -7,6 +7,7 @@ import {
 } from "@handyman/core/shop";
 import { reindexProducts, reindexSafely } from "./catalog-search";
 import { notifyManagers } from "./notify";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 
@@ -162,7 +163,7 @@ export async function applyOrderStock(tx: Prisma.TransactionClient, orderId: str
 export async function notifyLowStock(low: LowStockHit[]): Promise<void> {
   if (!low.length) return;
   const text = ["⚠️ Заканчивается на складе:", ...low.map((l) => `• ${l.name} (${l.sku}) — доступно ${l.available} шт., минимум ${l.minStock}`)].join("\n");
-  await notifyManagers(text).catch((e) => console.error("[stock] уведомление не сохранено", e));
+  await notifyManagers(text).catch((e) => logError("[stock] уведомление не сохранено", e));
 }
 
 // ---------- документы ----------

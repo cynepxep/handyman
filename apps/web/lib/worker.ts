@@ -5,6 +5,7 @@ import { hostname } from "node:os";
 import { runJobs } from "@handyman/db/jobs";
 import { TelegramError, pollOnce, releaseBotLease } from "@handyman/db/bot";
 import { secret } from "@handyman/db/integrations";
+import { logError } from "@handyman/db/errors";
 
 const g = globalThis as unknown as { hmWorker?: ReturnType<typeof setInterval>; hmBot?: boolean };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -16,7 +17,7 @@ export function startWorker(): void {
       .then((r) => {
         if (r.daily || r.weekly || r.reminders || r.alerts || r.retried) console.info("[worker]", JSON.stringify(r));
       })
-      .catch((e) => console.error("[worker]", e instanceof Error ? e.message : e));
+      .catch((e) => logError("[worker]", e instanceof Error ? e.message : e));
   setTimeout(tick, 20_000); // первый запуск — когда сайт уже поднялся
   g.hmWorker = setInterval(tick, 60_000);
   console.info("[worker] фоновые задачи запущены (раз в минуту)");
@@ -53,11 +54,11 @@ function startBot(): void {
         if (n === -1) await sleep(30_000); // читает другая копия сайта
       } catch (e) {
         if (e instanceof TelegramError && e.code === 409) {
-          if (!warned) console.error("[bot] бота уже читает другая программа (например, старый прототип на том же боте). Жду…");
+          if (!warned) logError("[bot] бота уже читает другая программа (например, старый прототип на том же боте). Жду…");
           warned = true;
           await sleep(60_000);
         } else {
-          console.error("[bot]", e instanceof Error ? e.message : e);
+          logError("[bot]", e instanceof Error ? e.message : e);
           await sleep(10_000);
         }
       }

@@ -14,7 +14,8 @@
     "./shop/warehouse": "./src/shop/warehouse.ts",
     "./telegram": "./src/shop/telegram-logic.ts",
     "./integrations": "./src/integrations.ts",
-    "./backups": "./src/backups.ts"
+    "./backups": "./src/backups.ts",
+    "./errors": "./src/errors.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

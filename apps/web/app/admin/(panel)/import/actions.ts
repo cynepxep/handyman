@@ -11,6 +11,7 @@ import { reindexAll, reindexSafely } from "@handyman/db/catalog-search";
 import { startMediaSync } from "@handyman/db/media";
 import { requirePermission } from "@/lib/auth";
 import { catalogChanged } from "@/lib/shop/cache";
+import { logError } from "@handyman/db/errors";
 
 const BASE = "/admin/import";
 
@@ -24,7 +25,7 @@ async function run(fallback: string, fn: () => Promise<string>): Promise<never> 
   } catch (e) {
     const known = e instanceof ImportUserError || e instanceof UndoUserError;
     const message = known ? e.message : `Непредвиденная ошибка: ${e instanceof Error ? e.message : String(e)}`;
-    if (!known) console.error("[import]", e);
+    if (!known) logError("[import]", e);
     redirect(withParam(fallback, "error", message));
   }
   redirect(target);
@@ -125,7 +126,7 @@ export async function applyAction(formData: FormData): Promise<void> {
       runId, approvedSkus: approved, who: session.username,
       afterDone: async () => {
         await reindexSafely(() => reindexAll());
-        await startMediaSync({ supplierId }, session.username, { onlyNew: true }).catch((e) => console.error("[media] после импорта", e));
+        await startMediaSync({ supplierId }, session.username, { onlyNew: true }).catch((e) => logError("[media] после импорта", e));
       },
     });
     catalogChanged(); // счётчики разделов на сайте обновятся и сами за 5 минут после окончания импорта

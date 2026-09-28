@@ -8,6 +8,7 @@ import {
 import { reindexProducts, reindexSafely } from "@handyman/db/catalog-search";
 import { requirePermission } from "@/lib/auth";
 import { catalogChanged } from "@/lib/shop/cache";
+import { logError } from "@handyman/db/errors";
 
 const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
 
@@ -18,7 +19,7 @@ async function run(fallback: string, fn: () => Promise<string>): Promise<never> 
     target = await fn();
   } catch (e) {
     const message = e instanceof SupplierUserError ? e.message : `Непредвиденная ошибка: ${e instanceof Error ? e.message : String(e)}`;
-    if (!(e instanceof SupplierUserError)) console.error("[suppliers]", e);
+    if (!(e instanceof SupplierUserError)) logError("[suppliers]", e);
     redirect(withParam(fallback, "error", message));
   }
   redirect(target);

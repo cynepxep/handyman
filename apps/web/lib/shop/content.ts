@@ -5,6 +5,7 @@ import { loadSiteContent, type SiteContent } from "@handyman/db/site-content";
 import { EMPTY_CONTACTS, TEXT_ENTRIES, defaultTexts, fillText, shopHref, type ShopLang } from "@handyman/core/site";
 import { defaultMenuConfig } from "@handyman/core/catalog";
 import { TAG_SHOP, cached } from "./cache";
+import { logError } from "@handyman/db/errors";
 
 /**
  * Контент из базы — в кэше между запросами (сбрасывается при сохранении в админке, страховка — час).
@@ -24,7 +25,7 @@ export const getShopContent = cache(async (lang: ShopLang): Promise<ShopContent>
     content = await loadCached(lang);
   } catch (e) {
     // База недоступна: сайт не падает, показывает стандартные тексты и меню.
-    console.error("[shop] не удалось загрузить контент сайта", e);
+    logError("[shop] не удалось загрузить контент сайта", e);
     content = { texts: defaultTexts(lang), contacts: EMPTY_CONTACTS, menu: defaultMenuConfig(), pages: [] };
   }
   const t: T = (key, vars) => fillText(content.texts[key] ?? defaultTexts(lang)[key] ?? key, vars); // нет в кэше — стандартный текст

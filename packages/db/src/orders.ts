@@ -19,6 +19,7 @@ import { npPointByRef } from "./novaposhta";
 import { photoStyleOn, pickImage } from "./photo-choice";
 import { loadLoyalty, recalcClient } from "./clients";
 import { applyOrderStock, notifyLowStock, ownStockOf, reserveForOrder } from "./stock";
+import { logError } from "./errors";
 
 // склад переехал в stock.ts (шаг 4.4); старые импорты из orders продолжают работать
 export { defaultWarehouseId, ownStockOf, setOwnStock } from "./stock";
@@ -273,7 +274,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     `Оплата: ${PAY_RU[v.pay]}. Сумма ${money(totals.total)}, сейчас ${money(totals.dueNow)}`,
     ...lines.map((l) => `• ${l.nameUk} × ${l.qty}${l.price < l.basePrice ? ` (опт: ${money(l.price)}/шт.)` : ""}${l.stock === "order" ? " — ПОД ЗАКАЗ" : l.stock === "local" ? " — со склада" : ""}`),
     v.comment ? `Комментарий: ${v.comment}` : "",
-  ]), order.id).catch((e) => console.error("[orders] уведомление не сохранено", e));
+  ]), order.id).catch((e) => logError("[orders] уведомление не сохранено", e));
   return { ok: true, no: order.no, accessKey, total: totals.total, dueNow: totals.dueNow };
 }
 
@@ -297,7 +298,7 @@ export async function placeOneClick(
   await notifyManagers(managerText(order, "⚡ Купить в 1 клик", [
     `${name || "Без имени"}, ${formatPhone(phone)} — перезвонить`,
     `• ${l.nameUk} × ${l.qty} = ${money(l.price * l.qty)}${l.stock === "order" ? " — ПОД ЗАКАЗ" : ""}`,
-  ]), order.id).catch((e) => console.error("[orders] уведомление не сохранено", e));
+  ]), order.id).catch((e) => logError("[orders] уведомление не сохранено", e));
   return { ok: true, no: order.no, accessKey: order.accessKey ?? "" };
 }
 

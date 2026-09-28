@@ -7,6 +7,7 @@ import {
 } from "@handyman/db/storefront-plus";
 import { requirePermission } from "@/lib/auth";
 import { catalogChanged } from "@/lib/shop/cache";
+import { logError } from "@handyman/db/errors";
 
 const withParam = (url: string, key: string, value: string) => `${url}${url.includes("?") ? "&" : "?"}${key}=${encodeURIComponent(value)}`;
 
@@ -25,7 +26,7 @@ async function run(page: string, fn: () => Promise<string | { go: string; messag
   } catch (e) {
     kind = "error";
     message = e instanceof PlusUserError ? e.message : `Непредвиденная ошибка: ${e instanceof Error ? e.message : String(e)}`;
-    if (!(e instanceof PlusUserError)) console.error("[compat]", e);
+    if (!(e instanceof PlusUserError)) logError("[compat]", e);
   }
   redirect(withParam(target, kind, message));
 }

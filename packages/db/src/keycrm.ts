@@ -25,6 +25,7 @@ import { secret } from "./integrations";
 import { notifyManagers } from "./notify";
 import { setOrderStatus } from "./orders";
 import { sendAutoMessages } from "./messages";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 const min = (n: number) => n * 60_000;
@@ -102,7 +103,7 @@ async function sourceIdOrThrow(): Promise<number> {
 // отправки, запущенные «в фоне» после оформления заказа (тесты ждут их через keycrmSettled)
 const inflight = new Set<Promise<unknown>>();
 function background(p: Promise<unknown>) {
-  const t = p.catch((e) => console.error("[keycrm]", e instanceof Error ? e.message : e)).finally(() => inflight.delete(t));
+  const t = p.catch((e) => logError("[keycrm]", e instanceof Error ? e.message : e)).finally(() => inflight.delete(t));
   inflight.add(t);
 }
 /** Для тестов: дождаться фоновых отправок. */
@@ -121,7 +122,7 @@ export async function afterOrderCreated(orderId: string): Promise<void> {
     await prisma.order.update({ where: { id: orderId }, data: { keycrmState: "queued", keycrmNextTryAt: new Date() } });
     background(deliver(orderId));
   } catch (e) {
-    console.error("[keycrm] заказ не поставлен в очередь:", e instanceof Error ? e.message : e);
+    logError("[keycrm] заказ не поставлен в очередь:", e instanceof Error ? e.message : e);
   }
 }
 
@@ -207,7 +208,7 @@ async function fail(orderId: string, no: string, isTest: boolean, uuid: string, 
   if (attempts === KEYCRM_MAX_ATTEMPTS) {
     await prisma.orderHistory.create({ data: { orderId, text: `Не удалось передать в KeyCRM после ${attempts} попыток: ${error.slice(0, 300)}` } });
     await notifyManagers(`${isTest ? "🧪 ТЕСТ · " : ""}❗ Заказ ${no} не передан в KeyCRM (${attempts} попыток): ${error.slice(0, 200)}. Кнопка «Отправить ещё раз» — в заказе.`, orderId)
-      .catch((e) => console.error("[keycrm] тревога не сохранена", e));
+      .catch((e) => logError("[keycrm] тревога не сохранена", e));
   }
 }
 
@@ -265,7 +266,7 @@ export async function applyKeycrmStatus(orderId: string, statusId: number, via: 
   if (!r.ok) return "none";
   const auto = await prisma.orderStatusTemplate.count({ where: { status: ours, autoSend: true } });
   if (auto) {
-    await sendAutoMessages(orderId, ours, "KeyCRM").catch((e) => console.error("[keycrm] автосообщение не отправлено", e));
+    await sendAutoMessages(orderId, ours, "KeyCRM").catch((e) => logError("[keycrm] автосообщение не отправлено", e));
   } else {
     // авто-шаблона нет — менеджер решает, что написать покупателю (старое напоминание по этому заказу заменяется новым)
     await prisma.$transaction([
@@ -273,7 +274,7 @@ export async function applyKeycrmStatus(orderId: string, statusId: number, via: 
       prisma.pendingNotif.create({ data: { orderId, status: ours, keycrmStatus: name } }),
     ]);
     await notifyManagers(`${o.isTest ? "🧪 ТЕСТ · " : ""}🔄 ${o.no}: в KeyCRM статус «${name}» → на сайте «${ORDER_STATUS_RU[ours] ?? ours}». Авто-сообщения нет — напишите покупателю из заказа.`, orderId)
-      .catch((e) => console.error("[keycrm] уведомление не сохранено", e));
+      .catch((e) => logError("[keycrm] уведомление не сохранено", e));
   }
   return "changed";
 }
@@ -374,7 +375,7 @@ async function pollStatuses(now: Date): Promise<number> {
       const info = res.status === 200 ? readKeycrmOrder(res.body) : null;
       if (info?.statusId && (await applyKeycrmStatus(r.id, info.statusId, "опрос KeyCRM", { firstSeenOnly: true })) === "changed") changed++;
     } catch (e) {
-      console.error(`[keycrm] опрос статуса ${r.keycrmId}:`, e instanceof Error ? e.message : e);
+      logError(`[keycrm] опрос статуса ${r.keycrmId}:`, e instanceof Error ? e.message : e);
       break; // нет связи — остальные спросим в следующий раз
     }
   }

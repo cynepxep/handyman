@@ -9,6 +9,7 @@ import {
   FACET_DEFS, FACET_FIELDS, UNSORTED_ID, extractFacets, facetField, fixKeyboardLayout, htmlToText, menuRanks, sortFacetValues, synonymMap,
 } from "@handyman/core/catalog";
 import { STOCK_RANK, availableQty, stockLevel, type StockLevel } from "@handyman/core/shop";
+import { logError } from "./errors";
 
 export class SearchUnavailableError extends Error {
   constructor(message = "Поиск временно недоступен. Попробуйте позже.") {
@@ -246,7 +247,7 @@ export async function reindexSafely(fn: () => Promise<unknown>): Promise<void> {
   try {
     await fn();
   } catch (e) {
-    console.error("[search] не удалось обновить индекс:", e instanceof Error ? e.message : e);
+    logError("[search] не удалось обновить индекс:", e instanceof Error ? e.message : e);
     await markSearchStale().catch(() => {});
   }
 }

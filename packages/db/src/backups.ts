@@ -23,6 +23,7 @@ import { projectRoot, resetSecretsKey, secretsKeyFile, secretsKeyMaterial } from
 import { mediaDir } from "./media";
 import { notifyManagers } from "./notify";
 import { deleteObject, offsiteConfig, putObject } from "./offsite";
+import { logError } from "./errors";
 
 const json = (v: unknown) => v as unknown as Prisma.InputJsonValue;
 export class BackupError extends Error {}
@@ -320,12 +321,12 @@ export async function createBackup(p: { kind: BackupKind; who: string; now?: Dat
       await pruneBackups();
     }
   } catch (e) {
-    if (m.ok) console.error("[backup] после копии:", errMsg(e));
+    if (m.ok) logError("[backup] после копии:", errMsg(e));
     else m.error = `${m.error}; ${errMsg(e)}`;
   } finally {
     await dropLock();
   }
-  if (!m.ok) console.error(`[backup] копия ${name} не сделана:`, m.error);
+  if (!m.ok) logError(`[backup] копия ${name} не сделана:`, m.error);
   if (p.kind === "auto" && !m.ok) await notifyManagers(`❗ Резервная копия не сделана: ${m.error}. Сайт попробует ещё раз через час. «Резервные копии» в админке.`).catch(() => {});
   if (p.kind === "auto" && m.offsite && !m.offsite.ok) await notifyManagers(`⚠️ Копия сделана, но не выгружена во второе хранилище: ${m.offsite.error}. Проверьте «Интеграции → Резервные копии».`).catch(() => {});
   return { ok: m.ok, name, error: m.error, manifest: m };
@@ -366,7 +367,7 @@ export async function pruneBackups(): Promise<string[]> {
     if (!p) continue;
     await rm(/*turbopackIgnore: true*/ p, { recursive: true, force: true });
     if (c) {
-      for (const f of Object.values(BACKUP_FILES)) await deleteObject(c, `db/${name}/${f}`).catch((e) => console.error("[backup] второе хранилище:", errMsg(e)));
+      for (const f of Object.values(BACKUP_FILES)) await deleteObject(c, `db/${name}/${f}`).catch((e) => logError("[backup] второе хранилище:", errMsg(e)));
     }
   }
   return drop;
@@ -481,7 +482,7 @@ export async function startInBackground(what: "backup" | "check", who: string): 
   if (g.hmBackupRun || (await currentLock())) return false;
   const job = what === "backup" ? createBackup({ kind: "manual", who }) : verifyBackup({ who, alert: false });
   g.hmBackupRun = job;
-  job.catch((e) => console.error(`[backup] ${what}:`, errMsg(e))).finally(() => {
+  job.catch((e) => logError(`[backup] ${what}:`, errMsg(e))).finally(() => {
     g.hmBackupRun = null;
   });
   return true;
@@ -509,7 +510,7 @@ export async function runBackupJobs(now = new Date()): Promise<"backup" | "check
         await prisma.setting.upsert({ where: { key: ATTEMPT_KEY }, create: { key: ATTEMPT_KEY, value: v }, update: { value: v } });
         const job = createBackup({ kind: "auto", who: "сайт", now });
         g.hmBackupRun = job;
-        job.catch((e) => console.error("[backup]", errMsg(e))).finally(() => {
+        job.catch((e) => logError("[backup]", errMsg(e))).finally(() => {
           g.hmBackupRun = null;
         });
         return "backup";
@@ -520,7 +521,7 @@ export async function runBackupJobs(now = new Date()): Promise<"backup" | "check
   if (restoreCheckDue(last ? new Date(last.at) : null, now) && (await listBackups()).some((b) => b.state === "ok")) {
     const job = verifyBackup({ who: "сайт" });
     g.hmBackupRun = job;
-    job.catch((e) => console.error("[backup] проверка:", errMsg(e))).finally(() => {
+    job.catch((e) => logError("[backup] проверка:", errMsg(e))).finally(() => {
       g.hmBackupRun = null;
     });
     return "check";
