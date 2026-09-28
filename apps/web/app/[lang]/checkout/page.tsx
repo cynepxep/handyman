@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { DELIVERY_CHOICES, PAY_CHOICES, formatPhone } from "@handyman/core/shop";
 import { getClient } from "@/lib/client-auth";
-import { isShopLang, paths, shopHref } from "@handyman/core/site";
+import { CLIENT_CABINET_ON, isShopLang, paths, shopHref } from "@handyman/core/site";
 import { loadCheckoutSettings } from "@handyman/db/orders";
 import { pickupPoints } from "@handyman/db/warehouses";
 import { monoMode } from "@handyman/db/payments";
@@ -73,7 +73,7 @@ export default async function CheckoutPage({ params }: PageProps<"/[lang]/checko
         options={{ pay: PAY_CHOICES.filter((k) => s.pay[k]), delivery: DELIVERY_CHOICES.filter((k) => s.delivery[k]) }}
         catalogHref={shopHref(lang, paths.catalog())}
         initial={initial}
-        loginHint={client ? undefined : { text: t("account.guest.discount"), href: shopHref(lang, paths.account()) }}
+        loginHint={client || !CLIENT_CABINET_ON ? undefined : { text: t("account.guest.discount"), href: shopHref(lang, paths.account()) }}
         pickups={pickups}
       />
     </section>

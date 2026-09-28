@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { extractFacets, htmlToText, slugOf } from "@handyman/core/catalog";
-import { isShopLang, paths, productSlug, shopHref } from "@handyman/core/site";
+import { CLIENT_CABINET_ON, isShopLang, paths, productSlug, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent, siteUrl } from "@/lib/shop/content";
 import { loadProduct, productDescription, productPlace, similarProducts } from "@/lib/shop/product";
 import { formatPrice } from "@/components/shop/format";
@@ -170,7 +170,7 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
           </div>
           {isTool && (
             <div className="hm-mytool">
-              {client ? (
+              {!CLIENT_CABINET_ON ? null : client ? (
                 <div><MyToolButton sku={p.sku} on={mine} addLabel={t("tool.add")} addedLabel={t("tool.added")} /></div>
               ) : (
                 <p className="hm-muted"><Link className="hm-link" href={shopHref(lang, paths.account())}>{t("tool.login")}</Link></p>

@@ -3,7 +3,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { isShopLang, paths, pickTexts, shopHref } from "@handyman/core/site";
+import { CLIENT_CABINET_ON, isShopLang, paths, pickTexts, shopHref } from "@handyman/core/site";
 import { TIER_RU, clientDiscountPct, formatPhone, tierProgress, type TierKey } from "@handyman/core/shop";
 import { prisma } from "@handyman/db";
 import { loadLoyalty } from "@handyman/db/clients";
@@ -41,7 +41,7 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/account">)
 
 export default async function AccountPage({ params }: PageProps<"/[lang]/account">) {
   const { lang } = await params;
-  if (!isShopLang(lang)) notFound();
+  if (!isShopLang(lang) || !CLIENT_CABINET_ON) notFound(); // кабинет пока выключен владельцем
   const c = await getShopContent(lang);
   const { t } = c;
   const client = await getClient();

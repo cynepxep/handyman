@@ -1,7 +1,7 @@
 // Шапка, подвал и нижняя панель телефона — общие для всех страниц витрины.
 // Тексты — из реестра (админка «Сайт → Тексты»), контакты и страницы — из «Сайт → Контакты» и «Сайт → Страницы».
 import Link from "next/link";
-import { paths, shopHref, telHref } from "@handyman/core/site";
+import { CLIENT_CABINET_ON, paths, shopHref, telHref } from "@handyman/core/site";
 import type { ShopContent } from "@/lib/shop/content";
 import { getSearchHints } from "@/lib/shop/search-hints";
 import { FocusSearchButton, LangSwitch } from "./client-bits";
@@ -71,10 +71,10 @@ export async function SiteHeader({ c, loggedIn }: { c: ShopContent; loggedIn: bo
         <SearchBox lang={lang} labels={labels} popular={popular} />
         <span className="hm-head-icons">
           {/* Кабинет: на телефоне он в нижней панели, здесь — с планшета и шире. Гостю — «Увійти» (та же страница покажет вход). */}
-          <Link className={`hm-cart hm-headacc${loggedIn ? " is-in" : ""}`} href={shopHref(lang, paths.account())} aria-label={t(loggedIn ? "header.account" : "header.login")}>
+          {CLIENT_CABINET_ON && <Link className={`hm-cart hm-headacc${loggedIn ? " is-in" : ""}`} href={shopHref(lang, paths.account())} aria-label={t(loggedIn ? "header.account" : "header.login")}>
             <Icon name="user" size={24} />
             <span className="hm-headacc-text">{t(loggedIn ? "header.account" : "header.login")}</span>
-          </Link>
+          </Link>}
           <HeaderFav href={shopHref(lang, paths.favorites())} label={t("fav.header")} />
           <HeaderCart />
         </span>
@@ -136,15 +136,15 @@ export function SiteFooter({ c }: { c: ShopContent }) {
   );
 }
 
-/** Нижняя панель на телефоне (как в приложении): Каталог, Пошук, Кошик, Кабінет. На планшете и компьютере скрыта. */
+/** Нижняя панель на телефоне (как в приложении): Каталог, Пошук, Кошик, Кабінет (пока кабинет выключен — три кнопки). На планшете и компьютере скрыта. */
 export function BottomNav({ c }: { c: ShopContent }) {
   const { t, lang } = c;
   return (
-    <nav className="hm-bottomnav" aria-label={t("nav.label")}>
+    <nav className={`hm-bottomnav${CLIENT_CABINET_ON ? "" : " hm-bottomnav-3"}`} aria-label={t("nav.label")}>
       <Link href={shopHref(lang, paths.catalog())}><Icon name="menu" size={22} />{t("nav.catalog")}</Link>
       <FocusSearchButton label={t("nav.search")} />
       <BottomCart label={t("nav.cart")} />
-      <Link href={shopHref(lang, paths.account())}><Icon name="user" size={22} />{t("nav.account")}</Link>
+      {CLIENT_CABINET_ON && <Link href={shopHref(lang, paths.account())}><Icon name="user" size={22} />{t("nav.account")}</Link>}
     </nav>
   );
 }
