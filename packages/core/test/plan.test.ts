@@ -187,3 +187,40 @@ test("выбор владельца «не загружать» и «новая 
   assert.equal(welding.placement.topNewName, "Зварювальне обладнання");
   assert.equal(welding.placement.topId, "zvaryuvalne-obladnannya");
 });
+
+test("бренды фида: свой бренд у каждого, «не загружать» пропускает товар и считается пропавшим", async () => {
+  const { countVendors, decideBrand, suggestBrand, vendorKey, NO_BRAND_KEY } = await import("../src/catalog");
+  const items: FeedItem[] = feed.items.slice(0, 3).map((it, n) => ({ ...it, vendor: ["Milwaukee", "DeWALT", null][n] }));
+  const vendors = countVendors([...items, { vendor: "MILWAUKEE" }]);
+  assert.deepEqual(vendors.map((v) => [v.key, v.count]), [["milwaukee", 2], ["dewalt", 1], [NO_BRAND_KEY, 1]]);
+  assert.equal(vendors[0].name, "Milwaukee");
+
+  const ours = [{ id: "b-mil", name: "milwaukee" }];
+  assert.deepEqual(suggestBrand("Milwaukee", ours, "Vitals"), { kind: "brand", brandId: "b-mil" });
+  assert.deepEqual(suggestBrand("DeWALT", ours, "Vitals"), { kind: "new", name: "DeWALT" });
+  assert.deepEqual(suggestBrand(null, ours, "Vitals"), { kind: "new", name: "Vitals" });
+  assert.deepEqual(suggestBrand(null, ours, null), { kind: "none" });
+  assert.deepEqual(decideBrand({ brandId: null, skip: true }, { kind: "none" }), { kind: "skip" });
+  assert.deepEqual(decideBrand(undefined, { kind: "new", name: "DeWALT" }), { kind: "brand", brandId: "new:DeWALT" });
+
+  const brands = new Map([
+    [vendorKey("Milwaukee"), { kind: "brand" as const, brandId: "b-mil" }],
+    [vendorKey("DeWALT"), { kind: "skip" as const }],
+  ]);
+  const plan = run([], opts({ brands }), items);
+  const byS = new Map(plan.items.map((p) => [p.sku, p]));
+  const c0 = byS.get(items[0].sku)!;
+  assert.ok(c0.action === "create" && c0.data.brandId === "b-mil");
+  const c1 = byS.get(items[1].sku)!;
+  assert.ok(c1.action === "skip" && /DeWALT/.test(c1.reason));
+  const c2 = byS.get(items[2].sku)!;
+  assert.ok(c2.action === "create" && c2.data.brandId === "brand-vitals", "без решения — бренд по умолчанию");
+
+  // товар уже был в каталоге, а теперь его бренд не загружается — он «пропал из фида» (станет «Под заказ»)
+  const before = dbAfter(run([], opts(), items));
+  const again = run(before, opts({ brands }), items);
+  assert.equal(again.missing.length, 1);
+  assert.match(again.missing[0].reason, /DeWALT/);
+  // бренд меняется у уже загруженного товара, если поле не защищено
+  assert.equal(upd(again, items[0].sku).changes.brandId, "b-mil");
+});

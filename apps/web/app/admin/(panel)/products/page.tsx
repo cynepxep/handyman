@@ -5,11 +5,11 @@ import { UNSORTED_ID } from "@handyman/core/catalog";
 import { requirePermission } from "@/lib/auth";
 import { PAGE_SIZE, loadCategories, money } from "@/lib/catalog";
 import { SelectAll, SubmitButton } from "../import/client-bits";
-import { markProductsAction, moveProductsAction } from "./actions";
+import { brandProductsAction, markProductsAction, moveProductsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
-type Params = { q?: string; cat?: string; avail?: string; flag?: string; page?: string };
+type Params = { q?: string; cat?: string; avail?: string; flag?: string; supplier?: string; brand?: string; page?: string };
 
 function href(p: Params, over: Partial<Params>): string {
   const merged: Params = { ...p, ...over };
@@ -24,7 +24,11 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const canEdit = (session.permissions as string[]).includes("products.edit");
   const { ok, error, ...p } = await searchParams;
   const page = Math.max(1, Number(p.page) || 1);
-  const cats = await loadCategories();
+  const [cats, suppliers, brands] = await Promise.all([
+    loadCategories(),
+    prisma.supplier.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    prisma.brand.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
 
   const and: Prisma.ProductWhereInput[] = [];
   const q = p.q?.trim();
@@ -48,6 +52,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   if (p.flag === "missing") and.push({ missingFromFeedSince: { not: null } });
   if (p.flag === "hit") and.push({ isHit: true });
   if (p.flag === "new") and.push({ isNew: true });
+  if (p.supplier) and.push({ supplierId: p.supplier === "none" ? null : p.supplier });
+  if (p.brand) and.push({ brandId: p.brand === "none" ? null : p.brand });
   const where: Prisma.ProductWhereInput = and.length ? { AND: and } : {};
 
   const [total, rows] = await Promise.all([
@@ -90,6 +96,16 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
             <option value="missing">Пропали из фида</option>
             <option value="hit">Хиты</option>
             <option value="new">Новинки</option>
+          </select>
+          <select name="supplier" defaultValue={p.supplier ?? ""} className="adm-select" aria-label="Поставщик">
+            <option value="">Все поставщики</option>
+            {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+            <option value="none">Без поставщика</option>
+          </select>
+          <select name="brand" defaultValue={p.brand ?? ""} className="adm-select" aria-label="Бренд">
+            <option value="">Все бренды</option>
+            {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+            <option value="none">Без бренда</option>
           </select>
           <button type="submit" className="adm-btn primary">Найти</button>
           <Link href="/admin/products" className="adm-btn">Сбросить</Link>
@@ -186,6 +202,15 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
               <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "hit:off")}>Снять «хит»</button>
               <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "new:on")}>Сделать новинкой</button>
               <button type="submit" className="adm-btn" formAction={markProductsAction.bind(null, "new:off")}>Снять «новинку»</button>
+            </div>
+            <div className="adm-row" style={{ marginTop: 8 }}>
+              <b>Бренд:</b>
+              <select name="setBrand" className="adm-select" aria-label="Поставить бренд" defaultValue="">
+                <option value="" disabled>Поставить бренд…</option>
+                {brands.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                <option value="none">— без бренда —</option>
+              </select>
+              <SubmitButton formAction={brandProductsAction} pendingText="Ставлю…">Поставить</SubmitButton>
             </div>
             <p className="adm-muted" style={{ marginTop: 6 }}>
               Перенесённая категория защищается от импорта: он её не вернёт назад. Галочка в шапке таблицы отмечает все товары на странице.

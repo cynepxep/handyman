@@ -7,6 +7,7 @@ import {
   decideCategory, placeInTree, placementLeafId,
   type CategoryPlacement, type StoredMapping,
 } from "./categories";
+import { vendorKey, type BrandMapping } from "./brands";
 
 /** Поля товара, которые можно защитить от импорта (ProductFieldLock.fieldName). */
 export const LOCKABLE_FIELDS = [
@@ -45,7 +46,10 @@ export type PlanOptions = {
   markupPct: number | null;
   /** Изменение цены больше этого процента не применяется без подтверждения (ТЗ: 30%). */
   jumpPct: number;
+  /** Бренд по умолчанию (для брендов фида без решения в brands). */
   brandId: string | null;
+  /** Решения по брендам фида (ключ — vendorKey). Нет — у всех товаров бренд по умолчанию. */
+  brands?: BrandMapping;
   stored: StoredMapping;
   /** Артикулы, для которых владелец подтвердил скачок цены. */
   approvedSkus: ReadonlySet<string>;
@@ -129,6 +133,14 @@ export function planImport(items: FeedItem[], existing: ReadonlyMap<string, Exis
   const skippedInFeed = new Map<string, string>(); // артикулы в фиде, но не загружаемые → причина
 
   for (const item of items) {
+    const brandDecision = opts.brands?.get(vendorKey(item.vendor));
+    if (brandDecision?.kind === "skip") {
+      const reason = item.vendor ? `Бренд «${item.vendor}» не загружается` : "Товары без бренда не загружаются";
+      skippedInFeed.set(item.sku, reason);
+      plans.push({ action: "skip", sku: item.sku, name: item.name, reason });
+      continue;
+    }
+    const brandId = brandDecision ? brandDecision.brandId : opts.brandId;
     const decision = decideCategory(item.categoryPath, opts.stored);
     const placement = placeInTree(item.categoryPath, decision);
     if (!placement || decision.kind === "skip") {
@@ -148,7 +160,7 @@ export function planImport(items: FeedItem[], existing: ReadonlyMap<string, Exis
         action: "create", sku: item.sku, item, placement,
         data: {
           nameUk: item.name, nameRu: item.name, descUk: item.descriptionHtml || null,
-          price, oldPrice, supplierPrice: price, categoryId: leaf, brandId: opts.brandId, supplierId: opts.supplierId,
+          price, oldPrice, supplierPrice: price, categoryId: leaf, brandId, supplierId: opts.supplierId,
           supplierAvailable: item.available, articleCode: item.articleCode, supplierUrl: item.url,
           missingFromFeedSince: null, priceConflict: false,
         },
@@ -185,7 +197,7 @@ export function planImport(items: FeedItem[], existing: ReadonlyMap<string, Exis
     if (!has("oldPrice") && !same(cur.oldPrice, oldPrice)) changes.oldPrice = oldPrice;
     if (!same(cur.supplierPrice, price)) changes.supplierPrice = price;
     if (!has("categoryId") && cur.categoryId !== leaf) changes.categoryId = leaf;
-    if (opts.brandId && !has("brandId") && cur.brandId !== opts.brandId) changes.brandId = opts.brandId;
+    if (brandId && !has("brandId") && cur.brandId !== brandId) changes.brandId = brandId;
     if (!has("supplierId") && cur.supplierId !== opts.supplierId) changes.supplierId = opts.supplierId;
     if (cur.supplierAvailable !== item.available) changes.supplierAvailable = item.available;
     if (item.articleCode && cur.articleCode !== item.articleCode) changes.articleCode = item.articleCode;
