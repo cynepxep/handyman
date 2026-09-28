@@ -139,8 +139,9 @@ if ($LASTEXITCODE -ne 0) {
     $repair = Join-Path $root "packages\db\prisma\repairs\$name.sql"
     if (-not (Test-Path -LiteralPath $repair)) { Fail "не удалось обновить базу данных (шаг $name), готового ремонта для него нет." }
     Write-Host "Чиню базу для шага $name (старые данные сохраняются в резервные таблицы)…" -ForegroundColor Yellow
-    Run "не удалось подготовить ремонт базы" { pnpm --filter @handyman/db exec dotenv -e ../../.env -- prisma migrate resolve --rolled-back $name }
-    Run "не удалось починить базу" { pnpm --filter @handyman/db exec dotenv -e ../../.env -- prisma db execute --file "prisma/repairs/$name.sql" --schema prisma/schema.prisma }
+    # без «--» в команде: у pnpm на Windows обёртка pnpm.ps1, и PowerShell выбрасывает «--», из-за чего аргументы не доходят до prisma
+    Run "не удалось подготовить ремонт базы" { pnpm --filter @handyman/db run migrate:mark-rolled-back $name }
+    Run "не удалось починить базу" { pnpm --filter @handyman/db run db:run-sql "prisma/repairs/$name.sql" }
   }
   Run "не удалось обновить базу данных после ремонта" { pnpm db:migrate }
 }

@@ -41,6 +41,8 @@
     "generate": "prisma generate",
     "migrate:dev": "dotenv -e ../../.env -- prisma migrate dev",
     "migrate:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
+    "migrate:mark-rolled-back": "dotenv -e ../../.env -- prisma migrate resolve --rolled-back",
+    "db:run-sql": "dotenv -e ../../.env -- prisma db execute --schema prisma/schema.prisma --file",
     "seed": "dotenv -e ../../.env -- tsx prisma/seed.ts",
     "studio": "dotenv -e ../../.env -- prisma studio",
     "search:reindex": "dotenv -e ../../.env -- tsx scripts/reindex.ts",
