@@ -269,7 +269,7 @@ export async function checkIntegration(id: string, who: string): Promise<CheckSt
   const missing: string[] = [];
   for (const k of d.required) if (!(await secret(secretKey(d.id, k)))) missing.push(d.fields.find((f) => f.key === k)!.label);
   let r: CheckResult;
-  if (missing.length) r = { ok: false, message: `Не заполнено: ${missing.join(", ")}. Пока работает заглушка.` };
+  if (missing.length) r = { ok: false, message: `Не заполнено: ${missing.join(", ")}. Впишите значение в поле выше и нажмите «Сохранить» — пока работает заглушка.` };
   else {
     try {
       r = await runCheck(d.id);
