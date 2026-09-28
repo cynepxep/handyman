@@ -14,6 +14,8 @@ export type CheckoutSettings = {
   /** Скидка за полную оплату (онлайн или на карту), %. 0 — без скидки (решение владельца на 2026-09-25). */
   fullPayDiscountPct: number;
   pay: Record<PayChoice, boolean>;
+  /** Оплата картой на сайте (кнопка «Сплатити», monobank) после оформления. Выключено — оплату и реквизиты присылает менеджер (решение владельца 2026-09-28). */
+  onlinePay: boolean;
   delivery: Record<DeliveryChoice, boolean>;
 };
 
@@ -22,6 +24,7 @@ export const DEFAULT_CHECKOUT: CheckoutSettings = {
   fullPayDiscountPct: 0,
   // полная оплата онлайн выключена, пока онлайн-оплата не подключена (решение владельца 2026-09-28); включается в «Сайт → Оформлення»
   pay: { prepay: true, full: false, card: true },
+  onlinePay: false,
   delivery: { np: true, pickup: true, courier: true },
 };
 
@@ -45,6 +48,7 @@ export function parseCheckoutSettings(raw: unknown): CheckoutSettings {
     prepayAmount: num(o.prepayAmount, DEFAULT_CHECKOUT.prepayAmount, 0, MAX_PREPAY),
     fullPayDiscountPct: num(o.fullPayDiscountPct, DEFAULT_CHECKOUT.fullPayDiscountPct, 0, MAX_DISCOUNT),
     pay: flags(o.pay, PAY_CHOICES, DEFAULT_CHECKOUT.pay),
+    onlinePay: typeof o.onlinePay === "boolean" ? o.onlinePay : DEFAULT_CHECKOUT.onlinePay,
     delivery: flags(o.delivery, DELIVERY_CHOICES, DEFAULT_CHECKOUT.delivery),
   };
 }
@@ -61,5 +65,5 @@ export function validateCheckoutSettingsForm(input: Record<string, string | unde
   const delivery = Object.fromEntries(DELIVERY_CHOICES.map((k) => [k, input[`delivery.${k}`] === "on"])) as Record<DeliveryChoice, boolean>;
   if (!PAY_CHOICES.some((k) => pay[k])) return { ok: false, error: "Оставьте включённым хотя бы один способ оплаты." };
   if (!DELIVERY_CHOICES.some((k) => delivery[k])) return { ok: false, error: "Оставьте включённым хотя бы один способ доставки." };
-  return { ok: true, value: { prepayAmount: Math.round(prepay * 100) / 100, fullPayDiscountPct: Math.round(disc * 100) / 100, pay, delivery } };
+  return { ok: true, value: { prepayAmount: Math.round(prepay * 100) / 100, fullPayDiscountPct: Math.round(disc * 100) / 100, pay, onlinePay: input.onlinePay === "on", delivery } };
 }

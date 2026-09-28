@@ -7,7 +7,7 @@ import { getClient } from "@/lib/client-auth";
 import { CLIENT_CABINET_ON, isShopLang, paths, shopHref } from "@handyman/core/site";
 import { loadCheckoutSettings } from "@handyman/db/orders";
 import { pickupPoints } from "@handyman/db/warehouses";
-import { monoMode } from "@handyman/db/payments";
+import { sitePayMode } from "@handyman/db/payments";
 import { getShopContent } from "@/lib/shop/content";
 import { formatPrice } from "@/components/shop/format";
 import { stockLabels } from "@/components/shop/product-card";
@@ -24,8 +24,8 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/checkout">
 export default async function CheckoutPage({ params }: PageProps<"/[lang]/checkout">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
-  const [c, s, pickups, client, mono] = await Promise.all([getShopContent(lang), loadCheckoutSettings(), pickupPoints(lang).catch(() => []), getClient(), monoMode()]);
-  const online = mono !== "off"; // шаг 3.2: оплата картой на странице заказа сразу после оформления
+  const [c, s, pickups, client, mono] = await Promise.all([getShopContent(lang), loadCheckoutSettings(), pickupPoints(lang).catch(() => []), getClient(), sitePayMode()]);
+  const online = mono !== "off"; // шаг 3.2: оплата картой на странице заказа сразу после оформления (галочка «Оплата картой на сайте»)
   // Этап 5: вошёл — имя («Прізвище Ім'я») и телефон из кабинета; гость — ссылка «войдите — скидка уровня учтётся»
   const nameParts = client?.name?.trim().split(/\s+/) ?? [];
   const initial = client ? { lastName: nameParts.length > 1 ? nameParts[0] : "", firstName: nameParts.length > 1 ? nameParts.slice(1).join(" ") : nameParts[0] ?? "", phone: client.phone ? formatPhone(client.phone) : "" } : undefined;

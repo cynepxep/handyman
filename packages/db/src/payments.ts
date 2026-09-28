@@ -16,7 +16,7 @@ import { fillText, paths, resolveTexts, shopHref } from "@handyman/core/site";
 import { secret } from "./integrations";
 import { loadTextOverrides } from "./site-content";
 import { notifyManagers } from "./notify";
-import { setOrderStatus } from "./orders";
+import { loadCheckoutSettings, setOrderStatus } from "./orders";
 import { sendAutoMessages, sendOrderMessages } from "./messages";
 import { queuePaymentReceiptTx, receiptMode, sendReceipt } from "./receipts";
 
@@ -33,6 +33,12 @@ export type MonoMode = "live" | "stub" | "off";
 export async function monoMode(): Promise<MonoMode> {
   if (await secret("mono.token")) return "live";
   return process.env.NODE_ENV === "production" ? "off" : "stub";
+}
+
+/** Оплата картой на сайте (кнопка «Сплатити» у покупателя): только при галочке «Оплата картой на сайте» в «Сайт → Оформление заказа».
+ *  Счета менеджера из заказа от неё не зависят (там — monoMode). */
+export async function sitePayMode(): Promise<MonoMode> {
+  return (await loadCheckoutSettings()).onlinePay ? monoMode() : "off";
 }
 
 type FetchLike = (url: string, init: { method: string; headers: Record<string, string>; body?: string; signal?: AbortSignal }) => Promise<{ status: number; json(): Promise<unknown> }>;
@@ -179,7 +185,7 @@ export async function payFromSite(no: string, key: string, origin: string): Prom
   if (!o || !key || o.accessKey !== key) return { ok: false, reason: "notFound" };
   const target = sitePayTarget({ payMode: o.payMode, status: o.status, total: o.total.toNumber(), dueNow: o.dueNow.toNumber(), paidAmount: o.paidAmount.toNumber() });
   if (!target) return { ok: false, reason: "nothing" };
-  const mode = await monoMode();
+  const mode = await sitePayMode();
   if (mode === "off") return { ok: false, reason: "off" };
   const fresh = new Date(Date.now() - (INVOICE_VALIDITY_SEC - 3600) * 1000);
   const open = await prisma.payInvoice.findFirst({
@@ -429,5 +435,5 @@ export async function orderPayState(no: string, key: string) {
   });
   if (!o || !key || o.accessKey !== key) return null;
   const order = { payMode: o.payMode, status: o.status, total: o.total.toNumber(), dueNow: o.dueNow.toNumber(), paidAmount: o.paidAmount.toNumber() };
-  return { order, last: o.invoices[0] ?? null, target: sitePayTarget(order), mode: await monoMode() };
+  return { order, last: o.invoices[0] ?? null, target: sitePayTarget(order), mode: await sitePayMode() };
 }
