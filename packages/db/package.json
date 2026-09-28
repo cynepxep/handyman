@@ -35,7 +35,8 @@
     "./payments": "./src/payments.ts",
     "./receipts": "./src/receipts.ts",
     "./suppliers": "./src/suppliers.ts",
-    "./import-undo": "./src/import-undo.ts"
+    "./import-undo": "./src/import-undo.ts",
+    "./keycrm": "./src/keycrm.ts"
   },
   "scripts": {
     "generate": "prisma generate",

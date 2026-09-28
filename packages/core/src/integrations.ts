@@ -70,12 +70,13 @@ export const INTEGRATIONS: IntegrationDef[] = [
   {
     id: "keycrm",
     title: "KeyCRM",
-    what: "Передача заказов в KeyCRM, как в прежнем магазине (шаг 3.5, по умолчанию выключено).",
+    what: "Передача заказов в KeyCRM (новые заказы, «1 клік», «по звонку»; тестовые — только кнопкой), статусы из KeyCRM обратно на сайт. По умолчанию выключено — включается на странице «KeyCRM».",
     stub: "Заказы живут только в этой админке.",
     fields: [
       { key: "apiKey", label: "API-ключ", env: "KEYCRM_API_KEY", secret: true, hint: "KeyCRM → Налаштування → Загальні → API-ключ." },
       { key: "sourceId", label: "Источник заказа (ID)", env: "KEYCRM_SOURCE_ID", secret: false, hint: "Номер источника «Сайт» в KeyCRM — проверка покажет список." },
-      { key: "webhookSecret", label: "Секрет вебхука", env: "KEYCRM_WEBHOOK_SECRET", secret: true, hint: "Любая длинная строка; её же укажете в KeyCRM." },
+      { key: "webhookSecret", label: "Секрет вебхука", env: "KEYCRM_WEBHOOK_SECRET", secret: true, hint: "Любая строка от 16 знаков (буквы и цифры); она войдёт в адрес вебхука для KeyCRM." },
+      { key: "npServiceId", label: "Служба «Нова Пошта» в KeyCRM (ID)", env: "KEYCRM_NP_SERVICE_ID", secret: false, hint: "Необязательно. С ним KeyCRM получает код отделения НП, а не только текст адреса." },
     ],
     required: ["apiKey"],
   },
@@ -141,10 +142,14 @@ export function validateField(id: IntegrationId, field: string, raw: string): st
   if (v.length > 500 || /[\r\n]/.test(v)) return "Слишком длинное значение или перенос строки — скопируйте ключ ещё раз.";
   if (id === "telegram" && field === "botToken" && !/^\d{5,}:[\w-]{20,}$/.test(v)) return "Токен бота выглядит как «123456789:AA…» — скопируйте его из @BotFather целиком.";
   if (id === "telegram" && field === "adminChatId" && !/^-?\d{3,20}$/.test(v)) return "ID чата — число (для группы начинается с «-»).";
-  if (id === "keycrm" && field === "sourceId" && !/^\d{1,9}$/.test(v)) return "Источник KeyCRM — число.";
+  if (id === "keycrm" && (field === "sourceId" || field === "npServiceId") && !/^\d{1,9}$/.test(v)) return field === "sourceId" ? "Источник KeyCRM — число." : "ID службы доставки — число.";
+  if (id === "keycrm" && field === "webhookSecret" && weakWebhookSecret(v)) return "Секрет вебхука — не короче 16 знаков, только латинские буквы, цифры, «-» и «_», и не шаблон «change-me».";
   if (id === "sms" && field === "sender" && v.length > 11) return "Имя отправителя SMS — до 11 знаков.";
   return null;
 }
+
+/** Секрет вебхука, который нельзя принимать: короткий, с символами, ломающими адрес, или шаблон из .env.example («change-me-too»). */
+export const weakWebhookSecret = (v: string) => v.length < 16 || !/^[A-Za-z0-9_-]+$/.test(v) || /change-me/i.test(v);
 
 // ---------- как понять ответ сервиса при проверке ----------
 

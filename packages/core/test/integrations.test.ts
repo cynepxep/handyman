@@ -40,6 +40,11 @@ test("проверка значений: токен бота, ID чата, ис�
   assert.equal(validateField("telegram", "adminChatId", "-1001234567890"), null);
   assert.match(validateField("telegram", "adminChatId", "@chat") ?? "", /число/);
   assert.match(validateField("keycrm", "sourceId", "сайт") ?? "", /число/);
+  assert.match(validateField("keycrm", "webhookSecret", "change-me-too") ?? "", /не короче 16/);
+  assert.match(validateField("keycrm", "webhookSecret", "short") ?? "", /не короче 16/);
+  assert.match(validateField("keycrm", "webhookSecret", "секрет-кирилицею-1234567") ?? "", /латинские/);
+  assert.equal(validateField("keycrm", "webhookSecret", "Hm_webhook-2026_x7Q9"), null);
+  assert.match(validateField("keycrm", "npServiceId", "НП") ?? "", /число/);
   assert.match(validateField("sms", "sender", "HandymanOdesa") ?? "", /11/);
   assert.match(validateField("mono", "token", "a\nb") ?? "", /перенос/);
 });

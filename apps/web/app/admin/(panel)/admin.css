@@ -59,6 +59,7 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-flash { border-radius: 8px; padding: 10px 14px; margin: 12px 0; border: 1px solid; }
 .adm-flash.err { border-color: var(--adm-bad); color: var(--adm-bad); background: color-mix(in srgb, var(--adm-bad) 8%, transparent); }
 .adm-flash.ok { border-color: var(--adm-ok); color: var(--adm-ok); background: color-mix(in srgb, var(--adm-ok) 8%, transparent); }
+.adm-flash.warn { border-color: var(--adm-warn); background: color-mix(in srgb, var(--adm-warn) 10%, transparent); }
 
 .adm-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; min-height: 40px; border-radius: 8px; border: 1px solid var(--adm-line); background: var(--adm-soft); color: inherit; font: inherit; cursor: pointer; }
 .adm-btn:hover { background: var(--adm-line); }

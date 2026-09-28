@@ -695,6 +695,17 @@ model Order {
   ttn            String?
   comment        String?
   keycrmId       String?
+  // шаг 3.5: передача в KeyCRM. keycrmState: null — не передаётся; queued — ждёт; sending — отправляется; sent — есть в KeyCRM; error — не вышло
+  // (keycrmNextTryAt задан — сайт повторит сам, пусто — только кнопкой). keycrmUuid — «номер в источнике» (HM-0001 или TEST-HM-0001 у теста).
+  keycrmState     String?
+  keycrmAttempts  Int       @default(0)
+  keycrmNextTryAt DateTime?
+  keycrmError     String?
+  keycrmSentAt    DateTime?
+  keycrmUuid      String?
+  keycrmStub      Boolean   @default(false)
+  keycrmStatusId  Int? // последний известный статус заказа в KeyCRM
+  keycrmCheckedAt DateTime? // когда последний раз спрашивали KeyCRM о статусе
   monoInvoiceId  String?
   isTest         Boolean        @default(false)
   noCallback     Boolean        @default(false)
@@ -723,6 +734,7 @@ model Order {
 
   @@index([clientId])
   @@index([status])
+  @@index([keycrmState])
 }
 
 model OrderItem {
@@ -802,6 +814,9 @@ model PendingNotif {
   status    OrderStatus
   createdAt DateTime    @default(now())
   resolved  Boolean     @default(false)
+  keycrmStatus String? // шаг 3.5: название статуса в KeyCRM (для подсказки менеджеру)
+
+  @@index([orderId, resolved])
 }
 
 // Идемпотентность вебхука mono: один invoiceId нельзя зачесть дважды.
