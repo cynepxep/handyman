@@ -68,6 +68,16 @@ export default async function CheckoutSettingsPage({ searchParams }: { searchPar
           </label>
         ))}
         <p className="adm-muted">Хотя бы один способ доставки и один способ оплаты должен остаться включённым.</p>
+        <label className="adm-check" style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+          <input type="checkbox" name="onlinePay" defaultChecked={s.onlinePay} />
+          <span>
+            <b>Оплата картой на сайте (monobank)</b>{" "}
+            <span className="adm-muted">
+              — после заказа с предоплатой или полной оплатой покупатель видит кнопку «Сплатити». Выключено — кнопки нет, покупателю пишем «менеджер
+              зв’яжеться з вами» и реквизиты/ссылку присылает менеджер. Включайте, когда подключите monobank в «Интеграциях».
+            </span>
+          </span>
+        </label>
         <label className="adm-check" style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 8, opacity: 0.6 }}>
           <input type="checkbox" disabled />
           <span>

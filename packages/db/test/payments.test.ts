@@ -79,8 +79,8 @@ before(async () => {
   const runId = await s.imp.startPreview({ supplierId: s.supplierId, source: file(sampleText), who: "test" });
   await s.imp.startApply({ runId, approvedSkus: [], who: "test" });
   await waitDone(s.imp, runId);
-  // «Повна оплата онлайн» по умолчанию выключена — здесь проверяем и её
-  await orders.saveCheckoutSettings({ ...(await orders.loadCheckoutSettings()), pay: { prepay: true, full: true, card: true } }, "test");
+  // «Повна оплата онлайн» и оплата картой на сайте по умолчанию выключены — здесь проверяем их
+  await orders.saveCheckoutSettings({ ...(await orders.loadCheckoutSettings()), pay: { prepay: true, full: true, card: true }, onlinePay: true }, "test");
   const p = await prisma.product.findFirstOrThrow({ where: { supplierAvailable: true, visible: true, price: { gt: 150 } }, orderBy: { sku: "asc" } });
   sku = p.sku;
   price = p.price.toNumber();
@@ -139,6 +139,22 @@ test("без токена (не production): тестовая оплата — �
   assert.equal(await prisma.auditLog.count({ where: { action: "payment.refund", target: o.id } }), 1);
   // после частичного возврата — можно доплатить до предоплаты
   assert.deepEqual((await pay.orderPayState(o.no, o.accessKey))?.target, { kind: "rest", amount: 50 });
+});
+
+test("оплата картой на сайте выключена в «Оформлении»: кнопки «Сплатити» нет, счёт менеджера — можно", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  const s0 = await orders.loadCheckoutSettings();
+  await orders.saveCheckoutSettings({ ...s0, onlinePay: false }, "test");
+  try {
+    const o = await place();
+    assert.equal(await pay.sitePayMode(), "off");
+    assert.equal((await pay.orderPayState(o.no, o.accessKey))?.mode, "off");
+    assert.deepEqual(await pay.payFromSite(o.no, o.accessKey, ORIGIN), { ok: false, reason: "off" });
+    const inv = await pay.createManagerInvoice(o.id, 100, "Менеджер", ORIGIN, false);
+    assert.ok(inv.stub, "менеджер по-прежнему может выставить счёт (тестовый — без токена)");
+  } finally {
+    await orders.saveCheckoutSettings(s0, "test");
+  }
 });
 
 test("в production без токена онлайн-оплаты нет", async (t) => {
