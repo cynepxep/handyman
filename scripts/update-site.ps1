@@ -5,6 +5,7 @@
 # Запуск: двойной щелчок по «Обновить сайт.cmd» (в папке проекта или ярлык на рабочем столе — он создаётся сам при первом запуске).
 
 $ErrorActionPreference = "Stop"
+$selfHash = (Get-FileHash -LiteralPath $PSCommandPath).Hash
 $root = Split-Path -Parent $PSScriptRoot
 Set-Location -LiteralPath $root
 $logDir = Join-Path $root ".data"
@@ -112,12 +113,37 @@ if ($branch -ne "main") {
 }
 Run "не удалось скачать обновление: нет интернета, нужен вход в GitHub или на этом компьютере есть свои сохранения, которых нет на GitHub (покажите это Claude)" { & $git pull --ff-only origin main }
 Write-Host ("Версия: " + (& $git log -1 --format="%h %s"))
+# сама кнопка обновилась — дальше работает уже новая версия (второй раз скачивать нечего, поэтому повтора не будет)
+if ((Get-FileHash -LiteralPath $PSCommandPath).Hash -ne $selfHash) {
+  Write-Host "Кнопка «Обновить сайт» тоже обновилась — продолжаю в новой версии."
+  try { Stop-Transcript | Out-Null } catch {}
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $PSCommandPath
+  exit $LASTEXITCODE
+}
 
 # ---------- зависимости, база, поиск ----------
 Step "Устанавливаю зависимости"
 Run "не удалось установить зависимости" { pnpm install --frozen-lockfile }
 Step "Обновляю базу данных"
-Run "не удалось обновить базу данных" { pnpm db:migrate }
+$old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+try { & pnpm db:migrate | Out-Host } finally { $ErrorActionPreference = $old }
+if ($LASTEXITCODE -ne 0) {
+  # Обновление базы споткнулось. Если для него есть ремонт (packages/db/prisma/repairs/<миграция>.sql) — чиним и повторяем.
+  $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
+  try {
+    $failed = @(& docker exec handyman-next-postgres-1 psql -U handyman -d handyman -At -c "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL" 2>$null)
+  } finally { $ErrorActionPreference = $old }
+  $failed = @($failed | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+  if (-not $failed.Count) { Fail "не удалось обновить базу данных." }
+  foreach ($name in $failed) {
+    $repair = Join-Path $root "packages\db\prisma\repairs\$name.sql"
+    if (-not (Test-Path -LiteralPath $repair)) { Fail "не удалось обновить базу данных (шаг $name), готового ремонта для него нет." }
+    Write-Host "Чиню базу для шага $name (старые данные сохраняются в резервные таблицы)…" -ForegroundColor Yellow
+    Run "не удалось подготовить ремонт базы" { pnpm --filter @handyman/db exec dotenv -e ../../.env -- prisma migrate resolve --rolled-back $name }
+    Run "не удалось починить базу" { pnpm --filter @handyman/db exec dotenv -e ../../.env -- prisma db execute --file "prisma/repairs/$name.sql" --schema prisma/schema.prisma }
+  }
+  Run "не удалось обновить базу данных после ремонта" { pnpm db:migrate }
+}
 Run "не удалось подготовить доступ к базе" { pnpm db:generate }
 Step "Обновляю поиск"
 $old = $ErrorActionPreference; $ErrorActionPreference = "Continue"
