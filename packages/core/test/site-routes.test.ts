@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { routeStorefront, shopHref, stripLang, switchLang, paths, isShopLang, productSlug } from "../src/site/routes";
+import { routeStorefront, shopHref, stripLang, switchLang, paths, isShopLang, productSlug, shopSection } from "../src/site/routes";
 import { parseListing, listingQuery, toggleFacet, hasFilters, clearFilters, filterCount } from "../src/site/listing";
 
 const KEYS = ["diameter", "series"];
@@ -97,4 +97,20 @@ test("адрес товара: артикул + название трансли�
   const long = productSlug("Пила ".repeat(40));
   assert.ok(long.length <= 80 && !long.endsWith("-"));
   assert.equal(paths.product("AB/12", "Тест"), "/product/AB%2F12/test", "артикул с «/» не ломает адрес");
+});
+
+test("раздел для подсветки в шапке и нижней панели", () => {
+  assert.equal(shopSection("/catalog"), "catalog");
+  assert.equal(shopSection("/ru/catalog/dysky-ta-kruhy/vidrizni"), "catalog");
+  assert.equal(shopSection("/task/rizaty-metal"), "catalog");
+  assert.equal(shopSection("/product/000237651/kruh"), "catalog");
+  assert.equal(shopSection("/search?q=болгарка"), "search");
+  assert.equal(shopSection("/ru/cart"), "cart");
+  assert.equal(shopSection("/checkout"), "cart");
+  assert.equal(shopSection("/favorites"), "favorites");
+  assert.equal(shopSection("/account"), "account");
+  assert.equal(shopSection("/"), null);
+  assert.equal(shopSection("/ru"), null);
+  assert.equal(shopSection("/catalogue"), null, "похожий адрес — не каталог");
+  assert.equal(shopSection("/info/delivery"), null);
 });

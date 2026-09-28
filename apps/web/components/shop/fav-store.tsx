@@ -7,6 +7,7 @@ import Link from "next/link";
 import { favSyncAction, favToggleAction } from "@/app/[lang]/cabinet-actions";
 import { Icon } from "./icons";
 import { btn } from "./ui";
+import { activeProps, useShopSection } from "./nav-active";
 
 const KEY = "hm.fav";
 const ACCT = "hm.fav.acct";
@@ -141,8 +142,9 @@ export function FavoriteButton({ sku, addLabel, removeLabel, variant = "card" }:
 /** Сердечко в шапке со счётчиком → страница «Обране». */
 export function HeaderFav({ href, label }: { href: string; label: string }) {
   const n = useFavorites().length;
+  const on = useShopSection() === "favorites";
   return (
-    <Link className="hm-cart hm-headfav" href={href} aria-label={label.replace("{n}", String(n))}>
+    <Link {...activeProps(on, "hm-cart hm-headfav")} href={href} aria-label={label.replace("{n}", String(n))}>
       <Icon name="heart" size={24} />
       {n > 0 && <span className="hm-cart-count">{n > 99 ? "99+" : n}</span>}
     </Link>
