@@ -235,19 +235,29 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-tasks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 /* плитка задачи компактная (просьба владельца): иконка слева от названия, пояснение и число — строками ниже */
 .hm-task { display: grid; grid-template-columns: 38px minmax(0, 1fr); column-gap: 10px; row-gap: 3px; align-items: center; align-content: start; background: var(--c-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px 12px; height: 100%; }
-.hm-task:hover { box-shadow: 0 0 0 2px var(--c-primary), var(--shadow); }
 .hm-task-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: var(--radius-sm); background: var(--c-primary); color: var(--c-on-primary); }
 .hm-task-icon svg { width: 22px; height: 22px; }
-.hm-task-name { font-family: var(--font-head); font-weight: 700; font-size: 1.08rem; line-height: 1.1; }
+.hm-task-name { font-weight: 600; font-size: 1rem; line-height: 1.2; overflow-wrap: break-word; }
 .hm-task-hint { grid-column: 1 / -1; color: var(--c-muted); font-size: .82rem; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .hm-task-count { grid-column: 1 / -1; color: var(--c-muted); font-size: .76rem; }
 .hm-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-.hm-group { display: grid; gap: 4px; align-content: start; background: var(--c-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px; height: 100%; }
-.hm-group:hover { box-shadow: 0 0 0 2px var(--c-primary), var(--shadow); }
+/* Плитка группы (снимок владельца с iPhone 2026-09-28): название — обычным Roboto, не узким жирным заголовочным (крупно и «рублено» в две строки);
+   фото 4:3 — на экране телефона больше плиток; число товаров прижато к низу — в ряду стоит на одной линии при названиях в 1, 2 и 3 строки. */
+.hm-group { display: flex; flex-direction: column; gap: 2px; background: var(--c-surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 6px 6px 10px; height: 100%; }
 .hm-group-img { position: relative; aspect-ratio: 1; background: #fff; border-radius: var(--radius-sm); overflow: hidden; }
 .hm-group-img img { object-fit: contain; }
-.hm-group-name { font-family: var(--font-head); font-weight: 700; font-size: 1.1rem; line-height: 1.15; }
 .hm-group-count { font-size: .82rem; color: var(--c-muted); }
+.hm-group .hm-group-img { flex: none; aspect-ratio: 4 / 3; margin-bottom: 6px; }
+.hm-group .hm-group-img img { padding: 4px; }
+.hm-group-name { padding: 0 4px; font-weight: 600; font-size: .95rem; line-height: 1.25; min-height: 2.5em; overflow-wrap: break-word; hyphens: auto; }
+.hm-group .hm-group-count { margin-top: auto; padding: 0 4px; font-size: .8rem; }
+/* узкий телефон (360–379): «Електроінструмент» / «Электроинструмент» целиком помещаются в строку, без переноса по буквам */
+@media (max-width: 379px) { .hm-group-name { font-size: .88rem; } }
+/* подсветка наведения — только там, где есть мышь: на телефоне после касания жёлтая рамка «залипала» на плитке */
+@media (hover: hover) {
+  .hm-task:hover, .hm-group:hover { box-shadow: 0 0 0 2px var(--c-primary), var(--shadow); }
+}
+.hm-task:active, .hm-group:active { box-shadow: 0 0 0 2px var(--c-primary), var(--shadow); }
 
 /* ---------- блоки главной ---------- */
 .hm-hero { display: grid; gap: 6px; padding-top: 12px; }
