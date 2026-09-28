@@ -11,6 +11,7 @@ import { optimizable } from "@/lib/image-hosts";
 import { formatPrice } from "./format";
 import { Icon } from "./icons";
 import { PhoneInput } from "./cart/phone-input";
+import { useFillTimer } from "./fill-timer";
 import { AddToCartButton } from "./cart/cart-buttons";
 import { StockBadge, btn, type StockLabels } from "./ui";
 
@@ -26,6 +27,7 @@ export function ReviewForm({ lang, productId, kind, labels, maxPhotos }: {
   const [rating, setRating] = useState(0);
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
+  const fillMs = useFillTimer();
   const id = `${kind}-${productId}`;
   if (result?.ok) return <p className="hm-alert hm-alert-ok" role="status">{result.message}</p>;
   return (
@@ -39,6 +41,7 @@ export function ReviewForm({ lang, productId, kind, labels, maxPhotos }: {
           setResult({ ok: false, message: labels.photoErr });
           return;
         }
+        fd.set("fillMs", String(fillMs() ?? ""));
         start(async () => setResult(await reviewAction(lang, fd)));
       }}
     >
@@ -326,12 +329,13 @@ function CallbackForm({ lang, productId, labels, onClose }: { lang: ShopLang; pr
   const [trap, setTrap] = useState("");
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
+  const fillMs = useFillTimer();
   return (
     <form
       className="hm-modal-body"
       onSubmit={(e) => {
         e.preventDefault();
-        start(async () => setResult(await callbackAction(lang, { phone, name, productId, website: trap })));
+        start(async () => setResult(await callbackAction(lang, { phone, name, productId, website: trap, fillMs: fillMs() })));
       }}
     >
       <div className="hm-drawer-head">

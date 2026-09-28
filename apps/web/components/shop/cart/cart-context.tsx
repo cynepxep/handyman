@@ -11,6 +11,7 @@ import { btn } from "../ui";
 import { Icon } from "../icons";
 import { CartLines } from "./cart-view";
 import { PhoneInput } from "./phone-input";
+import { useFillTimer } from "../fill-timer";
 import { cartStore, useCart } from "./store";
 
 const SHOWN_KEY = "hm.cartShown";
@@ -152,12 +153,13 @@ function OneClickForm({ sku, name, onClose }: { sku: string; name: string; onClo
   const [trap, setTrap] = useState("");
   const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
   const [pending, start] = useTransition();
+  const fillMs = useFillTimer();
   return (
     <form
       className="hm-modal-body"
       onSubmit={(e) => {
         e.preventDefault();
-        start(async () => setResult(await oneClickAction(lang, { sku, qty: 1, phone, name: who, website: trap })));
+        start(async () => setResult(await oneClickAction(lang, { sku, qty: 1, phone, name: who, website: trap, fillMs: fillMs() })));
       }}
     >
       <div className="hm-drawer-head">

@@ -15,3 +15,4 @@ export * from "./storefront-plus";
 export * from "./payments";
 export * from "./receipts";
 export * from "./keycrm";
+export * from "./antispam";

@@ -49,7 +49,9 @@ export default function LoginPage() {
         </button>
       </form>
       <p style={{ color: "#666", fontSize: 14, marginTop: 16 }}>
-        Первый вход: логин <code>owner</code>, пароль — значение <code>ADMIN_TOKEN</code> из файла <code>.env</code>. После 5 неверных паролей вход закрывается на 15 минут.
+        {/* шаг 8.3: на сервере не подсказываем посторонним логин владельца */}
+        {process.env.NODE_ENV !== "production" && <>Первый вход: логин <code>owner</code>, пароль — значение <code>ADMIN_TOKEN</code> из файла <code>.env</code>. </>}
+        После 5 неверных попыток вход закрывается на 15 минут.
       </p>
     </main>
   );

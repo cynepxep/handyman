@@ -112,6 +112,11 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 ошибки страниц/действий/API — `onRequestError` в `instrumentation.ts`, браузера — `error.tsx` → `/api/client-error`; раздел «Ошибки» (`/admin/errors`, право `errors.view`),
 блок «Здоровье сайта» на `/admin`, `/api/health` (наружу только ok/error, подробности — `HEALTH_KEY` или вход). **Вместо `console.error` в серверном коде — `logError(...)`
 из `@handyman/db/errors`** (те же аргументы, метка `[модуль]` в начале; пишет и в консоль, и в журнал). Тревога о новых ошибках и чистка 30 дней — в `runJobs`.
+**8.3** защита: лимиты форм и входа — **в базе** (`db/src/rate-limit.ts`, таблица `RateLimit`, правила `RATE_RULES` в `core/src/shop/antispam.ts`);
+новая публичная форма — `guardForm("<правило>", form)` из `apps/web/lib/antispam.ts` (ловушка `website` + `fillMs` из `useFillTimer()` в `components/shop/fill-timer.ts` + лимит),
+адрес — `requestIp()` (`lib/request-ip.ts`). Повторный заказ (тот же телефон + корзина за 10 минут) склеивается в `createOrderRecord` (в тестах выключено: `HM_ORDER_DEDUPE=off`
+в `test/helpers.ts`). Чёрный список — `Client.blockedAt`, заказ → `Order.suspicious`, в KeyCRM сам не уходит. Вход в админку — лимит по адресу + тревога (`staff.ts`).
+Заголовки безопасности — `lib/security-headers.ts`; «Проверка перед запуском» — `/admin/launch-check` (`core/src/launch-check.ts`, `db/src/launch-check.ts`).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -168,7 +173,7 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 350 проверок (core 211 + интеграционные db 139). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 361 проверка (core 217 + интеграционные db 144). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

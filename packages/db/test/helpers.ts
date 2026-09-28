@@ -15,6 +15,8 @@ process.env.BOT_TOKEN = "";
 process.env.ADMIN_CHAT_ID = "";
 // Ночные резервные копии из runJobs в тестах не делаются (тест копий включает их сам, в своей временной папке).
 process.env.HM_BACKUPS = "off";
+// Защита от повторного заказа (шаг 8.3) в тестах выключена: они много раз оформляют одну и ту же корзину. Её тест включает защиту сам.
+process.env.HM_ORDER_DEDUPE = "off";
 
 export const sampleText = fs.readFileSync(path.join(here, "../../core/test/fixtures/vitals-sample.xml"), "utf8");
 export const skipMsg = "нет подключения к тестовой базе handyman_test (запустите pnpm infra:up)";
@@ -30,7 +32,7 @@ export async function setupTestDb() {
     const imp = await import("../src/catalog-import");
     const prod = await import("../src/catalog-products");
     await prisma.$queryRaw`select 1`;
-    await prisma.$executeRawUnsafe('TRUNCATE "Supplier","Brand","Category","Product","ImportRun","AuditLog","FeedCategoryMap","TextOverride","Page","Setting","Order","Client","Outbox","Warehouse","StockItem","SearchQueryDay","MediaSyncRun","ErrorLog" RESTART IDENTITY CASCADE');
+    await prisma.$executeRawUnsafe('TRUNCATE "Supplier","Brand","Category","Product","ImportRun","AuditLog","FeedCategoryMap","TextOverride","Page","Setting","Order","Client","Outbox","Warehouse","StockItem","SearchQueryDay","MediaSyncRun","ErrorLog","RateLimit" RESTART IDENTITY CASCADE');
     await prisma.category.createMany({
       data: [["ak", "Акумуляторний"], ["el", "Електро"], ["gr", "Садова"], ["hand", "Ручний"], ["acc", "Аксесуари"], ["bld", "Будівельне"], ["pw", "Силова"]]
         .map(([id, n], sort) => ({ id, nameUk: n, nameRu: n, sort })),

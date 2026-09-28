@@ -116,8 +116,9 @@ export async function keycrmSettled(): Promise<void> {
 /** Вызывается после создания заказа (сайт, «1 клік», «по звонку»). Ошибка здесь никогда не мешает оформлению. */
 export async function afterOrderCreated(orderId: string): Promise<void> {
   try {
-    const o = await prisma.order.findUnique({ where: { id: orderId }, select: { isTest: true, keycrmState: true, keycrmId: true } });
-    if (!o || o.isTest || o.keycrmState || o.keycrmId) return;
+    const o = await prisma.order.findUnique({ where: { id: orderId }, select: { isTest: true, keycrmState: true, keycrmId: true, suspicious: true } });
+    // шаг 8.3: «подозрительный» (чёрный список) сам не уходит — менеджер решает и отправляет кнопкой из заказа
+    if (!o || o.isTest || o.suspicious || o.keycrmState || o.keycrmId) return;
     if (!(await loadKeycrmSettings()).enabled || (await keycrmMode()) === "off") return;
     await prisma.order.update({ where: { id: orderId }, data: { keycrmState: "queued", keycrmNextTryAt: new Date() } });
     background(deliver(orderId));

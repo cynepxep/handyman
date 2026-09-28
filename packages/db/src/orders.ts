@@ -5,7 +5,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma, type Prisma, type OrderStatus } from "./client";
 import {
-  ACTION_STATUSES, CANCEL_REASON_RU, SELLER_SETTING_KEY, clientDiscountPct, kyivDayStart, needsCancelReason, parseSeller, type TierKey,
+  ACTION_STATUSES, CANCEL_REASON_RU, DUPLICATE_ORDER_MS, cartSignature, SELLER_SETTING_KEY, clientDiscountPct, kyivDayStart, needsCancelReason, parseSeller, type TierKey,
   type ManualOrderInput, type OrderFilters, type SellerDetails,
 } from "@handyman/core/shop";
 import {
@@ -125,7 +125,7 @@ const DELIVERY_DB = { np: "NOVA_POSHTA", pickup: "PICKUP", courier: "COURIER_ODE
 const PAY_RU: Record<keyof typeof PAY_DB, string> = { prepay: "предоплата", full: "полная оплата на сайте", card: "по реквизитам", later: "уточнить" };
 const NP_RU: Record<string, string> = { warehouse: "отделение", postomat: "почтомат", address: "адрес" };
 
-export type PlaceResult = { ok: true; no: string; accessKey: string; total: number; dueNow: number } | { ok: false; errors: CheckoutErrors };
+export type PlaceResult = { ok: true; no: string; accessKey: string; total: number; dueNow: number; duplicate?: boolean } | { ok: false; errors: CheckoutErrors };
 /** `clientId` — покупатель вошёл в кабинет (Этап 5): заказ — ему, скидка — его (личная или по уровню). Гостю скидки уровня нет. */
 export type PlaceOptions = { lang: "uk" | "ru"; isTest?: boolean; clientId?: string | null };
 
@@ -173,11 +173,25 @@ async function createOrderRecord(p: {
   noCallback?: boolean;
   history: string;
   sessionClientId?: string | null;
-}) {
+  /** шаг 8.3: тот же телефон и та же корзина за 10 минут — второй заказ не создаём, отдаём первый (HM_ORDER_DEDUPE=off — только тесты) */
+  dedupe?: boolean;
+}): Promise<CreatedOrder> {
   const clientPct = await clientDiscountFor(p.sessionClientId);
   const totals = computeTotals(p.lines, p.pay, p.settings, clientPct);
   const accessKey = randomBytes(12).toString("base64url");
   const created = await prisma.$transaction(async (tx) => {
+    if (p.dedupe && process.env.HM_ORDER_DEDUPE !== "off") {
+      // одновременно два заказа с одного телефона (двойное нажатие) проверяются по очереди, иначе оба не увидят друг друга
+      await tx.$queryRaw`SELECT 1 AS ok FROM pg_advisory_xact_lock(hashtext(${`order:${p.phone}`}))`;
+      const sig = cartSignature(p.lines);
+      const recent = await tx.order.findMany({
+        where: { recipientPhone: p.phone, source: p.source, isTest: false, status: { not: "CANCELLED" }, createdAt: { gte: new Date(Date.now() - DUPLICATE_ORDER_MS) } },
+        orderBy: { createdAt: "desc" }, take: 5,
+        select: { no: true, accessKey: true, total: true, dueNow: true, items: { select: { sku: true, qty: true } } },
+      });
+      const same = recent.find((o) => cartSignature(o.items) === sig);
+      if (same) return { duplicate: { no: same.no, accessKey: same.accessKey ?? "", total: same.total.toNumber(), dueNow: same.dueNow.toNumber() } };
+    }
     // вошёл в кабинет — заказ его (телефон в заказе — получателя); если у него ещё нет телефона и этот свободен — запомним
     let clientId: string;
     if (p.sessionClientId && (await tx.client.findUnique({ where: { id: p.sessionClientId }, select: { id: true } }))) {
@@ -188,6 +202,8 @@ async function createOrderRecord(p: {
     } else {
       clientId = await upsertClient(tx, p.phone, p.name, p.lang);
     }
+    // шаг 8.3: покупатель (или этот телефон) в чёрном списке — заказ принимаем, но помечаем «подозрительный» (покупателю не сообщаем)
+    const blocked = (await tx.client.count({ where: { blockedAt: { not: null }, OR: [{ id: clientId }, { phone: p.phone }] } })) > 0;
     const seq = await nextSeq(tx);
     // закупочная цена на момент заказа (шаг 4.5) — прибыль не «плывёт», если закупку потом поменяют
     const costs = new Map(
@@ -200,25 +216,30 @@ async function createOrderRecord(p: {
         subtotal: totals.subtotal, discountPct: totals.discountPct, total: totals.total, dueNow: totals.dueNow,
         city: p.city ?? null, address: p.address ?? null, npWarehouseRef: p.npPoint ?? null, deliveryType: p.npType ?? null,
         npCityRef: p.npCityRef ?? null, npPointRef: p.npPointRef ?? null, pickupWarehouseId: p.pickupWarehouseId ?? null,
-        comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest,
+        comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest, suspicious: blocked ? "blocked" : null,
         recipientName: p.name, recipientPhone: p.phone, source: p.source, createdBy: p.createdBy ?? null, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
         items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i], unitCost: costs.get(l.productId) ?? null })) },
-        history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") } },
+        history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") + (blocked ? ". ⚠️ Подозрительный: покупатель в чёрном списке — в KeyCRM сам не уйдёт" : "") } },
       },
     });
     // резерв на нашем складе (шаг 4.4): товар остаётся на полке, но покупателям его «доступно» меньше
     const { changed, low } = await reserveForOrder(tx, order.id, p.lines.filter((l) => l.stock === "local"));
     return { order, changed, low };
   });
+  if ("duplicate" in created && created.duplicate) return { duplicate: created.duplicate };
   if (created.changed.length) await reindexSafely(() => reindexProducts(created.changed));
   if (!p.isTest) await notifyLowStock(created.low);
   // шаг 3.5: в очередь KeyCRM (если передача включена; тестовые — только кнопкой). Модуль грузится здесь: keycrm.ts сам импортирует orders.ts
   if (!p.isTest) await (await import("./keycrm")).afterOrderCreated(created.order.id);
-  return { order: created.order, totals, accessKey };
+  return { duplicate: null, order: created.order, totals, accessKey };
 }
 
-function managerText(o: { no: string; isTest: boolean }, head: string, body: string[]) {
-  return [`${o.isTest ? "🧪 ТЕСТ · " : ""}${head} ${o.no}`, ...body.filter(Boolean)].join("\n");
+type CreatedOrder =
+  | { duplicate: null; order: Prisma.OrderGetPayload<object>; totals: ReturnType<typeof computeTotals>; accessKey: string }
+  | { duplicate: { no: string; accessKey: string; total: number; dueNow: number } };
+
+function managerText(o: { no: string; isTest: boolean; suspicious: string | null }, head: string, body: string[]) {
+  return [`${o.isTest ? "🧪 ТЕСТ · " : ""}${o.suspicious ? "⚠️ ПОДОЗРИТЕЛЬНЫЙ (чёрный список) · " : ""}${head} ${o.no}`, ...body.filter(Boolean)].join("\n");
 }
 
 /** Оформление заказа с сайта. Ошибки — ключи текстов витрины. */
@@ -255,8 +276,8 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     }
   }
 
-  const { order, totals, accessKey } = await createOrderRecord({
-    lines, pay: v.pay, delivery: v.delivery, settings, phone: v.phone, name, lang: opts.lang, isTest: opts.isTest ?? false, source: "site",
+  const rec = await createOrderRecord({
+    lines, pay: v.pay, delivery: v.delivery, settings, phone: v.phone, name, lang: opts.lang, isTest: opts.isTest ?? false, source: "site", dedupe: !opts.isTest,
     city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : pickup?.cityUk ?? null,
     address: v.delivery === "courier" ? v.address : pickup?.addressUk ?? null,
     npType: v.delivery === "np" ? v.npType : null, npPoint: v.delivery === "np" ? npPoint : null,
@@ -264,6 +285,9 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     pickupWarehouseId: pickup?.id ?? null,
     comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте", sessionClientId: opts.clientId,
   });
+  // повтор той же корзины (второе нажатие, обновили страницу) — показываем первый заказ, менеджеру второй раз не пишем
+  if (rec.duplicate) return { ok: true, duplicate: true, ...rec.duplicate };
+  const { order, totals, accessKey } = rec;
   const delivery =
     v.delivery === "np" ? `Нова Пошта: ${v.city}, ${npPointRef ? npPoint : `${NP_RU[v.npType ?? "warehouse"]} ${npPoint}`}`
     : v.delivery === "pickup" ? `Самовывоз${pickup ? `: ${pickup.cityUk}, ${pickup.addressUk}` : " из магазина"}`
@@ -282,7 +306,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
 export async function placeOneClick(
   raw: { sku?: unknown; qty?: unknown; phone?: unknown; name?: unknown },
   opts: PlaceOptions,
-): Promise<{ ok: true; no: string; accessKey: string } | { ok: false; error: string }> {
+): Promise<{ ok: true; no: string; accessKey: string; duplicate?: boolean } | { ok: false; error: string }> {
   const phone = normalizePhone(String(raw.phone ?? ""));
   if (!phone) return { ok: false, error: "errPhone" };
   const items: CartLineInput[] = cleanCart([{ sku: raw.sku, qty: raw.qty ?? 1 }]);
@@ -290,10 +314,12 @@ export async function placeOneClick(
   if (!quote.lines.length) return { ok: false, error: "err.itemsGone" };
   const name = String(raw.name ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
   const settings = await loadCheckoutSettings();
-  const { order } = await createOrderRecord({
+  const rec = await createOrderRecord({
     lines: quote.lines, pay: "later", delivery: "to_confirm", settings, phone, name, lang: opts.lang, isTest: opts.isTest ?? false,
-    source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId,
+    source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId, dedupe: !opts.isTest,
   });
+  if (rec.duplicate) return { ok: true, duplicate: true, no: rec.duplicate.no, accessKey: rec.duplicate.accessKey };
+  const { order } = rec;
   const l = quote.lines[0];
   await notifyManagers(managerText(order, "⚡ Купить в 1 клик", [
     `${name || "Без имени"}, ${formatPhone(phone)} — перезвонить`,
@@ -362,7 +388,7 @@ export async function placeManualOrder(v: ManualOrderInput, who: string): Promis
   if (quote.missing.length) return { ok: false, error: `Товар не найден или скрыт: ${quote.missing.join(", ")}.` };
   const settings = await loadCheckoutSettings();
   const pickup = v.delivery === "pickup" ? await prisma.warehouse.findFirst({ where: { isPickup: true }, orderBy: [{ isDefault: "desc" }, { sort: "asc" }] }) : null;
-  const { order } = await createOrderRecord({
+  const rec = await createOrderRecord({
     lines: quote.lines, pay: v.pay, delivery: v.delivery, settings, phone: v.phone, name: v.name, lang: "uk", isTest: v.isTest,
     source: "manual", createdBy: who,
     city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : pickup?.cityUk ?? null,
@@ -371,6 +397,8 @@ export async function placeManualOrder(v: ManualOrderInput, who: string): Promis
     pickupWarehouseId: pickup?.id ?? null, comment: v.comment || null,
     history: `Заказ создан менеджером по звонку (${who})`,
   });
+  if (rec.duplicate) return { ok: false, error: "Такой заказ уже есть." }; // без dedupe не бывает
+  const { order } = rec;
   await prisma.auditLog.create({ data: { who, action: "order.manual", target: order.id, details: json({ no: order.no, items: v.items.length }) } });
   return { ok: true, id: order.id, no: order.no };
 }
@@ -396,6 +424,15 @@ export const getOrderDetail = (id: string) =>
       outboxEntries: { where: { audience: "manager" }, orderBy: { createdAt: "asc" } }, pickupWarehouse: { select: { name: true } },
     },
   });
+
+/** Шаг 8.3: менеджер проверил «подозрительный» заказ — снять отметку (в KeyCRM его можно отправить кнопкой в заказе). */
+export async function clearSuspicious(orderId: string, who: string): Promise<boolean> {
+  const r = await prisma.order.updateMany({ where: { id: orderId, suspicious: { not: null } }, data: { suspicious: null } });
+  if (!r.count) return false;
+  await prisma.orderHistory.create({ data: { orderId, text: `Отметка «подозрительный» снята (${who})` } });
+  await prisma.auditLog.create({ data: { who, action: "order.suspicious.clear", target: orderId } });
+  return true;
+}
 
 /**
  * Сменить статус (и/или добавить заметку). Для «Отменён» и «Возврат» — причина из CANCEL_REASONS (если не указана — «Другое»);

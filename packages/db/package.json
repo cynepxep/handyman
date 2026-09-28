@@ -40,7 +40,9 @@
     "./backups": "./src/backups.ts",
     "./offsite": "./src/offsite.ts",
     "./errors": "./src/errors.ts",
-    "./health": "./src/health.ts"
+    "./health": "./src/health.ts",
+    "./rate-limit": "./src/rate-limit.ts",
+    "./launch-check": "./src/launch-check.ts"
   },
   "scripts": {
     "generate": "prisma generate",

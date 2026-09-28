@@ -1,7 +1,7 @@
 // Фоновые задачи (шаг 4.8): раз в минуту `runJobs()` смотрит, что пора сделать — ежедневная сводка, отчёт по понедельникам,
 // напоминания по задачам, тревоги (импорт не прошёл, продажи упали), повтор неудачных сообщений, опрос оплат monobank (шаг 3.2),
 // кассовые чеки Checkbox и закрытие смены в 23:00 (шаг 3.3), передача заказов в KeyCRM и их статусы (шаг 3.5), ночная резервная копия
-// и еженедельная проверка восстановления (шаг 8.1, идут в фоне), тревоги и чистка журнала ошибок (шаг 8.2). Запускается вместе с сайтом
+// и еженедельная проверка восстановления (шаг 8.1, идут в фоне), тревоги и чистка журнала ошибок (шаг 8.2), чистка лимитов форм (шаг 8.3). Запускается вместе с сайтом
 // (apps/web/instrumentation.ts). «Один раз» гарантирует база: отметка `job:<ключ>` в Setting — даже при нескольких копиях сайта.
 
 import { prisma, Prisma } from "./client";
@@ -18,6 +18,7 @@ import { processKeycrm } from "./keycrm";
 import { runBackupJobs } from "./backups";
 import { alertErrors, logError, pruneErrors } from "./errors";
 import { markJobsRun } from "./health";
+import { pruneRateLimits } from "./rate-limit";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -198,6 +199,11 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
     // шаг 8.2: новые ошибки и всплески — сообщение в Telegram (не чаще раза в час на группу); группы старше 30 дней — удалить
     if (s.alerts) rep.errorAlerts = await alertErrors((text) => notifyManagers(text), now);
     await pruneErrors(now);
+  });
+
+  await step("rate-limits", async () => {
+    // шаг 8.3: счётчики лимитов форм и входа, чьё окно уже кончилось
+    await pruneRateLimits(now);
   });
 
   await step("retry", async () => {

@@ -9,7 +9,7 @@ import { dirname } from "node:path";
 import sharp from "sharp";
 import { prisma, Prisma, type WatchKind } from "./client";
 import {
-  REVIEW_MAX_PHOTOS, availableQty, formatPhone, ratingSummary, stockLevel, validateCallback, validateReview, watchDue, type StockLevel,
+  RATE_RULES, REVIEW_MAX_PHOTOS, availableQty, formatPhone, ratingSummary, stockLevel, validateCallback, validateReview, watchDue, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS, slugify } from "@handyman/core/catalog";
 import { fillText, paths, resolveTexts, shopHref } from "@handyman/core/site";
@@ -17,6 +17,8 @@ import { mediaFilePath } from "./media";
 import { notifyClient, notifyManagers } from "./notify";
 import { loadTextOverrides } from "./site-content";
 import { reindexProducts, reindexSafely } from "./catalog-search";
+import { rateHit } from "./rate-limit";
+import { isPhoneBlocked } from "./clients";
 
 export class PlusUserError extends Error {}
 
@@ -128,7 +130,8 @@ export async function myToolGroups(clientId: string | null | undefined): Promise
 
 // ================= отзывы и вопросы =================
 
-export const REVIEWS_PER_HOUR = 5;
+/** Отзывов и вопросов в час с одного адреса (шаг 8.3: считает RATE_RULES.review). */
+export const REVIEWS_PER_HOUR = RATE_RULES.review.limit;
 
 /** Фото из отзыва: проверяем, что это картинка, поворачиваем по EXIF, уменьшаем до 1600 px, в WebP без метаданных (без GPS). */
 export async function saveReviewPhoto(buf: Buffer): Promise<string> {
@@ -161,8 +164,8 @@ export async function createReview(p: NewReview): Promise<{ ok: true; kind: "rev
   const product = await prisma.product.findUnique({ where: { id: p.productId }, select: { id: true, sku: true, nameUk: true, visible: true, categoryId: true } });
   if (!product || !product.visible || HIDDEN_CATEGORY_IDS.includes(product.categoryId)) return { ok: false, error: "err.itemsGone" };
   const ipHash = createHash("sha256").update(`rv:${p.ip}`).digest("hex").slice(0, 32);
-  const recent = await prisma.review.count({ where: { ipHash, createdAt: { gte: new Date(Date.now() - 3600_000) } } });
-  if (recent >= REVIEWS_PER_HOUR) return { ok: false, error: "err.tooMany" };
+  // шаг 8.3: общий лимит в базе (RATE_RULES.review — 5 в час с одного адреса)
+  if (!(await rateHit("review", p.ip)).ok) return { ok: false, error: "err.tooMany" };
   const v = check.value;
   const r = await prisma.review.create({
     data: {
@@ -363,10 +366,11 @@ export async function requestCallback(raw: Record<string, unknown>, opts: { prod
   if ((await prisma.task.count({ where: { who: "сайт", createdAt: { gte: new Date(now - 10 * 60_000) } } })) >= 20) return { ok: false, error: "err.tooMany" };
   const product = opts.productId ? await prisma.product.findUnique({ where: { id: opts.productId }, select: { sku: true, nameUk: true } }) : null;
   const client = opts.clientId ? { id: opts.clientId } : await prisma.client.findUnique({ where: { phone }, select: { id: true } });
-  const title = `📞 Перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? ` — ${product.nameUk} (${product.sku})` : ""}${note ? ` · ${note}` : ""}${opts.lang === "ru" ? " · рус." : ""}`;
+  const blocked = await isPhoneBlocked(phone); // шаг 8.3: чёрный список — заявку принимаем, менеджер видит пометку
+  const title = `${blocked ? "⚠️ чёрный список · " : ""}📞 Перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? ` — ${product.nameUk} (${product.sku})` : ""}${note ? ` · ${note}` : ""}${opts.lang === "ru" ? " · рус." : ""}`;
   // срок — сейчас, напоминание уже отправлено этим же сообщением (фоновые задачи не повторят)
   await prisma.task.create({ data: { title: title.slice(0, 300), dueAt: new Date(now), notifiedAt: new Date(now), who: "сайт", clientId: client?.id ?? null } });
-  await notifyManagers(`📞 Просят перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? `\nТовар: ${product.nameUk} (${product.sku})` : ""}${note ? `\n${note}` : ""}`).catch(() => {});
+  await notifyManagers(`${blocked ? "⚠️ ПОДОЗРИТЕЛЬНЫЙ (чёрный список) · " : ""}📞 Просят перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? `\nТовар: ${product.nameUk} (${product.sku})` : ""}${note ? `\n${note}` : ""}`).catch(() => {});
   return { ok: true, phone: shown };
 }
 

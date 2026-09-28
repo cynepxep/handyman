@@ -7,6 +7,8 @@ import { prisma } from "@handyman/db";
 import { isShopLang } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
 import { TG_LOGIN_COOKIE, getClient, logoutClient, refCodeFromCookie, setClientCookie } from "@/lib/client-auth";
+import { rateHit } from "@handyman/db/rate-limit";
+import { requestIp } from "@/lib/request-ip";
 
 export type TgStart = { link: string } | { error: string };
 export type TgCheck = { status: "wait" | "expired" | "ok" };
@@ -14,6 +16,7 @@ export type SmsState = { step: "phone" | "code"; phone?: string; error?: string;
 
 /** Начать вход через Telegram: ссылка на бота; код запоминается в куке этого браузера. */
 export async function startTgLoginAction(): Promise<TgStart> {
+  if (!(await rateHit("tgLogin", await requestIp())).ok) return { error: "login.err.limit" }; // шаг 8.3: не больше 10 ссылок за 10 минут с адреса
   const r = await startTgLogin();
   if (!r) return { error: "login.sms.off" };
   (await cookies()).set(TG_LOGIN_COOKIE, r.code, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 600 });
@@ -39,11 +42,15 @@ export async function smsLoginAction(prev: SmsState, formData: FormData): Promis
   const lang = String(formData.get("lang") ?? "uk");
   const { t } = await getShopContent(isShopLang(lang) ? lang : "uk");
   if (formData.get("step") === "code" && prev.phone) {
+    // шаг 8.3: подбор кода с одного адреса — не больше 10 попыток за 15 минут (на сам код — 5 попыток)
+    if (!(await rateHit("smsVerify", await requestIp())).ok) return { step: "code", phone: prev.phone, error: "login.err.limit" };
     const r = await verifySmsCode(prev.phone, String(formData.get("code") ?? ""), await refCodeFromCookie());
     if (!r.ok) return { step: r.error === "phone" ? "phone" : "code", phone: prev.phone, error: r.error === "code" ? "login.err.code" : r.error === "expired" ? "login.err.expired" : "login.err.phone" };
     await setClientCookie(r.token);
     return { step: "code", phone: prev.phone, error: undefined, errorVars: { done: 1 } };
   }
+  // шаг 8.3: SMS стоят денег — не больше 5 кодов в час с одного адреса (на один номер — свои лимиты)
+  if (!(await rateHit("smsSend", await requestIp())).ok) return { step: "phone", phone: prev.phone, error: "login.err.limit" };
   const r = await sendSmsCode(String(formData.get("phone") ?? prev.phone ?? ""), (code) => t("login.sms.text", { code }));
   if (!r.ok) {
     const key = r.error === "phone" ? "login.err.phone" : r.error === "wait" ? "login.err.wait" : r.error === "limit" ? "login.err.limit" : "login.sms.off";

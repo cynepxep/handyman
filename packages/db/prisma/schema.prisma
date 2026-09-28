@@ -572,6 +572,10 @@ model Client {
   cart              Json? // Этап 5.5: общая корзина сайт ↔ Mini App ([{ sku, qty }]), только у вошедших
   cartVersion       Int       @default(0) // растёт при каждой записи корзины (браузер помнит, какую версию видел)
   cartUpdatedAt     DateTime?
+  // шаг 8.3: чёрный список — заказы принимаются, но помечаются «подозрительный» и сами не уходят в KeyCRM (покупателю не сообщаем)
+  blockedAt         DateTime?
+  blockedNote       String?
+  blockedBy         String?
   createdAt         DateTime  @default(now())
 
   orders       Order[]
@@ -720,6 +724,7 @@ model Order {
   createdBy      String? // шаг 4.3: сотрудник, оформивший заказ по звонку (source = manual)
   shopDeliveryCost Decimal      @default(0) @db.Decimal(10, 2) // шаг 4.5: доставка за счёт магазина (для прибыли)
   doneAt         DateTime? // шаг 4.5: когда стал «Выполнен» (месяц выручки); при уходе из «Выполнен» — пусто
+  suspicious     String? // шаг 8.3: «подозрительный» — почему (blocked — покупатель в чёрном списке); сам в KeyCRM не уходит
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 
@@ -735,6 +740,7 @@ model Order {
   @@index([clientId])
   @@index([status])
   @@index([keycrmState])
+  @@index([recipientPhone, createdAt])
 }
 
 model OrderItem {
@@ -1195,4 +1201,15 @@ model ErrorLog {
 
   @@index([closedAt, lastAt])
   @@index([lastAt])
+}
+
+// шаг 8.3: лимиты публичных форм и входа (заказы, «1 клік», «Передзвоніть мені», коды входа, пароль админки…) — в базе, а не в памяти:
+// не сбрасываются при перезапуске и общие для всех копий сайта. Строка = «правило : кто (хеш адреса/телефона) : окно времени».
+// Правила — RATE_RULES в packages/core/src/shop/antispam.ts, запись — packages/db/src/rate-limit.ts; старые строки чистит runJobs.
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
 }
