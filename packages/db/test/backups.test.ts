@@ -165,18 +165,22 @@ test("ночью из runJobs: копия с 03:30 по Киеву один ра
   process.env.HM_BACKUPS = "";
   try {
     const jobs = await import("../src/jobs");
-    // сегодня (по Киеву) 03:40 — имя копии получит сегодняшнюю дату
-    const ymd = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Kyiv" });
-    const offsetH = Number(new Date(`${ymd}T12:00:00Z`).toLocaleString("en-GB", { timeZone: "Europe/Kyiv", hour: "2-digit", hourCycle: "h23" })) - 12;
-    const due = new Date(Date.parse(`${ymd}T03:40:00Z`) - offsetH * 3600_000);
-    assert.equal(await bk.runBackupJobs(new Date(due.getTime() - 20 * 60_000)), null, "03:20 — рано");
+    // сегодня (по Киеву) 03:40 — имя копии получит сегодняшнюю дату. Если тесты идут позже 03:40, «ручные» копии прошлых тестов
+    // этого дня новее — правило хранения (самая новая копия дня) убрало бы ночную; поэтому «ночь» — не раньше, чем через минуту.
+    const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Kyiv" });
+    const offsetH = Number(new Date(`${today}T12:00:00Z`).toLocaleString("en-GB", { timeZone: "Europe/Kyiv", hour: "2-digit", hourCycle: "h23" })) - 12;
+    const kyiv = (hm: string) => new Date(Date.parse(`${today}T${hm}:00Z`) - offsetH * 3600_000);
+    const due = new Date(Math.max(kyiv("03:40").getTime(), Date.now() + 60_000));
+    const ymd = due.toLocaleDateString("sv-SE", { timeZone: "Europe/Kyiv" });
+    const later = new Date(Math.min(due.getTime() + 2 * 3600_000, Math.max(due.getTime(), kyiv("23:59").getTime())));
+    assert.equal(await bk.runBackupJobs(kyiv("03:20")), null, "03:20 — рано");
     const rep = await jobs.runJobs(due);
     assert.equal(rep.backup, "backup");
     assert.equal(await bk.runBackupJobs(due), null, "идёт — вторую не начинаем");
     await bk.backupSettled();
     const auto = (await bk.listBackups()).find((b) => b.kind === "auto" && b.name.startsWith(ymd));
     assert.equal(auto?.state, "ok");
-    assert.equal(await bk.runBackupJobs(new Date(due.getTime() + 2 * 3600_000)), null, "сегодня уже есть — и проверка была недавно");
+    assert.equal(await bk.runBackupJobs(later), null, "сегодня уже есть — и проверка была недавно");
     assert.equal(await bk.startInBackground("check", "тест"), true, "кнопка «Проверить»");
     assert.equal(await bk.startInBackground("backup", "тест"), false, "пока идёт проверка — копия не начинается");
     await bk.backupSettled();

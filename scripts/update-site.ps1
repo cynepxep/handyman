@@ -34,6 +34,12 @@ function DockerReady {
   try { & docker info *> $null; return ($LASTEXITCODE -eq 0) } catch { return $false } finally { $ErrorActionPreference = $old }
 }
 
+# ---------- магазин переехал на сервер (шаг 8.5, docs/LAUNCH.md) ----------
+# После переезда сайт на этом компьютере не запускаем: он читал бы того же бота и отправлял те же сводки и напоминания.
+if (Test-Path -LiteralPath (Join-Path $root ".data\moved-to-server.txt")) {
+  Fail "магазин переехал на сервер (файл .data\moved-to-server.txt), и запуск сайта на этом компьютере выключен. Обновление теперь — на сервере: bash deploy/update.sh. Вернуть сайт на компьютер — docs/LAUNCH.md, раздел «Откат»."
+}
+
 # ---------- ярлык на рабочем столе ----------
 try {
   $desktop = [Environment]::GetFolderPath("Desktop")

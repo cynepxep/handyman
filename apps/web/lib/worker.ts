@@ -1,5 +1,5 @@
 // Фоновые задачи вместе с сайтом (шаг 4.8): раз в минуту — сводки, напоминания, тревоги (`runJobs`, packages/db/src/jobs.ts).
-// Этап 5: бот в Telegram — долгий опрос новых сообщений (если не задан вебхук BOT_WEBHOOK=on — это для сервера с доменом, Этап 8).
+// Этап 5: бот в Telegram — долгий опрос новых сообщений (и на сервере тоже, шаг 8.5; BOT_WEBHOOK=on — только если вебхук зарегистрирован у Telegram).
 // Запускается из instrumentation.ts один раз на процесс. Выключить: HM_WORKER=off (всё) или HM_BOT=off (только чтение бота).
 import { hostname } from "node:os";
 import { runJobs } from "@handyman/db/jobs";

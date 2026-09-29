@@ -1,5 +1,5 @@
 // Защита (шаг 8.3) на базе handyman_test: лимиты в базе, повторный заказ, чёрный список («подозрительный», без KeyCRM),
-// перебор пароля админки с одного адреса + тревога, «Проверка перед запуском».
+// перебор пароля админки с одного адреса + тревога, «Проверка перед запуском», открытие для Google (8.5).
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { setupTestDb, waitDone, cleanup, sampleText, skipMsg, file } from "./helpers";
@@ -232,5 +232,27 @@ test("проверка перед запуском: пароль owner «change-
     for (const v of [process.env.DATABASE_URL, process.env.MEILI_MASTER_KEY].filter((x): x is string => Boolean(x && x.length > 8))) assert.ok(!text.includes(v), "значения ключей не показываются");
   } finally {
     await prisma.staff.deleteMany({ where: { username: "claude-test" } });
+  }
+});
+
+test("открытие для Google (8.5): по умолчанию закрыто; «Открыть» — в проверке и в журнале; «Закрыть» — обратно", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  const lc = await import("../src/launch-check");
+  await prisma.setting.deleteMany({ where: { key: "site.indexing" } });
+  try {
+    assert.deepEqual(await lc.loadIndexing(), { open: false, at: null, by: null });
+    assert.equal((await lc.launchFacts()).indexing.open, false);
+    const saved = await lc.saveIndexing(true, "Владелец");
+    assert.equal(saved.open, true);
+    assert.equal((await lc.loadIndexing()).by, "Владелец");
+    const st = Object.fromEntries((await lc.launchCheck()).map((i) => [i.id, i.status]));
+    assert.equal(st.indexing, "warn", "открыт не на сервере (тесты — не production) — «желательно»");
+    assert.equal(await prisma.auditLog.count({ where: { action: "site.indexing.open", who: "Владелец" } }), 1);
+    await lc.saveIndexing(false, "Владелец");
+    assert.equal((await lc.loadIndexing()).open, false);
+    assert.equal(await prisma.auditLog.count({ where: { action: "site.indexing.close" } }), 1);
+  } finally {
+    await prisma.setting.deleteMany({ where: { key: "site.indexing" } });
+    await prisma.auditLog.deleteMany({ where: { action: { startsWith: "site.indexing." } } });
   }
 });

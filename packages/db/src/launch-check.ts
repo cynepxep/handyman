@@ -12,6 +12,25 @@ import { loadSecurity } from "./staff";
 
 const TMP_LOGIN = "claude-test";
 
+// ---------- открытие сайта для поисковиков (шаг 8.5): Setting «site.indexing», переключает владелец ----------
+const INDEXING_KEY = "site.indexing";
+export type IndexingState = { open: boolean; at: string | null; by: string | null };
+
+/** Открыт ли сайт для поисковиков. Нет записи или база недоступна — закрыт (безопасно). */
+export async function loadIndexing(): Promise<IndexingState> {
+  const v = (await prisma.setting.findUnique({ where: { key: INDEXING_KEY } }).catch(() => null))?.value as Partial<IndexingState> | undefined;
+  return { open: v?.open === true, at: typeof v?.at === "string" ? v.at : null, by: typeof v?.by === "string" ? v.by : null };
+}
+
+export async function saveIndexing(open: boolean, who: string): Promise<IndexingState> {
+  const value: IndexingState = { open, at: new Date().toISOString(), by: who };
+  await prisma.$transaction([
+    prisma.setting.upsert({ where: { key: INDEXING_KEY }, update: { value }, create: { key: INDEXING_KEY, value } }),
+    prisma.auditLog.create({ data: { who, action: open ? "site.indexing.open" : "site.indexing.close" } }),
+  ]);
+  return value;
+}
+
 /** Временный адрес входа для проверок в исходниках или в собранном сайте. */
 function tmpRouteExists(): boolean {
   const web = join(/*turbopackIgnore: true*/ projectRoot(), "apps", "web");
@@ -20,7 +39,7 @@ function tmpRouteExists(): boolean {
 
 export async function launchFacts(): Promise<LaunchFacts> {
   const env = process.env;
-  const [owner, security, staff, tmpAccount, integrations, backups, openErrors] = await Promise.all([
+  const [owner, security, staff, tmpAccount, integrations, backups, openErrors, indexing] = await Promise.all([
     prisma.staff.findUnique({ where: { username: "owner" }, select: { passwordSalt: true, passwordHash: true, twoFactorSecret: true } }),
     loadSecurity(),
     prisma.staff.count({ where: { active: true, twoFactorSecret: null, username: { not: TMP_LOGIN } } }),
@@ -28,6 +47,7 @@ export async function launchFacts(): Promise<LaunchFacts> {
     integrationsOverview(),
     backupOverview().catch(() => null),
     prisma.errorLog.count({ where: { closedAt: null } }),
+    loadIndexing(),
   ]);
   const token = env.ADMIN_TOKEN?.trim() ?? "";
   return {
@@ -52,6 +72,7 @@ export async function launchFacts(): Promise<LaunchFacts> {
     },
     integrations: integrations.map((i) => ({ id: i.id, title: i.title, configured: i.configured, check: i.check ? { ok: i.check.ok, at: i.check.at } : null })),
     openErrors,
+    indexing: { open: indexing.open, at: indexing.at },
   };
 }
 
