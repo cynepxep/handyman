@@ -1,0 +1,103 @@
+# Сайт на сервере (шаг 8.4): база, поиск, сайт и Caddy (https) — одной командой. Пошагово — deploy/README.md.
+#   docker compose -f docker-compose.prod.yml up -d --build     — собрать и запустить (или обновить: deploy/update.sh)
+#   docker compose -f docker-compose.prod.yml exec web hm help  — служебные команды (сид, поиск, копии)
+# Настройки — файл .env рядом (шаблон: .env.production.example). Наружу открыты только порты 80/443 (Caddy);
+# база и поиск доступны только сайту внутри Docker. Данные — в томах (docker volume ls): база, поиск, фото, ключ и фиды, копии.
+# Для разработки на ПК остаётся docker-compose.yml (только база/поиск, сайт — pnpm dev).
+
+name: handyman-prod
+
+x-logging: &logging
+  # журналы контейнеров не растут бесконечно: 5 файлов по 10 МБ на контейнер
+  driver: json-file
+  options: { max-size: "10m", max-file: "5" }
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: handyman
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?впишите POSTGRES_PASSWORD в .env}
+      POSTGRES_DB: handyman
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U handyman"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.11
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?впишите MEILI_MASTER_KEY в .env}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: "true"
+    volumes:
+      - meili_data:/meili_data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:7700/health || wget -qO- http://127.0.0.1:7700/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    logging: *logging
+
+  web:
+    image: handyman-web:latest
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm}
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 30s
+    depends_on:
+      postgres: { condition: service_healthy }
+      meilisearch: { condition: service_healthy }
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://handyman:${POSTGRES_PASSWORD}@postgres:5432/handyman?schema=public
+      MEILI_HOST: http://meilisearch:7700
+      # папки внутри контейнера — это тома ниже (не менять)
+      MEDIA_DIR: /media
+      BACKUP_DIR: /backups
+      FEEDS_DIR: /data/feeds
+      SECRETS_KEY_FILE: /data/secrets.key
+    volumes:
+      - web_data:/data
+      - media:/media
+      - backups:/backups
+    # только для этого компьютера (проверка без Caddy: curl http://127.0.0.1:3000/api/health); из интернета закрыт
+    ports:
+      - "127.0.0.1:${WEB_LOCAL_PORT:-3000}:3000"
+    logging: *logging
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on: [web]
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?впишите SITE_ADDRESS в .env (домен, например shop.example.ua)}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    logging: *logging
+
+volumes:
+  postgres_data:
+  meili_data:
+  web_data:
+  media:
+  backups:
+  caddy_data:
+  caddy_config:

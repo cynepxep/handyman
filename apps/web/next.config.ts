@@ -1,9 +1,20 @@
+import { join } from "node:path";
 import type { NextConfig } from "next";
 import { IMAGE_HOSTS } from "./lib/image-hosts";
 import { securityHeaders } from "./lib/security-headers";
 
+// Шаг 8.4: сборка для сервера (Docker) — самодостаточная папка .next/standalone (запуск: node apps/web/server.js).
+// Включается переменной NEXT_STANDALONE=1 (её ставит apps/web/Dockerfile); на ПК владельца сборка и next start — как раньше.
+const standalone = process.env.NEXT_STANDALONE === "1";
+
 const nextConfig: NextConfig = {
   transpilePackages: ["@handyman/db", "@handyman/core"],
+  ...(standalone && {
+    output: "standalone" as const,
+    // монорепозиторий: пакеты packages/db и packages/core лежат выше папки сайта
+    outputFileTracingRoot: join(__dirname, "..", ".."),
+    turbopack: { root: join(__dirname, "..", "..") },
+  }),
   // шаг 8.3: не сообщаем, на чём сделан сайт; заголовки безопасности — lib/security-headers.ts
   poweredByHeader: false,
   headers: async () => securityHeaders(process.env.NODE_ENV === "production"),

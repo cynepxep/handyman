@@ -117,6 +117,12 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 адрес — `requestIp()` (`lib/request-ip.ts`). Повторный заказ (тот же телефон + корзина за 10 минут) склеивается в `createOrderRecord` (в тестах выключено: `HM_ORDER_DEDUPE=off`
 в `test/helpers.ts`). Чёрный список — `Client.blockedAt`, заказ → `Order.suspicious`, в KeyCRM сам не уходит. Вход в админку — лимит по адресу + тревога (`staff.ts`).
 Заголовки безопасности — `lib/security-headers.ts`; «Проверка перед запуском» — `/admin/launch-check` (`core/src/launch-check.ts`, `db/src/launch-check.ts`).
+**8.4** сборка для сервера (`deploy/README.md`): `apps/web/Dockerfile` (standalone — только при `NEXT_STANDALONE=1`; Ubuntu 24.04 + `postgresql-client-16`; сборка в той же
+папке `/app`, иначе Prisma не найдёт движок), `docker-compose.prod.yml` (проект `handyman-prod`: postgres, meilisearch, web, Caddy `deploy/Caddyfile`), `.env.production.example`,
+запуск — `deploy/entrypoint.sh` (миграции + ремонты, поиск если нет), служебные команды — `deploy/hm`, обновление — `deploy/update.sh` (копия → pull → build → up → health → откат).
+Новая служебная команда для сервера — в `deploy/hm` (+ список в `entrypoint.sh`); новый путь к данным — переменная в `docker-compose.prod.yml`/Dockerfile и том, не папка проекта.
+Сборка образа в облаке: доступ к пакетам Alpine/Debian закрыт, прокси подменяет сертификат — базовый образ Node с сертификатом песочницы и `--build-arg NODE_IMAGE=…`
+(см. CHANGELOG 8.4); e2e на боевой сборке — `E2E_BASE_URL=https://localhost CHROME_PATH=… pnpm test:e2e`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -173,11 +179,13 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 361 проверка (core 217 + интеграционные db 144). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 362 проверки (core 217 + интеграционные db 145). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
 | `pnpm backup:now` / `backup:check` / `backup:restore <копия> --yes` | резервная копия сейчас / проверка восстановления во временную базу / восстановление (`docs/BACKUPS.md`) |
+| `bash deploy/update.sh` (на сервере) | обновить сайт на сервере: копия → `git pull` → сборка → перезапуск → проверка, при сбое — откат (`deploy/README.md`) |
+| `docker compose -f docker-compose.prod.yml exec web hm help` | служебные команды в контейнере сайта на сервере (сид, поиск, копии) |
 
 Тестовая база создаётся один раз: `docker exec handyman-next-postgres-1 psql -U handyman -d postgres -c "CREATE DATABASE handyman_test"`
 (миграции тесты накатывают сами). Если Postgres/Meilisearch не запущены, интеграционные тесты **пропускаются** (`skipped` в отчёте).
@@ -291,4 +299,5 @@ Next.js 16 (App Router) — сайт (обычный, по ссылке, раб�
   расчёт суммы и проверка заказа (`@handyman/core/shop`); `test/`.
 - `packages/db` — Prisma-схема, сидирование, клиент; `src/catalog-import.ts`, `catalog-products.ts`, `catalog-search.ts`, `site-content.ts`, `orders.ts` (корзина, заказы, склад), `notify.ts` (Telegram через Outbox); `test/` (интеграционные), `scripts/reindex.ts`.
 - `docker-compose.yml` — Postgres/Redis/Meilisearch/web/bot для локального запуска.
+- `docker-compose.prod.yml`, `apps/web/Dockerfile`, `deploy/` (Caddyfile, entrypoint, `hm`, `update.sh`, README) — сайт на сервере (шаг 8.4).
 - `docs/` — `CHANGELOG.md`, `CATALOG-IMPORT.md`, `MIGRATION-NOTES.md`, `SITE-CONTENT.md` (что владелец меняет в разделе «Сайт»), `stage2/` (пакет Этапа 2).
