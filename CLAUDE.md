@@ -123,6 +123,12 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 Новая служебная команда для сервера — в `deploy/hm` (+ список в `entrypoint.sh`); новый путь к данным — переменная в `docker-compose.prod.yml`/Dockerfile и том, не папка проекта.
 Сборка образа в облаке: доступ к пакетам Alpine/Debian закрыт, прокси подменяет сертификат — базовый образ Node с сертификатом песочницы и `--build-arg NODE_IMAGE=…`
 (см. CHANGELOG 8.4); e2e на боевой сборке — `E2E_BASE_URL=https://localhost CHROME_PATH=… pnpm test:e2e`.
+**8.5** переезд и запуск: **`docs/LAUNCH.md`** (ПК → сервер, откат), **`docs/LAUNCH-CHECKLIST.md`** (тестовые заказы, браузеры); на сервере перенос —
+`deploy/move-from-pc.sh <копия>` (сам вписывает `SECRETS_KEY` из копии), обратно — `deploy/export-for-pc.sh`; на время подготовки сервера — `HM_WORKER=off`;
+файл `.data\moved-to-server.txt` на ПК → «Обновить сайт» не запускает сайт. Бот на сервере — долгий опрос (вебхук не регистрируется). **Открытие для Google** —
+кнопка в «Проверке перед запуском» (Setting `site.indexing`, `loadIndexing`/`saveIndexing`; `robotsRules` в `core/src/launch-check.ts` → `app/robots.ts`;
+`<meta robots>` витрины — `shopRobots()` из `lib/shop/indexing.ts`). Новая служебная страница витрины, которую не надо показывать Google, — в `ROBOTS_PRIVATE_PATHS`
+и `robots: { index: false }` у страницы. **Этап 8 завершён** — дальше правки владельца (`docs/QUESTIONS-TO-OWNER.md`) и переезд по `docs/LAUNCH.md`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -179,11 +185,12 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 362 проверки (core 217 + интеграционные db 145). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 365 проверок (core 219 + интеграционные db 146). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
 | `pnpm backup:now` / `backup:check` / `backup:restore <копия> --yes` | резервная копия сейчас / проверка восстановления во временную базу / восстановление (`docs/BACKUPS.md`) |
+| `bash deploy/move-from-pc.sh <копия>` / `deploy/export-for-pc.sh` (на сервере) | переезд с ПК (копия → ключ → восстановление → поиск) / копия с сервера для скачивания на ПК (`docs/LAUNCH.md`) |
 | `bash deploy/update.sh` (на сервере) | обновить сайт на сервере: копия → `git pull` → сборка → перезапуск → проверка, при сбое — откат (`deploy/README.md`) |
 | `docker compose -f docker-compose.prod.yml exec web hm help` | служебные команды в контейнере сайта на сервере (сид, поиск, копии) |
 

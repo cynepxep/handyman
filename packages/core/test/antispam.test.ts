@@ -1,8 +1,8 @@
-// Шаг 8.3: защита форм (ловушка, «слишком быстро», окна лимитов, подпись корзины) и «Проверка перед запуском».
+// Шаг 8.3: защита форм (ловушка, «слишком быстро», окна лимитов, подпись корзины) и «Проверка перед запуском»; 8.5 — открытие для Google.
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { MIN_FILL_MS, RATE_RULES, cartSignature, filledTooFast, rateWindow, trapFilled } from "../src/shop";
-import { dangerousEnv, isTemplateValue, launchChecklist, launchSummary, type LaunchFacts } from "../src/launch-check";
+import { dangerousEnv, isTemplateValue, launchChecklist, launchSummary, robotsBlocks, robotsRules, type LaunchFacts } from "../src/launch-check";
 
 test("ловушка и «слишком быстро»: бот — да, старая страница без замера — пропускаем", () => {
   assert.equal(trapFilled("http://spam"), true);
@@ -52,6 +52,7 @@ const base = (): LaunchFacts => ({
     { id: "backup", title: "Облако", configured: true, check: { ok: true, at: "2026-09-29T10:00:00Z" } },
   ],
   openErrors: 0,
+  indexing: { open: true, at: "2026-09-30T09:00:00Z" },
 });
 const NOW = new Date("2026-09-30T12:00:00Z");
 const byId = (f: LaunchFacts) => Object.fromEntries(launchChecklist(f, NOW).map((i) => [i.id, i.status]));
@@ -103,4 +104,29 @@ test("опасные значения .env на сервере: список с�
   assert.ok(msgs.every((m) => !m.includes("handyman@") && !m.includes("1.2.3.4")));
   assert.equal(isTemplateValue(" Change-Me-too "), true);
   assert.equal(isTemplateValue("own-value"), false);
+});
+
+test("открытие для Google (8.5): до запуска закрыто всё; после — витрина открыта, служебное и фильтры закрыты", () => {
+  assert.deepEqual(robotsRules(false), [{ userAgent: "*", disallow: "/" }]);
+  assert.equal(robotsBlocks(false, "/"), true);
+  assert.equal(robotsBlocks(false, "/product/M18-1/akumulyator"), true);
+  for (const p of ["/", "/ru", "/catalog", "/catalog/elektroinstrument/dryli", "/ru/catalog/elektroinstrument", "/product/4933451-1/drel", "/task/sverlyty", "/info/dostavka", "/media/p/ab.webp"]) {
+    assert.equal(robotsBlocks(true, p), false, p);
+  }
+  for (const p of ["/admin", "/admin/orders", "/design", "/api/health", "/cart", "/ru/cart", "/checkout", "/ru/checkout", "/order/HM-0001?k=x",
+    "/account", "/favorites", "/ru/compare", "/search?q=дриль", "/search", "/catalog/dryli?brand=Milwaukee", "/?ref=abc", "/product/1/x?utm_source=fb"]) {
+    assert.equal(robotsBlocks(true, p), true, p);
+  }
+  const [rule] = robotsRules(true);
+  assert.equal(rule.allow, "/");
+  assert.ok(Array.isArray(rule.disallow) && rule.disallow.includes("/admin"));
+});
+
+test("проверка перед запуском: «открыт для Google» — закрыт до запуска не мешает; открыт на ПК — «желательно»", () => {
+  const f = base();
+  assert.equal(byId(f).indexing, "ok");
+  f.indexing = { open: false, at: null };
+  assert.equal(byId(f).indexing, "info");
+  assert.equal(launchSummary(launchChecklist(f, NOW)).ready, true, "закрытый сайт не мешает «можно запускать»");
+  assert.equal(byId({ ...base(), production: false }).indexing, "warn");
 });

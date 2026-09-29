@@ -30,7 +30,11 @@ export async function generateMetadata({ params, searchParams }: PageProps<"/[la
   const q = one(sp.q);
   const { t } = await getShopContent(lang);
   const flag = one(sp.hit) === "1" ? t("home.hits.title") : one(sp.new) === "1" ? t("home.new.title") : one(sp.sale) === "1" ? t("home.sale.title") : "";
-  return { title: q ? t("search.results", { q }) : flag || t("search.title"), alternates: alternatesFor(lang, paths.search(q || undefined)) };
+  return {
+    title: q ? t("search.results", { q }) : flag || t("search.title"), alternates: alternatesFor(lang, paths.search(q || undefined)),
+    // результаты поиска поисковикам не показываем и после открытия сайта (как и в robots.txt)
+    robots: { index: false, follow: true },
+  };
 }
 
 export default async function SearchPage({ params, searchParams }: PageProps<"/[lang]/search">) {

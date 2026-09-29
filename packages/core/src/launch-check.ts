@@ -21,6 +21,8 @@ export type LaunchFacts = {
   backup: { lastOkAt: string | null; checkOk: boolean | null; checkAt: string | null; offsite: boolean };
   integrations: Array<{ id: string; title: string; configured: boolean; check: { ok: boolean; at: string } | null }>;
   openErrors: number;
+  /** открыт ли сайт для поисковиков (переключатель владельца на этой же странице, шаг 8.5) */
+  indexing: { open: boolean; at: string | null };
 };
 
 /** Шаблонные значения из .env.example — на сервере их быть не должно. */
@@ -173,7 +175,45 @@ export function launchChecklist(f: LaunchFacts, now: Date = new Date()): LaunchI
     detail: f.openErrors === 0 ? "В журнале ошибок пусто." : `Открытых ошибок: ${f.openErrors}.`,
     fix: "«Ошибки» — разобрать и закрыть.",
   });
+  const idxEarly = f.indexing.open && !(f.production && /^https:\/\//i.test(url));
+  add({
+    id: "indexing", group: E, title: "Сайт открыт для Google",
+    status: !f.indexing.open ? "info" : idxEarly ? "warn" : "ok",
+    detail: !f.indexing.open ? "Закрыт от поисковиков — так и должно быть до запуска." : idxEarly ? "Открыт, но сайт ещё не на сервере с https-адресом." : "Открыт: витрину видят поисковики, админка и корзина закрыты.",
+    fix: "Открывать в день запуска, когда всё остальное «готово» — кнопка ниже на этой странице.",
+  });
   return out;
+}
+
+// ---------- открытие сайта для поисковиков (шаг 8.5) ----------
+
+/**
+ * Служебные адреса, закрытые от поисковиков и после открытия: админка, стенд дизайна, API, корзина и оформление, «Дякуємо»,
+ * кабинет, «Обране», сравнение, поиск. Витрина — укр. без приставки и рус. с /ru.
+ */
+const SHOP_PRIVATE = ["/cart", "/checkout", "/order/", "/account", "/favorites", "/compare", "/search"];
+export const ROBOTS_PRIVATE_PATHS: readonly string[] = [
+  "/admin", "/design", "/api/",
+  ...SHOP_PRIVATE, ...SHOP_PRIVATE.map((p) => `/ru${p}`),
+  // любые адреса с параметрами: фильтры, сортировка, ?ref=, ?k= (у разделов есть canonical без параметров;
+  // посадочные страницы из фильтров — Этап 6)
+  "/*?",
+];
+
+export type RobotsRule = { userAgent: string; allow?: string; disallow: string | string[] };
+
+/** Правила robots.txt: до запуска закрыто всё; после — витрина открыта, служебное закрыто. */
+export function robotsRules(open: boolean): RobotsRule[] {
+  return open ? [{ userAgent: "*", allow: "/", disallow: [...ROBOTS_PRIVATE_PATHS] }] : [{ userAgent: "*", disallow: "/" }];
+}
+
+/** Закрыт ли адрес правилами robots (для проверки и тестов; «*» — любые символы, как у Google). */
+export function robotsBlocks(open: boolean, pathWithQuery: string): boolean {
+  if (!open) return true;
+  return ROBOTS_PRIVATE_PATHS.some((rule) => {
+    const re = new RegExp("^" + rule.split("*").map((x) => x.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*"));
+    return re.test(pathWithQuery);
+  });
 }
 
 export function launchSummary(items: LaunchItem[]): { ok: number; fail: number; warn: number; info: number; ready: boolean } {
