@@ -206,6 +206,26 @@ test("восстановление в рабочую базу: данные ко
   assert.equal(safety.manifest?.counts?.after.Client, before);
 });
 
+test("восстановление самой старой копии: чистка после копии «перед восстановлением» её не удаляет", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  // как при переезде (шаг 8.5/8.4): копия с ПК старше всех, а новых «ручных» уже 5 — после 6-й самая старая ушла бы под чистку
+  const dir = process.env.BACKUP_DIR!;
+  const oldest = "2020-01-01_120000-manual";
+  const src = (await bk.listBackups()).find((b) => b.state === "ok" && b.name.endsWith("-manual"))!;
+  const copyAs = (name: string) => {
+    fs.cpSync(path.join(dir, src.name), path.join(dir, name), { recursive: true });
+    const mf = path.join(dir, name, "manifest.json");
+    fs.writeFileSync(mf, JSON.stringify({ ...JSON.parse(fs.readFileSync(mf, "utf8")), name }));
+  };
+  copyAs(oldest);
+  const extra = [1, 2, 3, 4, 5].map((i) => `2099-01-0${i}_120000-manual`);
+  extra.forEach(copyAs);
+  const r = await bk.restoreBackup(path.join(dir, oldest));
+  assert.ok(r.safety, "копия текущей базы сделана");
+  assert.ok(fs.existsSync(path.join(dir, oldest, "db.dump")), "копия, из которой восстанавливали, на месте");
+  for (const n of [oldest, ...extra, r.safety!]) fs.rmSync(path.join(dir, n), { recursive: true, force: true });
+});
+
 test("имена и скачивание: только файлы копий, «../» не проходит", async (t) => {
   if (!ready) return t.skip(skipMsg);
   const name = (await bk.listBackups())[0].name;

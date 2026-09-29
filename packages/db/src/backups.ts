@@ -287,7 +287,7 @@ export type BackupResult = { ok: boolean; name: string; error?: string; manifest
  * Сделать копию (ждёт окончания). Занято (идёт другая копия/проверка) — BackupError. Ошибка — копия помечается неудачной,
  * ночная — ещё и тревогой в Telegram. После удачной — выгрузка во второе хранилище и удаление старых копий.
  */
-export async function createBackup(p: { kind: BackupKind; who: string; now?: Date }): Promise<BackupResult> {
+export async function createBackup(p: { kind: BackupKind; who: string; now?: Date; keep?: string[] }): Promise<BackupResult> {
   const name = backupName(p.now ?? new Date(), p.kind);
   if (!(await takeLock({ what: "backup", name, who: p.who }))) throw new BackupError("Уже идёт копирование или проверка — подождите несколько минут.");
   const dir = join(/*turbopackIgnore: true*/ backupDir(), name);
@@ -318,7 +318,7 @@ export async function createBackup(p: { kind: BackupKind; who: string; now?: Dat
     if (m.ok) {
       m.offsite = await uploadOffsite(dir, m);
       if (m.offsite) await writeManifest(dir, m);
-      await pruneBackups();
+      await pruneBackups(p.keep);
     }
   } catch (e) {
     if (m.ok) logError("[backup] после копии:", errMsg(e));
@@ -357,10 +357,10 @@ async function uploadOffsite(dir: string, m: BackupManifest, mediaBudgetMs = 45 
   }
 }
 
-/** Удалить старые копии по правилу 14/8 (+ из второго хранилища). */
-export async function pruneBackups(): Promise<string[]> {
+/** Удалить старые копии по правилу 14/8 (+ из второго хранилища). `keep` — не трогать (копия, из которой сейчас восстанавливаем). */
+export async function pruneBackups(keep: string[] = []): Promise<string[]> {
   const list = await listBackups();
-  const drop = pickBackupsToDrop(list.filter((b) => b.state !== "running").map((b) => ({ name: b.name, ok: b.state === "ok" })));
+  const drop = pickBackupsToDrop(list.filter((b) => b.state !== "running").map((b) => ({ name: b.name, ok: b.state === "ok" }))).filter((n) => !keep.includes(n));
   const c = drop.length ? await offsiteConfig().catch(() => null) : null;
   for (const name of drop) {
     const p = backupPath(name);
@@ -590,7 +590,8 @@ export async function restoreBackup(folder: string, opts: { safety?: boolean; lo
   const live = await countRows(prisma).catch(() => ({}) as RowCounts);
   if (opts.safety !== false && Object.values(live).some((n) => n > 0)) {
     log("Сначала — копия текущей базы (на случай, если восстановили не ту копию)…");
-    const r = await createBackup({ kind: "pre-restore", who: "восстановление" });
+    // старая копия (например, перенесённая с ПК) не должна удалиться чисткой после этой новой
+    const r = await createBackup({ kind: "pre-restore", who: "восстановление", keep: [basename(folder)] });
     if (!r.ok) throw new BackupError(`Не удалось сделать копию текущей базы: ${r.error}. Восстановление не начато.`);
     rep.safety = r.name;
   }

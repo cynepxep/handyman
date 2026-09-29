@@ -69,10 +69,20 @@
 5. Восстановить: `pnpm backup:restore 2026-09-28_033000-auto --yes` (имя нужной копии). Без `--yes` команда только объяснит, что сделает.
 6. Затем: `pnpm db:migrate` (если копия со старой версии сайта), `pnpm search:reindex`, и запустить сайт ярлыком **«Обновить сайт»**.
 
-### На сервере (Linux, после шага 8.4)
+### На сервере (Docker, шаг 8.4 — `deploy/README.md`)
 
-1. Остановить сайт (контейнер `web`), база должна работать.
-2. `pnpm backup:restore <имя копии или путь к папке копии> --yes`, затем `pnpm db:migrate`, `pnpm search:reindex`, запустить сайт.
+В папке проекта на сервере (`cd /opt/handyman`):
+
+```bash
+C="docker compose -f docker-compose.prod.yml"
+$C exec web ls /backups                                        # список копий
+$C stop web                                                    # остановить сайт (база и поиск работают)
+$C run --rm web backup-restore 2026-09-28_033000-auto --yes     # имя нужной копии
+$C up -d web                                                   # запустить: база сама обновится до текущей версии
+$C exec web hm reindex                                         # пересобрать поиск
+```
+
+Копия с другого компьютера кладётся в том копий: `$C cp ./2026-09-28_120000-manual web:/backups/` (сайт при этом запущен).
 
 ### С другого компьютера / из облака
 
@@ -96,7 +106,7 @@
 
 Одна функция `pgRunner()` в `packages/db/src/backups.ts`, по порядку:
 1. `PG_BIN_DIR` в `.env` — папка с `pg_dump`/`pg_restore`;
-2. `pg_dump` на этом компьютере (на сервере — в образе сайта, шаг 8.4 ставит `postgresql16-client`);
+2. `pg_dump` на этом компьютере (на сервере — в образе сайта: `apps/web/Dockerfile` ставит `postgresql-client-16` из пакетов Ubuntu 24.04);
 3. Docker: `docker exec handyman-next-postgres-1 pg_dump …` (компьютер владельца; имя контейнера — `PG_DOCKER_CONTAINER`).
 Версия `pg_dump` должна быть не старше сервера базы (сейчас PostgreSQL 16).
 
@@ -107,5 +117,7 @@
   `packages/db/src/offsite.ts` (облако; в тестах сеть — `setOffsiteFetch`), страница `apps/web/app/admin/(panel)/backups/`.
 - Список копий — папки в `BACKUP_DIR` с `manifest.json`; таблиц в базе нет. В `Setting`: `backup.lock` (идёт копия/проверка — одна на все копии
   сайта; зависшая снимается через 3 часа), `backup.lastAttempt` (попытки ночной копии за день), `backup.lastCheck` (последняя проверка).
+- Копия «перед восстановлением» не удаляет чисткой ту копию, из которой восстанавливают (`createBackup({ keep })` → `pruneBackups(keep)`;
+  иначе старая копия, перенесённая с ПК, при 5+ более новых «ручных» пропадала до восстановления — найдено на шаге 8.4).
 - В тестах ночные копии из `runJobs` выключены (`HM_BACKUPS=off` в `test/helpers.ts`); тест копий включает их сам и пишет во временную папку.
 - Новая важная таблица — добавить в `BACKUP_CHECK_TABLES` (сверка числа строк при проверке).

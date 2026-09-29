@@ -63,7 +63,11 @@ async function main() {
     if (r.key === "env-differs") console.log("ВНИМАНИЕ: в .env задан SECRETS_KEY, который не совпадает с ключом копии. Впишите в SECRETS_KEY содержимое файла secrets.key из копии, иначе ключи «Интеграций» не прочитаются.");
     if (r.key === "missing") console.log("ВНИМАНИЕ: в копии нет ключа шифрования — ключи «Интеграций» придётся ввести заново.");
     if (r.media) console.log(`Фото: в копии ${r.media.files}, скопировано новых ${r.media.copied}.`);
-    console.log("Дальше: pnpm db:migrate (если копия со старой версии сайта), pnpm search:reindex, затем запустить сайт.");
+    console.log(
+      process.env.HM_CONTAINER
+        ? "Дальше: запустить сайт (docker compose -f docker-compose.prod.yml up -d web — база обновится сама), затем пересобрать поиск: … exec web hm reindex."
+        : "Дальше: pnpm db:migrate (если копия со старой версии сайта), pnpm search:reindex, затем запустить сайт.",
+    );
     return;
   }
   console.log("Команды: pnpm backup:now | pnpm backup:check [имя] | pnpm backup:restore <копия> --yes (подробно — docs/BACKUPS.md)");

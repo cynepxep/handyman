@@ -1,0 +1,71 @@
+#!/bin/sh
+# Служебные команды внутри контейнера сайта (шаг 8.4). Запуск на сервере из папки проекта:
+#   docker compose -f docker-compose.prod.yml exec web hm <команда>        — сайт работает
+#   docker compose -f docker-compose.prod.yml run --rm web <команда>       — сайт остановлен (например, восстановление копии)
+# Команды:
+#   migrate                   — обновить базу (миграции + готовые ремонты из prisma/repairs); делается само при каждом запуске сайта
+#   seed                      — ПЕРВЫЙ запуск на пустой базе: роли, права, учётная запись owner (пароль — ADMIN_TOKEN). Повторно не запускать:
+#                               сид перезаписывает права ролей
+#   reindex                   — пересобрать поиск из базы
+#   ensure-search             — собрать поиск, только если его ещё нет (делается само при запуске сайта)
+#   backup-now                — резервная копия сейчас (как кнопка в админке «Резервные копии»)
+#   backup-check [копия]      — проверить восстановление копии во временную базу (рабочую не трогает)
+#   backup-restore <копия> --yes — ВОССТАНОВИТЬ копию в рабочую базу (сайт должен быть остановлен; docs/BACKUPS.md)
+set -e
+TOOLS=/app/tools
+cd "$TOOLS"
+PRISMA="$TOOLS/node_modules/.bin/prisma"
+TSX="$TOOLS/node_modules/.bin/tsx"
+SCHEMA="prisma/schema.prisma"
+
+migrate() {
+  if "$PRISMA" migrate deploy --schema "$SCHEMA"; then return 0; fi
+  # Обновление базы споткнулось. Если для шага есть ремонт (prisma/repairs/<миграция>.sql) — чиним и повторяем
+  # (то же, что делает кнопка «Обновить сайт» на ПК владельца).
+  url="${DATABASE_URL%%\?*}" # psql не понимает параметр ?schema=
+  failed=$(psql "$url" -At -c "SELECT migration_name FROM _prisma_migrations WHERE finished_at IS NULL AND rolled_back_at IS NULL") || return 1
+  if [ -z "$failed" ]; then echo "[hm] не удалось обновить базу данных" >&2; return 1; fi
+  for name in $failed; do
+    repair="prisma/repairs/$name.sql"
+    if [ ! -f "$repair" ]; then echo "[hm] не удалось обновить базу (шаг $name), готового ремонта для него нет" >&2; return 1; fi
+    echo "[hm] чиню базу для шага $name (старые данные сохраняются в резервные таблицы)…"
+    "$PRISMA" migrate resolve --rolled-back "$name" --schema "$SCHEMA"
+    "$PRISMA" db execute --schema "$SCHEMA" --file "$repair"
+  done
+  "$PRISMA" migrate deploy --schema "$SCHEMA"
+}
+
+# Есть ли поисковый индекс: 0 — есть, 3 — нет, 1 — поиск не отвечает.
+search_exists() {
+  node -e '
+    const host = (process.env.MEILI_HOST || "http://localhost:7700").replace(/\/$/, "");
+    const uid = process.env.MEILI_INDEX_PRODUCTS || "products";
+    const key = process.env.MEILI_MASTER_KEY || "";
+    fetch(`${host}/indexes/${uid}`, { headers: key ? { Authorization: `Bearer ${key}` } : {}, signal: AbortSignal.timeout(5000) })
+      .then((r) => process.exit(r.ok ? 0 : r.status === 404 ? 3 : 1))
+      .catch(() => process.exit(1));
+  '
+}
+
+cmd="${1:-help}"
+[ $# -gt 0 ] && shift
+case "$cmd" in
+  migrate) migrate ;;
+  seed) exec "$TSX" prisma/seed.ts ;;
+  reindex) exec "$TSX" scripts/reindex.ts ;;
+  ensure-search)
+    code=0; search_exists || code=$?
+    # поиск может подниматься дольше сайта — несколько попыток
+    tries=0
+    while [ "$code" = 1 ] && [ $tries -lt 20 ]; do sleep 3; tries=$((tries + 1)); code=0; search_exists || code=$?; done
+    case "$code" in
+      0) echo "[hm] поиск на месте" ;;
+      3) echo "[hm] поискового индекса нет — собираю из базы"; exec "$TSX" scripts/reindex.ts ;;
+      *) echo "[hm] поиск не отвечает — индекс не проверен (сайт работает, поиск догонит: hm reindex)" >&2; exit 1 ;;
+    esac ;;
+  backup-now) exec "$TSX" scripts/backup.ts now "$@" ;;
+  backup-check) exec "$TSX" scripts/backup.ts check "$@" ;;
+  backup-restore) exec "$TSX" scripts/backup.ts restore "$@" ;;
+  help|-h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) echo "[hm] неизвестная команда: $cmd (список — hm help)" >&2; exit 2 ;;
+esac

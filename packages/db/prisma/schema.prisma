@@ -4,7 +4,8 @@
 generator client {
   provider      = "prisma-client-js"
   output        = "../generated/client"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  // debian-openssl-3.0.x — боевой образ на Ubuntu 24.04 (шаг 8.4, apps/web/Dockerfile)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {

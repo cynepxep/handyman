@@ -1,5 +1,18 @@
+# Что НЕ отправляется в сборку образа (docker build): зависимости и сборки ставятся заново внутри,
+# секреты и данные (фото, копии, ключ шифрования, фиды) — только в томах на сервере, не в образе.
 **/node_modules
 **/.next
 packages/db/generated
 .git
 .env
+.env.*
+!.env.example
+!.env.production.example
+.data
+**/.data
+storage
+backups
+test-results
+playwright-report
+**/*.log
+*.tsbuildinfo
