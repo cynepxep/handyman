@@ -271,3 +271,15 @@ manual», сумма, **зачтено** `paid` и возвращено `refunde
 - `Order.suspicious` — «подозрительный» и почему (`blocked` — покупатель в чёрном списке); такой заказ сам не уходит в KeyCRM.
 - Индекс `Order(recipientPhone, createdAt)` — для проверки повторного заказа (тот же телефон и та же корзина за 10 минут).
 В старом проекте был лимит в памяти; чёрного списка и повторной проверки не было.
+
+## Аналитика (шаг А1) — миграция `20261004120000_analytics`
+
+Только добавления:
+- `Order.analyticsAt` — когда событие покупки (`purchase`) отдано в браузер на странице «Дякуємо» (или после «Купити в 1 клік»). Ставится одним
+  запросом `updateMany … where analyticsAt IS NULL` — второй показ страницы и одновременные запросы события не получают. Тестовые, «подозрительные»
+  и открытые из браузера с входом в админку — флаг не ставится.
+- `Order.utm` (JSON) — метки рекламного перехода из куки `hm_utm` (`utm_source/medium/campaign/term/content`, `gclid`, `gbraid`, `wbraid`, `fbclid`,
+  `ttclid`, `landing` — страница входа, `at` — когда). Пусто — пришёл не по рекламе (или раньше 30 дней).
+- Без миграции: `Setting` «analytics.settings» (`enabled`, кто и когда включил), ID кабинетов — в `IntegrationSecret` (`analytics.gtmId|ga4Id|
+  adsConversionId|adsPurchaseLabel|metaPixelId|tiktokPixelId`), результат проверки — в «integrations.checks».
+В старом проекте аналитики и меток рекламы не было.

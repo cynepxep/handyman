@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { btn } from "@/components/shop/ui";
 import { cartStore } from "@/components/shop/cart/store";
+import { trackItems } from "@/components/shop/analytics";
 import { logoutAction, repeatOrderAction, telegramLinkAction } from "@/app/[lang]/account-actions";
 
 export function RepeatOrderButton({ no, label, doneLabel, cartHref }: { no: string; label: string; doneLabel: string; cartHref: string }) {
@@ -20,6 +21,7 @@ export function RepeatOrderButton({ no, label, doneLabel, cartHref }: { no: stri
         start(async () => {
           const items = await repeatOrderAction(no);
           for (const i of items) cartStore.add(i.sku, i.qty);
+          trackItems("add_to_cart", items.map((i) => ({ sku: i.sku, qty: i.qty, atQty: cartStore.get().find((l) => l.sku === i.sku)?.qty ?? i.qty }))); // шаг А1
           setDone(true);
           router.push(cartHref);
         })

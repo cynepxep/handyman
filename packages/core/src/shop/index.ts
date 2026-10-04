@@ -16,3 +16,4 @@ export * from "./payments";
 export * from "./receipts";
 export * from "./keycrm";
 export * from "./antispam";
+export * from "./analytics";

@@ -10,6 +10,7 @@ import { integrationsOverview, projectRoot } from "./integrations";
 import { backupOverview } from "./backups";
 import { loadSecurity } from "./staff";
 import { sitemapStats } from "./sitemap";
+import { loadAnalyticsSettings } from "./analytics";
 
 const TMP_LOGIN = "claude-test";
 
@@ -66,7 +67,7 @@ function tmpRouteExists(): boolean {
 
 export async function launchFacts(): Promise<LaunchFacts> {
   const env = process.env;
-  const [owner, security, staff, tmpAccount, integrations, backups, openErrors, indexing, sitemap, searchConsole] = await Promise.all([
+  const [owner, security, staff, tmpAccount, integrations, backups, openErrors, indexing, sitemap, searchConsole, analytics] = await Promise.all([
     prisma.staff.findUnique({ where: { username: "owner" }, select: { passwordSalt: true, passwordHash: true, twoFactorSecret: true } }),
     loadSecurity(),
     prisma.staff.count({ where: { active: true, twoFactorSecret: null, username: { not: TMP_LOGIN } } }),
@@ -77,6 +78,7 @@ export async function launchFacts(): Promise<LaunchFacts> {
     loadIndexing(),
     sitemapStats().catch(() => ({ urls: 0, products: 0 })),
     loadSearchConsole(),
+    loadAnalyticsSettings(),
   ]);
   const token = env.ADMIN_TOKEN?.trim() ?? "";
   return {
@@ -104,6 +106,7 @@ export async function launchFacts(): Promise<LaunchFacts> {
     indexing: { open: indexing.open, at: indexing.at },
     sitemap,
     searchConsole: { code: Boolean(searchConsole.code), verified: Boolean(searchConsole.verifiedAt) },
+    analytics: { enabled: analytics.enabled },
   };
 }
 

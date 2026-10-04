@@ -50,7 +50,7 @@ const RAIL_SIZES = "240px";
 
 export function ProductCard({ card, labels, rail, priority }: { card: CardData; labels: CardLabels; rail?: boolean; priority?: boolean }) {
   return (
-    <article className="hm-card" data-product-id={card.id}>
+    <article className="hm-card" data-product-id={card.id} data-sku={card.sku}>
       <div className="hm-card-media">
         {card.image ? (
           <Image src={card.image} alt={card.name} fill sizes={rail ? RAIL_SIZES : GRID_SIZES} priority={priority} unoptimized={!optimizable(card.image)} />

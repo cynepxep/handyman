@@ -29,6 +29,8 @@ import { CompatSections, QtyPrices, ReviewsSection } from "@/components/shop/pro
 import { CallbackButton, CompareButton, WatchButton } from "@/components/shop/plus";
 import type { TierKey } from "@handyman/core/shop";
 import { callbackLabels } from "@/lib/shop/cart-labels";
+import { TrackView } from "@/components/shop/analytics";
+import { analyticsItem, ecommerceOf } from "@handyman/core/shop";
 
 const SPECS_VISIBLE = 8;
 
@@ -119,10 +121,16 @@ export default async function ProductPage({ params }: PageProps<"/[lang]/product
     },
   ];
 
+  // шаг А1: view_item — товар с ценой, как на странице; категории — группа и подгруппа меню и категория каталога (по-украински)
+  const viewItem = ecommerceOf([
+    analyticsItem({ sku: p.sku, name: p.nameUk, brand: p.brand, categories: [place?.group.nameUk, place?.sub.nameUk, stats.byId.get(p.categoryId)?.nameUk], price: p.price }),
+  ]);
+
   return (
-    <article className="hm-section hm-product" data-product-id={p.id}>
+    <article className="hm-section hm-product" data-product-id={p.id} data-sku={p.sku}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld).replace(/</g, "\\u003c") }} />
       <RememberView sku={p.sku} />
+      <TrackView event="view_item" data={{ ecommerce: viewItem }} dedupe={p.sku} />
       <Breadcrumbs label={t("crumbs.label")} items={crumbs} />
 
       <div className="hm-product-top">

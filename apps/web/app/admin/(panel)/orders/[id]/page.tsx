@@ -10,7 +10,7 @@ import { monoMode, orderInvoices } from "@handyman/db/payments";
 import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts";
 import { keycrmMode, loadKeycrmSettings, pendingNotifsOf } from "@handyman/db/keycrm";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
-import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, keycrmStatusName } from "@handyman/core/shop";
+import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, keycrmStatusName, parseUtm, utmLabel } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
@@ -49,6 +49,10 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
     keycrmMode(), loadKeycrmSettings(), pendingNotifsOf(o.id),
   ]);
 
+  // шаг А1: откуда пришёл покупатель (метки рекламного перехода за 30 дней до заказа)
+  const utm = parseUtm(o.utm);
+  const utmText = utmLabel(utm);
+
   return (
     <>
       <p><Link className="adm-link" href="/admin/orders">← Все заказы</Link></p>
@@ -57,6 +61,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
       </h1>
       <p className="adm-muted">
         {when(o.createdAt)} · {ORDER_SOURCE_RU[o.source ?? "site"] ?? o.source}{o.createdBy ? ` (оформил ${o.createdBy})` : ""} · язык: {o.lang === "RU" ? "русский" : "украинский"}
+        {utmText && (
+          <> · <span title={[utm?.landing ? `страница входа: ${utm.landing}` : "", utm?.at ? `переход: ${when(new Date(utm.at))}` : "", utm?.utm_term ? `ключевое слово: ${utm.utm_term}` : "", utm?.utm_content ? `объявление: ${utm.utm_content}` : ""].filter(Boolean).join("\n")}>реклама: {utmText}</span></>
+        )}
         {o.isTest && <> · <span className="adm-chip">тестовый заказ</span></>}
         {o.client.blockedAt && !o.suspicious && <> · <span className="adm-chip bad">покупатель в чёрном списке</span></>}
         {o.cancelReason && <> · <span className="adm-chip bad">причина: {CANCEL_REASON_RU[o.cancelReason] ?? o.cancelReason}</span></>}

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ShopLang } from "@handyman/core/site/routes";
 import { checkoutQuoteAction, placeOrderAction, type CheckoutQuote } from "@/app/[lang]/cart-actions";
+import { trackItems } from "../analytics";
 import { useFillTimer } from "../fill-timer";
 import { npCitiesAction, npPointsAction } from "@/app/[lang]/np-actions";
 import type { PickupPoint } from "@handyman/core/shop/warehouse";
@@ -126,6 +127,16 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
       alive = false;
     };
   }, [key, lang, pay, done]);
+
+  // шаг А1: begin_checkout — один раз за открытие оформления, когда корзина прочитана (товары и цены собирает сервер)
+  const began = useRef(false);
+  useEffect(() => {
+    if (began.current || done) return;
+    const cur = JSON.parse(key) as Array<{ sku: string; qty: number }>;
+    if (!cur.length) return;
+    began.current = true;
+    trackItems("begin_checkout", cur.map((l) => ({ sku: l.sku, qty: l.qty })));
+  }, [key, done]);
 
   const canSkipCall = quote?.canSkipCall ?? true;
 

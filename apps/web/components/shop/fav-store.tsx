@@ -8,6 +8,7 @@ import { favSyncAction, favToggleAction } from "@/app/[lang]/cabinet-actions";
 import { Icon } from "./icons";
 import { btn } from "./ui";
 import { activeProps, useShopSection } from "./nav-active";
+import { trackItems } from "./analytics";
 
 const KEY = "hm.fav";
 const ACCT = "hm.fav.acct";
@@ -82,6 +83,7 @@ export const favStore = {
   async toggle(sku: string): Promise<boolean> {
     const on = !read().includes(sku);
     write(on ? [sku, ...read()] : read().filter((s) => s !== sku));
+    if (on) trackItems("add_to_wishlist", [{ sku, qty: 1 }]); // шаг А1
     if (!isAcct()) return true;
     const ok = await favToggleAction(sku, on).catch(() => false);
     if (!ok) write(on ? read().filter((s) => s !== sku) : [sku, ...read()]); // не получилось — вернуть как было

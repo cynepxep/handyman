@@ -43,7 +43,8 @@
     "./health": "./src/health.ts",
     "./rate-limit": "./src/rate-limit.ts",
     "./launch-check": "./src/launch-check.ts",
-    "./sitemap": "./src/sitemap.ts"
+    "./sitemap": "./src/sitemap.ts",
+    "./analytics": "./src/analytics.ts"
   },
   "scripts": {
     "generate": "prisma generate",

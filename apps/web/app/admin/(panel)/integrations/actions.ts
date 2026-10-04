@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { integrationById } from "@handyman/core/integrations";
 import { IntegrationError, checkIntegration, clearIntegrationField, saveIntegration } from "@handyman/db/integrations";
 import { requireOwner } from "@/lib/auth";
+import { saveAnalyticsSettings } from "@handyman/db/analytics";
 
 const back = (id: string, kind: "ok" | "error", text: string) => `/admin/integrations?${kind}=${encodeURIComponent(text)}&s=${encodeURIComponent(id)}#${encodeURIComponent(id)}`;
 
@@ -51,4 +52,12 @@ export async function clearIntegrationAction(formData: FormData): Promise<void> 
     throw e;
   }
   redirect(back(id, "ok", "Удалено из базы."));
+}
+
+/** Шаг А1: «Аналитика включена» — грузить ли контейнер Google Tag Manager на витрине. */
+export async function toggleAnalyticsAction(formData: FormData): Promise<void> {
+  const s = await requireOwner();
+  const on = formData.get("enabled") === "1";
+  await saveAnalyticsSettings(on, s.name || s.username);
+  redirect(back("analytics", "ok", on ? "Аналитика включена: контейнер Google Tag Manager загружается на витрине (кроме браузеров с входом в админку)." : "Аналитика выключена: на витрине ничего не загружается."));
 }

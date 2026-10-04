@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { integrationsOverview, secretsKeySource, type FieldState } from "@handyman/db/integrations";
 import { loadKeycrmSettings } from "@handyman/db/keycrm";
+import { loadAnalyticsSettings } from "@handyman/db/analytics";
 import { requireOwner } from "@/lib/auth";
 import { SubmitButton } from "../import/client-bits";
-import { checkIntegrationAction, clearIntegrationAction, saveIntegrationAction } from "./actions";
+import { checkIntegrationAction, clearIntegrationAction, saveIntegrationAction, toggleAnalyticsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,7 +22,7 @@ function FieldNow({ f }: { f: FieldState }) {
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; s?: string }> }) {
   await requireOwner();
   const sp = await searchParams;
-  const [list, keycrm] = await Promise.all([integrationsOverview(), loadKeycrmSettings()]);
+  const [list, keycrm, analytics] = await Promise.all([integrationsOverview(), loadKeycrmSettings(), loadAnalyticsSettings()]);
 
   return (
     <>
@@ -36,7 +37,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
         <section key={it.id} id={it.id} className="adm-card">
           <h2 style={{ marginTop: 0, display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center" }}>
             {it.title}
-            {it.configured ? <span className="adm-chip ok">ключ задан</span> : <span className="adm-chip warn">заглушка</span>}
+            {it.configured ? <span className="adm-chip ok">{it.id === "analytics" ? "ID вписан" : "ключ задан"}</span> : <span className="adm-chip warn">{it.id === "analytics" ? "не подключено" : "заглушка"}</span>}
           </h2>
           <p style={{ margin: "4px 0" }}>{it.what}</p>
           {!it.configured && <p className="adm-muted" style={{ margin: "4px 0" }}>Без ключа: {it.stub.charAt(0).toLowerCase() + it.stub.slice(1)}</p>}
@@ -45,6 +46,17 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               Передача заказов: {keycrm.enabled ? <span className="adm-chip ok">включена</span> : <span className="adm-chip">выключена</span>}{" "}
               <Link className="adm-link" href="/admin/integrations/keycrm">Включить / выключить, статусы, вебхук →</Link>
             </p>
+          )}
+          {it.id === "analytics" && (
+            <form action={toggleAnalyticsAction} className="adm-row" style={{ margin: "6px 0", alignItems: "center" }}>
+              <span>
+                Аналитика: {analytics.enabled ? <span className="adm-chip ok">включена</span> : <span className="adm-chip">выключена</span>}
+                {analytics.at && <small className="adm-muted"> ({when(analytics.at)}, {analytics.by})</small>}
+              </span>
+              <input type="hidden" name="enabled" value={analytics.enabled ? "0" : "1"} />
+              <SubmitButton pendingText="…" primary={!analytics.enabled && it.configured}>{analytics.enabled ? "Выключить" : "Включить"}</SubmitButton>
+              {!it.configured && !analytics.enabled && <small className="adm-muted">Без ID контейнера включение ничего не загрузит.</small>}
+            </form>
           )}
           {sp.s === it.id && sp.error && <p className="adm-flash err" role="alert">{sp.error}</p>}
           {sp.s === it.id && sp.ok && <p className="adm-flash ok" role="status">{sp.ok}</p>}
@@ -88,7 +100,7 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
                   <form key={f.key} action={clearIntegrationAction}>
                     <input type="hidden" name="id" value={it.id} />
                     <input type="hidden" name="field" value={f.key} />
-                    <SubmitButton pendingText="…">Удалить из базы: {f.label.toLowerCase()}</SubmitButton>
+                    <SubmitButton pendingText="…">Удалить из базы: «{f.label}»</SubmitButton>
                   </form>
                 ))}
             </div>

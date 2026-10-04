@@ -116,6 +116,7 @@ const facts = (): LaunchFacts => ({
   indexing: { open: false, at: null },
   sitemap: { urls: 19_812, products: 9_800 },
   searchConsole: { code: false, verified: false },
+  analytics: { enabled: false },
 });
 const item = (f: LaunchFacts, id: string) => launchChecklist(f).find((i) => i.id === id)!;
 

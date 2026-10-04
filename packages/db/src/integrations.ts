@@ -7,7 +7,7 @@ import { dirname, join } from "node:path";
 import { randomBytes } from "node:crypto";
 import {
   INTEGRATIONS, deriveKey, integrationById, maskSecret, openSecret, readCheckboxCheck, readKeycrmCheck, readMonoCheck, readNovaPoshtaCheck,
-  readTelegramCheck, readTurboSmsCheck, sealSecret, secretKey, validateField, type CheckResult, type IntegrationId, type SecretKey,
+  readGtmCheck, readTelegramCheck, readTurboSmsCheck, sealSecret, secretKey, validateField, type CheckResult, type IntegrationId, type SecretKey,
 } from "@handyman/core/integrations";
 import { prisma, Prisma } from "./client";
 import { logError } from "./errors";
@@ -183,6 +183,7 @@ export async function saveIntegration(id: string, values: Record<string, string>
   ]);
   await dropCheck(d.id);
   integrationsChanged();
+  if (d.id === "analytics") (await import("./analytics")).analyticsChanged(); // шаг А1: витрина сразу берёт новый ID
   return changed.map((c) => c.key);
 }
 
@@ -196,6 +197,7 @@ export async function clearIntegrationField(id: string, field: string, who: stri
   ]);
   await dropCheck(d.id);
   integrationsChanged();
+  if (d.id === "analytics") (await import("./analytics")).analyticsChanged();
 }
 
 async function dropCheck(id: string) {
@@ -271,6 +273,16 @@ async function runCheck(id: IntegrationId): Promise<CheckResult> {
     case "backup":
       // шаг 8.1: второе хранилище копий (S3) отвечает XML, а не JSON — своя проверка; модуль грузится лениво (он сам импортирует этот)
       return (await import("./offsite")).checkOffsite();
+    case "analytics": {
+      // шаг А1: Google отдаёт gtm.js только опубликованного контейнера (это скрипт, не JSON — смотрим только код ответа)
+      const gtmId = await v("gtmId");
+      const res = await fetchImpl(`https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmId)}`, { method: "GET", headers: {}, signal: AbortSignal.timeout(10_000) });
+      const def = integrationById("analytics")!;
+      const filled: string[] = [];
+      for (const f of def.fields) if (f.key !== "gtmId" && (await v(f.key))) filled.push(f.label.split(":")[0]);
+      const { loadAnalyticsSettings } = await import("./analytics");
+      return readGtmCheck(res.status, gtmId, [...new Set(filled)], (await loadAnalyticsSettings()).enabled);
+    }
     case "sms": {
       const r = await call("https://api.turbosms.ua/user/balance.json", { method: "POST", headers: { Authorization: `Bearer ${await v("token")}` }, body: {} });
       return readTurboSmsCheck(r.status, r.body);

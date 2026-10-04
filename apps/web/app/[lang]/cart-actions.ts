@@ -12,6 +12,7 @@ import { getShopContent } from "@/lib/shop/content";
 import { getClient, refCodeFromCookie } from "@/lib/client-auth";
 import { logError } from "@handyman/db/errors";
 import { guardForm } from "@/lib/antispam";
+import { utmFromCookie } from "@/lib/shop/analytics";
 
 /** Этап 5: приглашение засчитываем, если это первый заказ покупателя (и его ещё никто не пригласил). */
 async function creditReferral(orderNo: string) {
@@ -89,7 +90,7 @@ export async function placeOrderAction(lang: unknown, form: Record<string, unkno
     const bad = await guardForm("order", form);
     if (bad) return { ok: false, errors: {}, message: t(bad) };
     const client = await getClient();
-    const r = await placeOrder(form, { lang: l, isTest: await isStaff(), clientId: client?.id });
+    const r = await placeOrder(form, { lang: l, isTest: await isStaff(), clientId: client?.id, utm: await utmFromCookie() });
     if (!r.ok) return { ok: false, errors: Object.fromEntries(Object.entries(r.errors).map(([k, key]) => [k, t(key ?? "err.server")])) };
     if (!r.duplicate) await creditReferral(r.no);
     return { ok: true, url: shopHref(l, paths.order(r.no, r.accessKey)) };
@@ -100,18 +101,22 @@ export async function placeOrderAction(lang: unknown, form: Record<string, unkno
 }
 
 /** «Купити в 1 клік». */
-export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?: unknown; phone?: unknown; name?: unknown; website?: unknown; fillMs?: unknown }) {
+export type OneClickResult = { ok: true; message: string; no?: string; k?: string } | { ok: false; message: string };
+
+export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?: unknown; phone?: unknown; name?: unknown; website?: unknown; fillMs?: unknown }): Promise<OneClickResult> {
   const l = langOf(lang);
   const { t } = await getShopContent(l);
   try {
     const bad = await guardForm("order", form);
-    if (bad) return { ok: false as const, message: t(bad) };
+    if (bad) return { ok: false, message: t(bad) };
     const client = await getClient();
-    const r = await placeOneClick(form, { lang: l, isTest: await isStaff(), clientId: client?.id });
+    const r = await placeOneClick(form, { lang: l, isTest: await isStaff(), clientId: client?.id, utm: await utmFromCookie() });
     if (r.ok && !r.duplicate) await creditReferral(r.no);
-    return r.ok ? { ok: true as const, message: t("oneClick.done", { no: r.no }) } : { ok: false as const, message: t(r.error) };
+    if (!r.ok) return { ok: false, message: t(r.error) };
+    // номер и ключ — только для события покупки (шаг А1); повтор того же заказа ключ не получает
+    return { ok: true, message: t("oneClick.done", { no: r.no }), ...(r.duplicate ? {} : { no: r.no, k: r.accessKey }) };
   } catch (e) {
     logError("[one-click] заказ не создан", e);
-    return { ok: false as const, message: t("err.server") };
+    return { ok: false, message: t("err.server") };
   }
 }
