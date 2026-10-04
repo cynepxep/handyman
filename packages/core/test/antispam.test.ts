@@ -53,6 +53,8 @@ const base = (): LaunchFacts => ({
   ],
   openErrors: 0,
   indexing: { open: true, at: "2026-09-30T09:00:00Z" },
+  sitemap: { urls: 20_000, products: 9_900 },
+  searchConsole: { code: true, verified: true },
 });
 const NOW = new Date("2026-09-30T12:00:00Z");
 const byId = (f: LaunchFacts) => Object.fromEntries(launchChecklist(f, NOW).map((i) => [i.id, i.status]));

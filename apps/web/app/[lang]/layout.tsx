@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { Roboto, Roboto_Condensed } from "next/font/google";
 import { isShopLang, paths, pickTexts, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent, siteUrl } from "@/lib/shop/content";
-import { shopRobots } from "@/lib/shop/indexing";
+import { shopRobots, shopVerification } from "@/lib/shop/indexing";
 import { ShopTextsProvider } from "@/components/shop/client-bits";
 import { BottomNav, SiteFooter, SiteHeader } from "@/components/shop/site-chrome";
 import { ShopCartProvider } from "@/components/shop/cart/cart-context";
@@ -35,7 +35,7 @@ const CLIENT_TEXT_KEYS = ["error.title", "error.text", "error.retry", "notFound.
 export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Promise<Metadata> {
   const { lang } = await params;
   if (!isShopLang(lang)) return {};
-  const [{ t }, robots] = await Promise.all([getShopContent(lang), shopRobots()]);
+  const [{ t }, robots, verification] = await Promise.all([getShopContent(lang), shopRobots(), shopVerification()]);
   const site = t("meta.siteName");
   return {
     metadataBase: siteUrl(),
@@ -43,6 +43,8 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
     description: t("meta.description"),
     // До запуска сайт закрыт от поисковиков; открывает владелец в «Проверка перед запуском» (шаг 8.5).
     robots,
+    // подтверждение сайта в Google Search Console (шаг Л1): код вписывает владелец в «Проверке перед запуском»
+    ...(verification ? { verification } : {}),
     alternates: alternatesFor(lang, "/"),
     openGraph: { siteName: site, locale: lang === "uk" ? "uk_UA" : "ru_UA", type: "website" },
     formatDetection: { telephone: false },

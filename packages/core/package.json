@@ -16,7 +16,8 @@
     "./integrations": "./src/integrations.ts",
     "./backups": "./src/backups.ts",
     "./errors": "./src/errors.ts",
-    "./launch-check": "./src/launch-check.ts"
+    "./launch-check": "./src/launch-check.ts",
+    "./sitemap": "./src/sitemap.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

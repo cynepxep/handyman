@@ -9,6 +9,7 @@ import { launchChecklist, type LaunchFacts, type LaunchItem } from "@handyman/co
 import { integrationsOverview, projectRoot } from "./integrations";
 import { backupOverview } from "./backups";
 import { loadSecurity } from "./staff";
+import { sitemapStats } from "./sitemap";
 
 const TMP_LOGIN = "claude-test";
 
@@ -31,6 +32,32 @@ export async function saveIndexing(open: boolean, who: string): Promise<Indexing
   return value;
 }
 
+// ---------- Google Search Console (шаг Л1): Setting «site.searchConsole», вписывает владелец ----------
+const SEARCH_CONSOLE_KEY = "site.searchConsole";
+/** code — код мета-тега google-site-verification (не секрет: он виден в коде главной); verifiedAt — владелец отметил «подтверждено». */
+export type SearchConsoleState = { code: string | null; verifiedAt: string | null; by: string | null };
+
+export async function loadSearchConsole(): Promise<SearchConsoleState> {
+  const v = (await prisma.setting.findUnique({ where: { key: SEARCH_CONSOLE_KEY } }).catch(() => null))?.value as Partial<SearchConsoleState> | undefined;
+  const str = (x: unknown) => (typeof x === "string" && x ? x : null);
+  return { code: str(v?.code), verifiedAt: str(v?.verifiedAt), by: str(v?.by) };
+}
+
+/**
+ * Сохранить код и отметку «подтверждено». Новый код снимает прежнюю отметку (подтверждать заново);
+ * отметка без кода допустима — владелец мог подтвердить сайт через запись DNS у регистратора домена.
+ */
+export async function saveSearchConsole(input: { code: string | null; verified: boolean }, who: string): Promise<SearchConsoleState> {
+  const prev = await loadSearchConsole();
+  const keep = input.verified && input.code === prev.code && prev.verifiedAt;
+  const value: SearchConsoleState = { code: input.code, verifiedAt: keep ? prev.verifiedAt : input.verified ? new Date().toISOString() : null, by: who };
+  await prisma.$transaction([
+    prisma.setting.upsert({ where: { key: SEARCH_CONSOLE_KEY }, update: { value }, create: { key: SEARCH_CONSOLE_KEY, value } }),
+    prisma.auditLog.create({ data: { who, action: "site.searchConsole", details: { code: Boolean(value.code), verified: Boolean(value.verifiedAt) } } }),
+  ]);
+  return value;
+}
+
 /** Временный адрес входа для проверок в исходниках или в собранном сайте. */
 function tmpRouteExists(): boolean {
   const web = join(/*turbopackIgnore: true*/ projectRoot(), "apps", "web");
@@ -39,7 +66,7 @@ function tmpRouteExists(): boolean {
 
 export async function launchFacts(): Promise<LaunchFacts> {
   const env = process.env;
-  const [owner, security, staff, tmpAccount, integrations, backups, openErrors, indexing] = await Promise.all([
+  const [owner, security, staff, tmpAccount, integrations, backups, openErrors, indexing, sitemap, searchConsole] = await Promise.all([
     prisma.staff.findUnique({ where: { username: "owner" }, select: { passwordSalt: true, passwordHash: true, twoFactorSecret: true } }),
     loadSecurity(),
     prisma.staff.count({ where: { active: true, twoFactorSecret: null, username: { not: TMP_LOGIN } } }),
@@ -48,6 +75,8 @@ export async function launchFacts(): Promise<LaunchFacts> {
     backupOverview().catch(() => null),
     prisma.errorLog.count({ where: { closedAt: null } }),
     loadIndexing(),
+    sitemapStats().catch(() => ({ urls: 0, products: 0 })),
+    loadSearchConsole(),
   ]);
   const token = env.ADMIN_TOKEN?.trim() ?? "";
   return {
@@ -73,6 +102,8 @@ export async function launchFacts(): Promise<LaunchFacts> {
     integrations: integrations.map((i) => ({ id: i.id, title: i.title, configured: i.configured, check: i.check ? { ok: i.check.ok, at: i.check.at } : null })),
     openErrors,
     indexing: { open: indexing.open, at: indexing.at },
+    sitemap,
+    searchConsole: { code: Boolean(searchConsole.code), verified: Boolean(searchConsole.verifiedAt) },
   };
 }
 
