@@ -26,7 +26,7 @@ test("тело заказа: источник, номер, покупатель,
   const mc = String(b.manager_comment);
   assert.match(mc, /Заказ HM-0007 с сайта/);
   assert.match(mc, /Оплата: Предоплата, сейчас 200 ₴/);
-  assert.match(mc, /Скидка клиента 3% уже учтена/);
+  assert.match(mc, /Скидка 3% \(клиента и\/или за полную оплату\) уже учтена/);
   assert.match(mc, /Сумма на сайте: 1 500 ₴/);
   assert.doesNotMatch(mc, /ТЕСТ/);
 });

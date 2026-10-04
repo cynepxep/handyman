@@ -166,25 +166,31 @@ export async function getBatteries(): Promise<Array<{ value: string; count: numb
   }
 }
 
-/** Акции: товары в наличии со старой ценой, скидка от 10 %, дороже 100 ₴ — самые большие скидки первыми. */
+/**
+ * Акции: товары в наличии со старой ценой, скидка от 10 %, дороже 100 ₴ — самые большие скидки первыми.
+ * «В наличии» (шаг Л2) — как в поиске: свободно на нашем складе (availableQty) или есть у поставщика.
+ */
 export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[]> {
   const styleOn = await photoStyleOn();
   const rows = await prisma.product.findMany({
-    where: { visible: true, oldPrice: { not: null }, supplierAvailable: true, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} } },
-    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true, reserved: true } } },
+    where: {
+      visible: true, oldPrice: { not: null }, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} },
+      OR: [{ supplierAvailable: true }, { stockItems: { some: { onHand: { gt: 0 } } } }],
+    },
+    select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, supplierAvailable: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true, reserved: true } } },
   });
   const items: SearchItem[] = rows
     .map((r) => {
       const price = r.price.toNumber();
       const old = r.oldPrice ? r.oldPrice.toNumber() : null;
-      return { r, price, old, pct: discountPct(price, old) };
+      return { r, price, old, pct: discountPct(price, old), stock: stockLevel(availableQty(r.stockItems), r.supplierAvailable) };
     })
-    .filter((x) => x.pct >= 10 && x.price >= 100)
+    .filter((x) => x.stock !== "order" && x.pct >= 10 && x.price >= 100)
     .sort((a, b) => b.pct - a.pct)
     .slice(0, limit)
-    .map(({ r, price, old, pct }) => ({
+    .map(({ r, price, old, pct, stock }) => ({
       id: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, brand: null, price, oldPrice: old, discountPct: pct, available: true,
-      stock: stockLevel(availableQty(r.stockItems), true), hit: r.isHit, isNew: r.isNew,
+      stock, hit: r.isHit, isNew: r.isNew,
       image: r.images[0] ? pickImage(r.images[0], styleOn) : null, categoryId: r.categoryId,
     }));
   return toCards(items, lang);

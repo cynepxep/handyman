@@ -13,6 +13,7 @@ import { checkoutQuoteAction, placeOrderAction, type CheckoutQuote } from "@/app
 import { useFillTimer } from "../fill-timer";
 import { npCitiesAction, npPointsAction } from "@/app/[lang]/np-actions";
 import type { PickupPoint } from "@handyman/core/shop/warehouse";
+import { unitPriceAt } from "@handyman/core/shop";
 import { formatPrice } from "../format";
 import { StockBadge, btn, type StockLabels } from "../ui";
 import { Combo } from "./combo";
@@ -346,7 +347,7 @@ export function CheckoutForm({ lang, labels, options, catalogHref, pickups, init
                   {v?.name ?? "…"} {l.qty > 1 && <b>× {l.qty}</b>}
                   {v && <StockBadge level={v.stock} labels={labels.stock} />}
                 </span>
-                <b>{v ? formatPrice(v.price * l.qty) : ""}</b>
+                <b>{v ? formatPrice((v.qty === l.qty ? v.price : unitPriceAt(v.basePrice, v.tiers, l.qty)) * l.qty) : ""}</b>
               </li>
             );
           })}

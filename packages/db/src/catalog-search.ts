@@ -202,8 +202,10 @@ let settingsFixed = false;
 
 export async function ensureIndex() {
   const uid = indexUid();
-  const found = await meili("GET", `/indexes/${uid}`);
+  const found = await meili<{ primaryKey?: string | null }>("GET", `/indexes/${uid}`);
   if (found.status === 404) await task("POST", "/indexes", { uid, primaryKey: "id" });
+  // индекс создан сам собой без ключа (товар обновили раньше первой пересборки) — документы в него не ложатся; чиним (шаг Л2)
+  else if (found.data?.primaryKey == null) await task("PATCH", `/indexes/${uid}`, { primaryKey: "id" });
   await task("PATCH", `/indexes/${uid}/settings`, SETTINGS());
 }
 
@@ -213,7 +215,7 @@ export async function reindexAll(): Promise<{ indexed: number }> {
   const { docs } = await buildDocs();
   const uid = indexUid();
   await task("DELETE", `/indexes/${uid}/documents`);
-  for (let i = 0; i < docs.length; i += 1000) await task("POST", `/indexes/${uid}/documents`, docs.slice(i, i + 1000));
+  for (let i = 0; i < docs.length; i += 1000) await task("POST", `/indexes/${uid}/documents?primaryKey=id`, docs.slice(i, i + 1000));
   await clearSearchStale();
   return { indexed: docs.length };
 }
@@ -225,7 +227,7 @@ export async function reindexProducts(ids: string[]): Promise<void> {
   const { docs, hiddenIds } = await buildDocs({ id: { in: ids } });
   const present = new Set(docs.map((d) => d.id));
   const remove = [...new Set([...hiddenIds, ...ids.filter((id) => !present.has(id))])];
-  if (docs.length) await task("POST", `/indexes/${uid}/documents`, docs);
+  if (docs.length) await task("POST", `/indexes/${uid}/documents?primaryKey=id`, docs); // ключ явно: индекса ещё могло не быть
   if (remove.length) await task("POST", `/indexes/${uid}/documents/delete-batch`, remove);
 }
 

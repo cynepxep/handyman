@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DEFAULT_CHECKOUT, canSkipCall, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel,
+  DEFAULT_CHECKOUT, canSkipCall, cleanCart, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, lineStockLevel,
   validateCheckout, validateCheckoutSettingsForm, validateWarehouseForm, toPickupPoint, type CheckoutSettings,
 } from "../src/shop";
 
@@ -17,6 +17,15 @@ test("наличие: свой склад → в Одессе, иначе пос
   assert.equal(stockLevel(0, false), "order");
   assert.equal(canSkipCall(["local", "supplier"]), true);
   assert.equal(canSkipCall(["local", "order"]), false);
+});
+
+test("наличие строки корзины (Л2): «в Одессе» — только если свободного хватает на всё количество", () => {
+  assert.equal(lineStockLevel(2, 2, false), "local");
+  assert.equal(lineStockLevel(2, 1, true), "local");
+  assert.equal(lineStockLevel(2, 3, true), "supplier"); // остальное — у поставщика: заказ ждёт его
+  assert.equal(lineStockLevel(2, 3, false), "order"); // остального нет нигде — уточнить звонком
+  assert.equal(lineStockLevel(0, 1, true), "supplier");
+  assert.equal(lineStockLevel(1, 0, false), "local"); // количество 0 считается как 1
 });
 
 test("корзина из браузера: мусор выброшен, одинаковые строки сложены, количество 1–99", () => {

@@ -91,7 +91,8 @@ test("свой склад: остаток задаётся, заказ спис�
   if (!ready) return t.skip(skipMsg);
   await orders.setOwnStock(inStock.id, 2, "test");
   const q = await orders.quoteCart([{ sku: inStock.sku, qty: 3 }]);
-  assert.equal(q.lines[0].stock, "local");
+  assert.equal(q.lines[0].stock, "supplier", "шаг Л2: на 3 шт. своих 2 не хватает — заказ ждёт поставщика (что есть — откладывается)");
+  assert.equal((await orders.quoteCart([{ sku: inStock.sku, qty: 2 }])).lines[0].stock, "local");
   const r = await orders.placeOrder(form({ items: [{ sku: inStock.sku, qty: 3 }] }), { lang: "uk" });
   assert.ok(r.ok);
   if (!r.ok) return;

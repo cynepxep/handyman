@@ -102,6 +102,7 @@ test("оформление: пустая форма — понятные оши�
   const sku = await page.locator(".hm-grid [data-action=add-to-cart]").first().getAttribute("data-sku");
   await page.evaluate((s) => localStorage.setItem("hm.cart", JSON.stringify([{ sku: s, qty: 1 }])), sku);
   await page.goto("/checkout");
+  await page.waitForTimeout(3100); // защита 8.3: форма, отправленная быстрее 3 секунд, просит «натисніть ще раз» — до проверки полей не доходит
   await page.locator("form.hm-checkout button[type=submit]").click();
   await expect(page.locator("form.hm-checkout [aria-invalid=true]").first()).toBeVisible();
   expect(await page.locator("form.hm-checkout .hm-field-error").count()).toBeGreaterThanOrEqual(3);
