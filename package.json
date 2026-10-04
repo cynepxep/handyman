@@ -20,6 +20,7 @@
     "search:reindex": "pnpm --filter @handyman/db run search:reindex",
     "backup:now": "pnpm --filter @handyman/db run backup:now",
     "backup:check": "pnpm --filter @handyman/db run backup:check",
-    "backup:restore": "pnpm --filter @handyman/db run backup:restore"
+    "backup:restore": "pnpm --filter @handyman/db run backup:restore",
+    "gtm:container": "pnpm --filter @handyman/core run gtm:container"
   }
 }

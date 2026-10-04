@@ -148,6 +148,10 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 `ANALYTICS_EVENTS` (+ `ECOMMERCE_EVENTS`, если с товарами) в `core/src/shop/analytics.ts`. Покупка — только `claimPurchase` (флаг `Order.analyticsAt`, один раз;
 тестовые/«подозрительные»/сотрудник — нет). Метки рекламы — кука `hm_utm` (`proxy.ts`) → `PlaceOptions.utm` → `Order.utm`. Звонки/мессенджеры считаются сами по
 `href` (`tel:`, `t.me`, `viber:`) — новые ссылки ничего не требуют. Нажатие на товар в списке — `select_item`, если карточка внутри `[data-a-list]` и у неё `data-sku`.
+**А2** готовый контейнер GTM: собирается кодом `packages/core/src/gtm-container.ts` (вход `@handyman/core/gtm`) → файл `deploy/gtm-container.json` (`pnpm gtm:container`;
+тест сверяет файл с кодом и прогоняет события «симулятором GTM» — `packages/core/test/gtm-container.test.ts`) и кнопка «Скачать» в «Интеграциях» (`integrations/gtm-container/route.ts`).
+ID в контейнер не вписываются — теги берут их из `hm_config`; пустой ID — триггер-исключение «Блок — нет …». **Новое событие сайта** → GA4-тег появится сам (из `ANALYTICS_EVENTS`),
+параметры — `GA4_EVENT_PARAMS`, Meta/TikTok — `PIXEL_EVENTS`; затем `pnpm gtm:container` и новая `GTM_CONTAINER_VERSION`. Код тегов — только ES5. Инструкция владельцу — `docs/ANALYTICS.md`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -201,10 +205,11 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 18 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+», аналитика — только при включённой); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 399 проверок (core 239 + интеграционные db 160). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 410 проверок (core 250 + интеграционные db 160). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |
+| `pnpm gtm:container` | пересобрать готовый контейнер Google Tag Manager `deploy/gtm-container.json` из `packages/core/src/gtm-container.ts` (шаг А2) |
 | `pnpm backup:now` / `backup:check` / `backup:restore <копия> --yes` | резервная копия сейчас / проверка восстановления во временную базу / восстановление (`docs/BACKUPS.md`) |
 | `bash deploy/move-from-pc.sh <копия>` / `deploy/export-for-pc.sh` (на сервере) | переезд с ПК (копия → ключ → восстановление → поиск) / копия с сервера для скачивания на ПК (`docs/LAUNCH.md`) |
 | `bash deploy/update.sh` (на сервере) | обновить сайт на сервере: копия → `git pull` → сборка → перезапуск → проверка, при сбое — откат (`deploy/README.md`) |

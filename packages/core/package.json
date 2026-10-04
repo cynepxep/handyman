@@ -18,11 +18,13 @@
     "./backups": "./src/backups.ts",
     "./errors": "./src/errors.ts",
     "./launch-check": "./src/launch-check.ts",
-    "./sitemap": "./src/sitemap.ts"
+    "./sitemap": "./src/sitemap.ts",
+    "./gtm": "./src/gtm-container.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "gtm:container": "tsx scripts/gtm-container.ts"
   },
   "devDependencies": {
     "@types/node": "^20",

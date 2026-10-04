@@ -4,6 +4,7 @@ import Link from "next/link";
 import { integrationsOverview, secretsKeySource, type FieldState } from "@handyman/db/integrations";
 import { loadKeycrmSettings } from "@handyman/db/keycrm";
 import { loadAnalyticsSettings } from "@handyman/db/analytics";
+import { GTM_CONTAINER_VERSION } from "@handyman/core/gtm";
 import { requireOwner } from "@/lib/auth";
 import { SubmitButton } from "../import/client-bits";
 import { checkIntegrationAction, clearIntegrationAction, saveIntegrationAction, toggleAnalyticsAction } from "./actions";
@@ -57,6 +58,15 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               <SubmitButton pendingText="…" primary={!analytics.enabled && it.configured}>{analytics.enabled ? "Выключить" : "Включить"}</SubmitButton>
               {!it.configured && !analytics.enabled && <small className="adm-muted">Без ID контейнера включение ничего не загрузит.</small>}
             </form>
+          )}
+          {it.id === "analytics" && (
+            <div className="adm-row" style={{ margin: "6px 0", alignItems: "center" }}>
+              <a className="adm-btn" href="/admin/integrations/gtm-container" download>⬇ Скачать готовый контейнер для Tag Manager</a>
+              <small className="adm-muted" style={{ maxWidth: 620 }}>
+                Теги GA4, Google Ads, Meta и TikTok уже настроены (версия {GTM_CONTAINER_VERSION}). В Tag Manager: «Администрирование» → «Импортировать контейнер» →
+                этот файл → «Объединить», затем «Отправить» → «Опубликовать». ID вписывать в Tag Manager не нужно — он берёт их из полей ниже.
+              </small>
+            </div>
           )}
           {sp.s === it.id && sp.error && <p className="adm-flash err" role="alert">{sp.error}</p>}
           {sp.s === it.id && sp.ok && <p className="adm-flash ok" role="status">{sp.ok}</p>}

@@ -1,0 +1,2956 @@
+{
+  "exportFormatVersion": 2,
+  "exportTime": "2026-10-04 00:00:00",
+  "containerVersion": {
+    "path": "accounts/0/containers/0/versions/0",
+    "accountId": "0",
+    "containerId": "0",
+    "containerVersionId": "0",
+    "name": "Handyman 2026-10-04",
+    "description": "Готовый контейнер магазина Handyman: GA4, Google Ads, Meta Pixel, TikTok Pixel. ID берутся из админки сайта (dataLayer, hm_config) — в контейнере их вписывать не нужно. Инструкция — docs/ANALYTICS.md.",
+    "container": {
+      "path": "accounts/0/containers/0",
+      "accountId": "0",
+      "containerId": "0",
+      "name": "Handyman",
+      "publicId": "GTM-XXXXXXX",
+      "usageContext": [
+        "WEB"
+      ],
+      "fingerprint": "0"
+    },
+    "tag": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "1",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — тег Google",
+        "type": "googtag",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "2147479553"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "tagId",
+            "value": "{{DL - GA4 ID}}"
+          }
+        ],
+        "notes": "Загружает GA4 и считает просмотры страниц (переходы без перезагрузки — «Расширенная статистика» в потоке GA4)."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "2",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — view_item",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "1"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "view_item"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "3",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — view_item_list",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "2"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "view_item_list"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "4",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — select_item",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "3"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "select_item"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "5",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — add_to_cart",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "4"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "add_to_cart"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "6",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — remove_from_cart",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "5"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "remove_from_cart"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "7",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — begin_checkout",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "6"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "begin_checkout"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "8",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — purchase",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "7"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "purchase"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "9",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — search",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "8"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "search"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "false"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "search_term"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - search_term}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "10",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — phone_click",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "9"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "phone_click"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "false"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "click_location"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - click_location}}"
+                  }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "page_type"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - page_type}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "11",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — telegram_click",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "10"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "telegram_click"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "false"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "messenger"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - messenger}}"
+                  }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "click_location"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - click_location}}"
+                  }
+                ]
+              },
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "page_type"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - page_type}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "12",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "GA4 — add_to_wishlist",
+        "type": "gaawe",
+        "parentFolderId": "2",
+        "firingTriggerId": [
+          "11"
+        ],
+        "blockingTriggerId": [
+          "14"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "eventName",
+            "value": "add_to_wishlist"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "measurementIdOverride",
+            "value": "{{DL - GA4 ID}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "sendEcommerceData",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "getEcommerceDataFrom",
+            "value": "dataLayer"
+          },
+          {
+            "type": "LIST",
+            "key": "eventSettingsTable",
+            "list": [
+              {
+                "type": "MAP",
+                "map": [
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameter",
+                    "value": "channel"
+                  },
+                  {
+                    "type": "TEMPLATE",
+                    "key": "parameterValue",
+                    "value": "{{DL - channel}}"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "13",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Google Ads — Conversion Linker",
+        "type": "gclidw",
+        "parentFolderId": "3",
+        "firingTriggerId": [
+          "2147479553"
+        ],
+        "blockingTriggerId": [
+          "15"
+        ],
+        "parameter": [
+          {
+            "type": "BOOLEAN",
+            "key": "enableCrossDomain",
+            "value": "false"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "enableUrlPassthrough",
+            "value": "false"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "enableCookieOverrides",
+            "value": "false"
+          }
+        ],
+        "notes": "Запоминает клик по рекламе Google (gclid), чтобы покупка засчиталась объявлению."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "14",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Google Ads — конверсия «Покупка»",
+        "type": "awct",
+        "parentFolderId": "3",
+        "firingTriggerId": [
+          "7"
+        ],
+        "blockingTriggerId": [
+          "15",
+          "16"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "conversionId",
+            "value": "{{JS - Google Ads ID без AW-}}"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "conversionLabel",
+            "value": "{{DL - Google Ads метка покупки}}"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "conversionValue",
+            "value": "{{DL - ecommerce.value}}"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "currencyCode",
+            "value": "{{DL - ecommerce.currency}}"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "orderId",
+            "value": "{{DL - ecommerce.transaction_id}}"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "enableConversionLinker",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "conversionCookiePrefix",
+            "value": "_gcl"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "rdp",
+            "value": "false"
+          }
+        ],
+        "notes": "Сумма — товары после скидок, без доставки; номер заказа — чтобы Google не посчитал покупку дважды."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "15",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Google Ads — ремаркетинг",
+        "type": "sp",
+        "parentFolderId": "3",
+        "firingTriggerId": [
+          "2147479553",
+          "13"
+        ],
+        "blockingTriggerId": [
+          "15"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "conversionId",
+            "value": "{{JS - Google Ads ID без AW-}}"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "customParamsFormat",
+            "value": "NONE"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "enableConversionLinker",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "conversionCookiePrefix",
+            "value": "_gcl"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "rdp",
+            "value": "false"
+          }
+        ],
+        "notes": "Списки посетителей для показа рекламы тем, кто уже был на сайте."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "16",
+        "tagFiringOption": "ONCE_PER_LOAD",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — пиксель (основной код)",
+        "type": "html",
+        "parentFolderId": "4",
+        "firingTriggerId": [
+          "2147479553"
+        ],
+        "blockingTriggerId": [
+          "17"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  var id = {{DL - Meta Pixel ID}};\n  if (!id) return;\n  !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');\n  window.fbq('init', String(id));\n  window.fbq('track', 'PageView');\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Официальный код пикселя Meta + PageView при открытии сайта."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "17",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — PageView (переход по сайту)",
+        "type": "html",
+        "parentFolderId": "4",
+        "firingTriggerId": [
+          "13"
+        ],
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'PageView');\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "18",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — ViewContent",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "1"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'ViewContent', { content_type: 'product', content_ids: {{JS - артикулы товаров}}, contents: {{JS - Meta contents}}, content_name: {{JS - название первого товара}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: view_item."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "19",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — AddToCart",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "4"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'AddToCart', { content_type: 'product', content_ids: {{JS - артикулы товаров}}, contents: {{JS - Meta contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: add_to_cart."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "20",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — InitiateCheckout",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "6"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'InitiateCheckout', { content_type: 'product', content_ids: {{JS - артикулы товаров}}, contents: {{JS - Meta contents}}, num_items: {{JS - штук всего}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: begin_checkout."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "21",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — Purchase",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "7"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'Purchase', { content_type: 'product', content_ids: {{JS - артикулы товаров}}, contents: {{JS - Meta contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} }, { eventID: {{DL - event_id}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: purchase. eventID = номер заказа (склейка с покупкой с сервера)."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "22",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — Search",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "8"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'Search', { search_string: {{DL - search_term}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: search."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "23",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — AddToWishlist",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "11"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'AddToWishlist', { content_type: 'product', content_ids: {{JS - артикулы товаров}}, contents: {{JS - Meta contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: add_to_wishlist."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "24",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "Meta — Contact",
+        "type": "html",
+        "parentFolderId": "4",
+        "blockingTriggerId": [
+          "17"
+        ],
+        "setupTag": [
+          {
+            "tagName": "Meta — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "12"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (typeof window.fbq !== 'function') return;\n  window.fbq('track', 'Contact');\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: phone_click, telegram_click."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "25",
+        "tagFiringOption": "ONCE_PER_LOAD",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — пиксель (основной код)",
+        "type": "html",
+        "parentFolderId": "5",
+        "firingTriggerId": [
+          "2147479553"
+        ],
+        "blockingTriggerId": [
+          "18"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  var id = {{DL - TikTok Pixel ID}};\n  if (!id) return;\n  !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=[\"page\",\"track\",\"identify\",\"instances\",\"debug\",\"on\",\"off\",\"once\",\"ready\",\"alias\",\"group\",\"enableCookie\",\"disableCookie\",\"holdConsent\",\"revokeConsent\",\"grantConsent\"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r=\"https://analytics.tiktok.com/i18n/pixel/events.js\";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=d.createElement(\"script\");n.type=\"text/javascript\",n.async=!0,n.src=r+\"?sdkid=\"+e+\"&lib=\"+t;e=d.getElementsByTagName(\"script\")[0];e.parentNode.insertBefore(n,e)};ttq.load(String(id));ttq.page()}(window,document,'ttq');\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Официальный код пикселя TikTok + просмотр страницы при открытии сайта."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "26",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — page (переход по сайту)",
+        "type": "html",
+        "parentFolderId": "5",
+        "firingTriggerId": [
+          "13"
+        ],
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.page();\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "27",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — ViewContent",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "1"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('ViewContent', { content_type: 'product', contents: {{JS - TikTok contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: view_item."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "28",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — AddToCart",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "4"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('AddToCart', { content_type: 'product', contents: {{JS - TikTok contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: add_to_cart."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "29",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — InitiateCheckout",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "6"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('InitiateCheckout', { content_type: 'product', contents: {{JS - TikTok contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: begin_checkout."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "30",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — CompletePayment",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "7"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('CompletePayment', { content_type: 'product', contents: {{JS - TikTok contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} }, { event_id: {{DL - event_id}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: purchase. event_id = номер заказа (склейка с покупкой с сервера)."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "31",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — Search",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "8"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('Search', { query: {{DL - search_term}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: search."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "32",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — AddToWishlist",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "11"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('AddToWishlist', { content_type: 'product', contents: {{JS - TikTok contents}}, value: {{DL - ecommerce.value}}, currency: {{DL - ecommerce.currency}} });\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: add_to_wishlist."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "tagId": "33",
+        "tagFiringOption": "ONCE_PER_EVENT",
+        "monitoringMetadata": {
+          "type": "MAP"
+        },
+        "consentSettings": {
+          "consentStatus": "NOT_SET"
+        },
+        "name": "TikTok — Contact",
+        "type": "html",
+        "parentFolderId": "5",
+        "blockingTriggerId": [
+          "18"
+        ],
+        "setupTag": [
+          {
+            "tagName": "TikTok — пиксель (основной код)",
+            "stopOnSetupFailure": true
+          }
+        ],
+        "firingTriggerId": [
+          "12"
+        ],
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "html",
+            "value": "<script>\n(function() {\n  if (!window.ttq || typeof window.ttq.track !== 'function') return;\n  window.ttq.track('Contact');\n})();\n</script>"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "supportDocumentWrite",
+            "value": "false"
+          }
+        ],
+        "notes": "Событие сайта: phone_click, telegram_click."
+      }
+    ],
+    "trigger": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "1",
+        "parentFolderId": "1",
+        "name": "Событие — view_item",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "view_item"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "2",
+        "parentFolderId": "1",
+        "name": "Событие — view_item_list",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "view_item_list"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "3",
+        "parentFolderId": "1",
+        "name": "Событие — select_item",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "select_item"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "4",
+        "parentFolderId": "1",
+        "name": "Событие — add_to_cart",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "add_to_cart"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "5",
+        "parentFolderId": "1",
+        "name": "Событие — remove_from_cart",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "remove_from_cart"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "6",
+        "parentFolderId": "1",
+        "name": "Событие — begin_checkout",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "begin_checkout"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "7",
+        "parentFolderId": "1",
+        "name": "Событие — purchase",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "purchase"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "8",
+        "parentFolderId": "1",
+        "name": "Событие — search",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "search"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "9",
+        "parentFolderId": "1",
+        "name": "Событие — phone_click",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "phone_click"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "10",
+        "parentFolderId": "1",
+        "name": "Событие — telegram_click",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "telegram_click"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "11",
+        "parentFolderId": "1",
+        "name": "Событие — add_to_wishlist",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "EQUALS",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "add_to_wishlist"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "12",
+        "parentFolderId": "1",
+        "name": "Событие — звонок или мессенджер",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^(phone_click|telegram_click)$"
+              }
+            ]
+          }
+        ],
+        "notes": "phone_click (tel:) и telegram_click (Telegram, Viber) — для «Contact» в Meta и TikTok."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "13",
+        "parentFolderId": "1",
+        "name": "Переход по сайту без перезагрузки",
+        "type": "HISTORY_CHANGE",
+        "filter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{History Source}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^(pushState|popstate)$"
+              }
+            ]
+          }
+        ],
+        "notes": "Сайт открывает страницы без перезагрузки (Next.js) — просмотр страницы для Meta, TikTok и ремаркетинга. replaceState (смена фильтров) не считается."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "14",
+        "parentFolderId": "1",
+        "name": "Блок — нет ID GA4",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": ".*"
+              }
+            ]
+          }
+        ],
+        "filter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{DL - GA4 ID}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^G-[A-Z0-9]+$"
+              },
+              {
+                "type": "BOOLEAN",
+                "key": "negate",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "notes": "Исключение: ID не вписан в «Интеграции → Аналитика и реклама» — теги этого кабинета не срабатывают."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "15",
+        "parentFolderId": "1",
+        "name": "Блок — нет ID Google Ads",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": ".*"
+              }
+            ]
+          }
+        ],
+        "filter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{DL - Google Ads ID}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^AW-[0-9]+$"
+              },
+              {
+                "type": "BOOLEAN",
+                "key": "negate",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "notes": "Исключение: ID не вписан в «Интеграции → Аналитика и реклама» — теги этого кабинета не срабатывают."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "16",
+        "parentFolderId": "1",
+        "name": "Блок — нет метки покупки Google Ads",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": ".*"
+              }
+            ]
+          }
+        ],
+        "filter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{DL - Google Ads метка покупки}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^[A-Za-z0-9_-]+$"
+              },
+              {
+                "type": "BOOLEAN",
+                "key": "negate",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "notes": "Исключение: ID не вписан в «Интеграции → Аналитика и реклама» — теги этого кабинета не срабатывают."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "17",
+        "parentFolderId": "1",
+        "name": "Блок — нет ID Meta Pixel",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": ".*"
+              }
+            ]
+          }
+        ],
+        "filter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{DL - Meta Pixel ID}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^[0-9]+$"
+              },
+              {
+                "type": "BOOLEAN",
+                "key": "negate",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "notes": "Исключение: ID не вписан в «Интеграции → Аналитика и реклама» — теги этого кабинета не срабатывают."
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "triggerId": "18",
+        "parentFolderId": "1",
+        "name": "Блок — нет ID TikTok Pixel",
+        "type": "CUSTOM_EVENT",
+        "customEventFilter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{_event}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": ".*"
+              }
+            ]
+          }
+        ],
+        "filter": [
+          {
+            "type": "MATCH_REGEX",
+            "parameter": [
+              {
+                "type": "TEMPLATE",
+                "key": "arg0",
+                "value": "{{DL - TikTok Pixel ID}}"
+              },
+              {
+                "type": "TEMPLATE",
+                "key": "arg1",
+                "value": "^[A-Z0-9]+$"
+              },
+              {
+                "type": "BOOLEAN",
+                "key": "negate",
+                "value": "true"
+              }
+            ]
+          }
+        ],
+        "notes": "Исключение: ID не вписан в «Интеграции → Аналитика и реклама» — теги этого кабинета не срабатывают."
+      }
+    ],
+    "variable": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "1",
+        "name": "DL - GA4 ID",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "ID потока GA4 (G-…). Берётся из «Интеграции → Аналитика и реклама» на сайте (событие hm_config). Здесь не менять.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "defaultValue",
+            "value": ""
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "hm_ga4_id"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "2",
+        "name": "DL - Google Ads ID",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Идентификатор конверсии Google Ads (AW-…). Берётся из «Интеграции → Аналитика и реклама» на сайте (событие hm_config). Здесь не менять.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "defaultValue",
+            "value": ""
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "hm_ads_id"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "3",
+        "name": "DL - Google Ads метка покупки",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Метка конверсии «Покупка» Google Ads. Берётся из «Интеграции → Аналитика и реклама» на сайте (событие hm_config). Здесь не менять.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "defaultValue",
+            "value": ""
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "hm_ads_purchase_label"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "4",
+        "name": "DL - Meta Pixel ID",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "ID пикселя Meta. Берётся из «Интеграции → Аналитика и реклама» на сайте (событие hm_config). Здесь не менять.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "defaultValue",
+            "value": ""
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "hm_meta_pixel_id"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "5",
+        "name": "DL - TikTok Pixel ID",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "ID пикселя TikTok. Берётся из «Интеграции → Аналитика и реклама» на сайте (событие hm_config). Здесь не менять.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "true"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "defaultValue",
+            "value": ""
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "hm_tiktok_pixel_id"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "6",
+        "name": "DL - channel",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "web — обычный сайт, miniapp — внутри Telegram Mini App.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "channel"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "7",
+        "name": "DL - event_id",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Номер заказа (HM-…) у покупки: по нему кабинеты не считают покупку дважды (браузер + сервер).",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "event_id"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "8",
+        "name": "DL - ecommerce.value",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Сумма товаров события, грн (считает сервер сайта).",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.value"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "9",
+        "name": "DL - ecommerce.currency",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Валюта (UAH).",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.currency"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "10",
+        "name": "DL - ecommerce.transaction_id",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Номер заказа (HM-…).",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.transaction_id"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "11",
+        "name": "DL - ecommerce.items",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Товары события (item_id = артикул).",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "ecommerce.items"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "12",
+        "name": "DL - search_term",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Что искали.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "search_term"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "13",
+        "name": "DL - messenger",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "telegram или viber.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "messenger"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "14",
+        "name": "DL - click_location",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Где нажали: header, footer, bottom_nav, page.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "click_location"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "15",
+        "name": "DL - page_type",
+        "type": "v",
+        "parentFolderId": "1",
+        "notes": "Тип страницы: home, catalog, product, search, cart, checkout, thanks, info…",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "INTEGER",
+            "key": "dataLayerVersion",
+            "value": "2"
+          },
+          {
+            "type": "BOOLEAN",
+            "key": "setDefaultValue",
+            "value": "false"
+          },
+          {
+            "type": "TEMPLATE",
+            "key": "name",
+            "value": "page_type"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "16",
+        "name": "JS - Google Ads ID без AW-",
+        "type": "jsm",
+        "parentFolderId": "1",
+        "notes": "Тегам Google Ads нужен идентификатор без «AW-».",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function() {\n  var v = {{DL - Google Ads ID}};\n  return v ? String(v).replace(/^AW-/i, '') : undefined;\n}"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "17",
+        "name": "JS - артикулы товаров",
+        "type": "jsm",
+        "parentFolderId": "1",
+        "notes": "Артикулы товаров события — для Meta (content_ids).",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function() {\n  var it = {{DL - ecommerce.items}};\n  if (!it || !it.length) return undefined;\n  var r = [];\n  for (var i = 0; i < it.length; i++) if (it[i] && it[i].item_id) r.push(String(it[i].item_id));\n  return r;\n}"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "18",
+        "name": "JS - Meta contents",
+        "type": "jsm",
+        "parentFolderId": "1",
+        "notes": "Товары для Meta: id, quantity, item_price.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function() {\n  var it = {{DL - ecommerce.items}};\n  if (!it || !it.length) return undefined;\n  var r = [];\n  for (var i = 0; i < it.length; i++) {\n    if (!it[i] || !it[i].item_id) continue;\n    r.push({ id: String(it[i].item_id), quantity: Number(it[i].quantity) || 1, item_price: Number(it[i].price) || 0 });\n  }\n  return r;\n}"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "19",
+        "name": "JS - TikTok contents",
+        "type": "jsm",
+        "parentFolderId": "1",
+        "notes": "Товары для TikTok: content_id, content_name, quantity, price.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function() {\n  var it = {{DL - ecommerce.items}};\n  if (!it || !it.length) return undefined;\n  var r = [];\n  for (var i = 0; i < it.length; i++) {\n    if (!it[i] || !it[i].item_id) continue;\n    r.push({ content_id: String(it[i].item_id), content_type: 'product', content_name: it[i].item_name, quantity: Number(it[i].quantity) || 1, price: Number(it[i].price) || 0 });\n  }\n  return r;\n}"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "20",
+        "name": "JS - штук всего",
+        "type": "jsm",
+        "parentFolderId": "1",
+        "notes": "Сколько штук в корзине — для Meta InitiateCheckout.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function() {\n  var it = {{DL - ecommerce.items}};\n  if (!it || !it.length) return undefined;\n  var n = 0;\n  for (var i = 0; i < it.length; i++) n += Number(it[i] && it[i].quantity) || 1;\n  return n;\n}"
+          }
+        ]
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "variableId": "21",
+        "name": "JS - название первого товара",
+        "type": "jsm",
+        "parentFolderId": "1",
+        "notes": "Название товара — для Meta ViewContent.",
+        "formatValue": {},
+        "parameter": [
+          {
+            "type": "TEMPLATE",
+            "key": "javascript",
+            "value": "function() {\n  var it = {{DL - ecommerce.items}};\n  return it && it[0] && it[0].item_name ? String(it[0].item_name) : undefined;\n}"
+          }
+        ]
+      }
+    ],
+    "folder": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "folderId": "1",
+        "name": "Handyman — переменные и триггеры"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "folderId": "2",
+        "name": "GA4"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "folderId": "3",
+        "name": "Google Ads"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "folderId": "4",
+        "name": "Meta Pixel"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "fingerprint": "0",
+        "folderId": "5",
+        "name": "TikTok Pixel"
+      }
+    ],
+    "builtInVariable": [
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "PAGE_URL",
+        "name": "Page URL"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "PAGE_HOSTNAME",
+        "name": "Page Hostname"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "PAGE_PATH",
+        "name": "Page Path"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "REFERRER",
+        "name": "Referrer"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "EVENT",
+        "name": "Event"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "HISTORY_SOURCE",
+        "name": "History Source"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "NEW_HISTORY_URL",
+        "name": "New History URL"
+      },
+      {
+        "accountId": "0",
+        "containerId": "0",
+        "type": "OLD_HISTORY_URL",
+        "name": "Old History URL"
+      }
+    ],
+    "fingerprint": "0"
+  }
+}
