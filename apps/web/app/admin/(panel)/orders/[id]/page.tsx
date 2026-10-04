@@ -9,6 +9,7 @@ import { listTasks } from "@handyman/db/service";
 import { monoMode, orderInvoices } from "@handyman/db/payments";
 import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts";
 import { keycrmMode, loadKeycrmSettings, pendingNotifsOf } from "@handyman/db/keycrm";
+import { adEventsOf } from "@handyman/db/ad-events";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
 import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, keycrmStatusName, parseUtm, utmLabel } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
@@ -20,6 +21,7 @@ import { CopyButton, StatusForm } from "./status-form";
 import { PaymentsBlock } from "./payments-block";
 import { ReceiptsBlock } from "./receipts-block";
 import { KeycrmBlock, KeycrmPending } from "./keycrm-block";
+import { AdEventsBlock } from "./ad-events-block";
 
 export const dynamic = "force-dynamic";
 
@@ -43,10 +45,10 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   const later = o.total.toNumber() - o.dueNow.toNumber();
   const canHistory = session.permissions.includes("orders.history");
   const canFinance = session.permissions.includes("finance.view");
-  const [tpl, clientMsgs, held, profit, tasks, invoices, mono, receipts, rmode, receiptable, kmode, kset, pending] = await Promise.all([
+  const [tpl, clientMsgs, held, profit, tasks, invoices, mono, receipts, rmode, receiptable, kmode, kset, pending, adEvents] = await Promise.all([
     canEdit ? templatesForOrder(o.id) : null, clientMessagesOf(o.id), orderReservations(o.id), canFinance ? orderProfitOf(o.id) : null,
     listTasks({ orderId: o.id }), orderInvoices(o.id), monoMode(), orderReceipts(o.id), receiptMode(), receiptableOf(o.id),
-    keycrmMode(), loadKeycrmSettings(), pendingNotifsOf(o.id),
+    keycrmMode(), loadKeycrmSettings(), pendingNotifsOf(o.id), adEventsOf(o.id),
   ]);
 
   // шаг А1: откуда пришёл покупатель (метки рекламного перехода за 30 дней до заказа)
@@ -139,6 +141,7 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
         order={o} mode={kmode} enabled={kset.enabled} statusName={o.keycrmStatusId ? keycrmStatusName(kset, o.keycrmStatusId) : null}
         canEdit={canEdit} isOwner={session.roleKey === "owner"}
       />
+      <AdEventsBlock rows={adEvents} />
 
       <section className="adm-card">
         <h2 style={{ marginTop: 0 }}>Товары</h2>

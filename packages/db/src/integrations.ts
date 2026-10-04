@@ -183,7 +183,11 @@ export async function saveIntegration(id: string, values: Record<string, string>
   ]);
   await dropCheck(d.id);
   integrationsChanged();
-  if (d.id === "analytics") (await import("./analytics")).analyticsChanged(); // шаг А1: витрина сразу берёт новый ID
+  if (d.id === "analytics") {
+    (await import("./analytics")).analyticsChanged(); // шаг А1: витрина сразу берёт новый ID
+    // шаг А3: новый ключ — покупки последних дней, не ушедшие из-за неверного ключа, отправляются снова
+    if (changed.some((c) => /Token$|ApiSecret$|PixelId$|ga4Id$/.test(c.key))) await (await import("./ad-events")).requeueAdErrors();
+  }
   return changed.map((c) => c.key);
 }
 
@@ -279,9 +283,12 @@ async function runCheck(id: IntegrationId): Promise<CheckResult> {
       const res = await fetchImpl(`https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(gtmId)}`, { method: "GET", headers: {}, signal: AbortSignal.timeout(10_000) });
       const def = integrationById("analytics")!;
       const filled: string[] = [];
-      for (const f of def.fields) if (f.key !== "gtmId" && (await v(f.key))) filled.push(f.label.split(":")[0]);
+      for (const f of def.fields) if (/Id$/.test(f.key) && f.key !== "gtmId" && (await v(f.key))) filled.push(f.label.split(":")[0]);
       const { loadAnalyticsSettings } = await import("./analytics");
-      return readGtmCheck(res.status, gtmId, [...new Set(filled)], (await loadAnalyticsSettings()).enabled);
+      const gtm = readGtmCheck(res.status, gtmId, [...new Set(filled)], (await loadAnalyticsSettings()).enabled);
+      // шаг А3: ключи покупки с сервера (Meta — токен, GA4 — формат события); модуль грузится лениво (он сам импортирует этот)
+      const srv = await (await import("./ad-events")).checkAdServers();
+      return srv.lines.length ? { ok: gtm.ok && srv.ok, message: [gtm.message, ...srv.lines].join(" ") } : gtm;
     }
     case "sms": {
       const r = await call("https://api.turbosms.ua/user/balance.json", { method: "POST", headers: { Authorization: `Bearer ${await v("token")}` }, body: {} });

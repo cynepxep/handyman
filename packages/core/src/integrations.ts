@@ -110,7 +110,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
     // шаг А1: не секреты (ID видны в коде страницы), но хранятся здесь же, рядом с остальными сервисами
     id: "analytics",
     title: "Аналитика и реклама (Google Tag Manager)",
-    what: "Статистика сайта и учёт покупок для рекламы: Google Analytics 4, Google Ads, Meta (Facebook/Instagram) Pixel, TikTok Pixel. На сайт ставится только контейнер Google Tag Manager, остальные ID он получает отсюда. Сайт сообщает о просмотрах товаров, корзине, оформлении, покупке (один раз на заказ; тестовые и заказы из браузера с админкой — нет), поиске, звонках и Telegram. Включается переключателем ниже.",
+    what: "Статистика сайта и учёт покупок для рекламы: Google Analytics 4, Google Ads, Meta (Facebook/Instagram) Pixel, TikTok Pixel. На сайт ставится только контейнер Google Tag Manager, остальные ID он получает отсюда. Сайт сообщает о просмотрах товаров, корзине, оформлении, покупке (один раз на заказ; тестовые и заказы из браузера с админкой — нет), поиске, звонках и Telegram. С токенами Meta, TikTok и секретом GA4 сервер ещё и сам дублирует каждую покупку в эти кабинеты (её не теряют блокировщики рекламы и iPhone; кабинеты склеивают её с покупкой из браузера по номеру заказа, телефон и почта — только в зашифрованном виде), а отмену заказа передаёт в GA4 как возврат. Включается переключателем ниже.",
     stub: "Ничего не загружается и никуда не отправляется.",
     fields: [
       { key: "gtmId", label: "ID контейнера Google Tag Manager", env: "GTM_ID", secret: false, hint: "Вида GTM-ABC1234: tagmanager.google.com, вверху рядом с названием контейнера." },
@@ -119,6 +119,12 @@ export const INTEGRATIONS: IntegrationDef[] = [
       { key: "adsPurchaseLabel", label: "Google Ads: метка конверсии «Покупка»", env: "GOOGLE_ADS_PURCHASE_LABEL", secret: false, hint: "Часть после «/» в «AW-123456789/AbC-dEf_123»." },
       { key: "metaPixelId", label: "Meta Pixel (Facebook/Instagram): ID", env: "META_PIXEL_ID", secret: false, hint: "Только цифры: Meta Events Manager → Источники данных → ваш пиксель." },
       { key: "tiktokPixelId", label: "TikTok Pixel: ID", env: "TIKTOK_PIXEL_ID", secret: false, hint: "Вида C1ABCDEF2GHIJ3KLMN4O: TikTok Ads Manager → Инструменты → Events." },
+      // шаг А3: покупка с сервера — без этих ключей сервер покупку в кабинет не дублирует (на компьютере разработки — заглушка)
+      { key: "metaCapiToken", label: "Meta: токен Conversions API (покупка с сервера)", env: "META_CAPI_TOKEN", secret: true, hint: "Необязательно. Events Manager → ваш пиксель → Настройки → Conversions API → «Создать маркер доступа». Нужен и ID пикселя выше." },
+      { key: "metaTestCode", label: "Meta: код тестовых событий", env: "META_TEST_EVENT_CODE", secret: false, hint: "Только на время проверки: вида TEST12345 (Events Manager → «Тестирование событий»). После проверки — удалить, иначе покупки не попадут в отчёты." },
+      { key: "tiktokToken", label: "TikTok: токен Events API (покупка с сервера)", env: "TIKTOK_EVENTS_TOKEN", secret: true, hint: "Необязательно. TikTok Ads Manager → Инструменты → Events → ваш пиксель → Настройки → «Сгенерировать токен доступа». Нужен и ID пикселя выше." },
+      { key: "tiktokTestCode", label: "TikTok: код тестовых событий", env: "TIKTOK_TEST_EVENT_CODE", secret: false, hint: "Только на время проверки: вида TEST12345 (Events → пиксель → «Тестовые события»). После проверки — удалить." },
+      { key: "ga4ApiSecret", label: "Google Analytics 4: секрет API Measurement Protocol", env: "GA4_API_SECRET", secret: true, hint: "Необязательно. Администратор → Потоки данных → ваш сайт → «Секретные ключи API Measurement Protocol» → «Создать». Нужен и идентификатор потока выше." },
     ],
     required: ["gtmId"],
   },

@@ -13,6 +13,7 @@ import {
   type CartLineInput, type CheckoutErrors, type CheckoutSettings, type DeliveryChoice, type PayChoice, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
+import type { AdContext } from "@handyman/core/ad-events";
 import { reindexProducts, reindexSafely } from "./catalog-search";
 import { notifyManagers } from "./notify";
 import { npPointByRef } from "./novaposhta";
@@ -136,6 +137,8 @@ export type PlaceOptions = {
   lang: "uk" | "ru"; isTest?: boolean; clientId?: string | null;
   /** шаг А1: метки рекламного перехода из куки hm_utm (откуда пришёл покупатель) */
   utm?: Utm | null;
+  /** шаг А3: куки рекламы, адрес и браузер покупателя — для покупки с сервера (только при включённой аналитике) */
+  adContext?: AdContext | null;
 };
 
 /** Скидка покупателя для заказа (Этап 5): личная или по уровню (если уровни включены). */
@@ -187,6 +190,7 @@ async function createOrderRecord(p: {
   /** шаг 8.3: тот же телефон и та же корзина за 10 минут — второй заказ не создаём, отдаём первый (HM_ORDER_DEDUPE=off — только тесты) */
   dedupe?: boolean;
   utm?: Utm | null;
+  adContext?: AdContext | null;
 }): Promise<CreatedOrder> {
   const clientPct = await clientDiscountFor(p.discountClientId !== undefined ? p.discountClientId : p.sessionClientId);
   const totals = computeTotals(p.lines, p.pay, p.settings, clientPct);
@@ -231,6 +235,7 @@ async function createOrderRecord(p: {
         comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest, suspicious: blocked ? "blocked" : null,
         recipientName: p.name, recipientPhone: p.phone, source: p.source, createdBy: p.createdBy ?? null, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
         utm: p.utm ? (p.utm as Prisma.InputJsonValue) : undefined,
+        adContext: p.adContext && Object.keys(p.adContext).length ? (p.adContext as Prisma.InputJsonValue) : undefined,
         items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i], unitCost: costs.get(l.productId) ?? null })) },
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") + (blocked ? ". ⚠️ Подозрительный: покупатель в чёрном списке — в KeyCRM сам не уйдёт" : "") } },
       },
@@ -248,6 +253,8 @@ async function createOrderRecord(p: {
   if (!p.isTest) await notifyLowStock(created.low);
   // шаг 3.5: в очередь KeyCRM (если передача включена; тестовые — только кнопкой). Модуль грузится здесь: keycrm.ts сам импортирует orders.ts
   if (!p.isTest) await (await import("./keycrm")).afterOrderCreated(created.order.id);
+  // шаг А3: покупка с сервера в Meta / TikTok / GA4 (если аналитика включена; только сайт и «1 клік»)
+  if (!p.isTest) await (await import("./ad-events")).queueAdPurchase(created.order.id);
   return { duplicate: null, order: created.order, totals, accessKey, took: created.took, short: created.short };
 }
 
@@ -327,6 +334,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     npCityRef: v.delivery === "np" ? (v.npCityRef ?? null) : null, npPointRef,
     pickupWarehouseId: pickup?.id ?? null,
     comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте", sessionClientId: opts.clientId, utm: opts.utm,
+    adContext: opts.adContext,
   });
   // повтор той же корзины (второе нажатие, обновили страницу) — показываем первый заказ, менеджеру второй раз не пишем
   if (rec.duplicate) return { ok: true, duplicate: true, ...rec.duplicate };
@@ -361,7 +369,7 @@ export async function placeOneClick(
   const rec = await createOrderRecord({
     lines: quote.lines, pay: "later", delivery: "to_confirm", settings, phone, name, lang: opts.lang, isTest: opts.isTest ?? false,
     source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId, dedupe: !opts.isTest,
-    utm: opts.utm,
+    utm: opts.utm, adContext: opts.adContext,
   });
   if (rec.duplicate) return { ok: true, duplicate: true, no: rec.duplicate.no, accessKey: rec.duplicate.accessKey };
   const { order, totals, took, short } = rec;
@@ -497,7 +505,7 @@ export async function setOrderStatus(orderId: string, status: OrderStatus, who: 
     const o = await tx.order.findUnique({ where: { id: orderId }, select: { status: true, clientId: true, cancelReason: true, isTest: true } });
     if (!o) return null;
     const reasonChanged = reason !== null && reason !== o.cancelReason;
-    if (o.status === status && !note && !reasonChanged) return { changed: [], low: [], isTest: o.isTest };
+    if (o.status === status && !note && !reasonChanged) return { changed: [], low: [], isTest: o.isTest, from: o.status };
     // doneAt — месяц выручки для финансов (шаг 4.5): ставится при переходе в «Выполнен», стирается при уходе из него
     const doneAt = status === "DONE" ? (o.status === "DONE" ? undefined : new Date()) : null;
     await tx.order.update({ where: { id: orderId }, data: { status, cancelReason: reason, ...(doneAt !== undefined ? { doneAt } : {}) } });
@@ -505,11 +513,13 @@ export async function setOrderStatus(orderId: string, status: OrderStatus, who: 
     await tx.orderHistory.create({ data: { orderId, text: `${head} (${who})${note ? ` — ${note.slice(0, 300)}` : ""}` } });
     await tx.auditLog.create({ data: { who, action: "order.status", target: orderId, details: json({ from: o.status, to: status }) } });
     if (o.status !== status && (o.status === "DONE" || status === "DONE")) await recalcClient(tx, o.clientId); // сумма покупок и уровень
-    return { ...(await applyOrderStock(tx, orderId, o.status, status, who)), isTest: o.isTest };
+    return { ...(await applyOrderStock(tx, orderId, o.status, status, who)), isTest: o.isTest, from: o.status };
   });
   if (res === null) return { ok: false, error: "Заказ не найден." };
   if (res.changed.length) await reindexSafely(() => reindexProducts(res.changed));
   if (!res.isTest) await notifyLowStock(res.low);
+  // шаг А3: отмена или возврат — «возврат» в GA4 (если покупка там посчитана), чтобы выручка в отчётах была честной
+  if (!res.isTest && res.from !== status && needsCancelReason(status)) await (await import("./ad-events")).queueAdRefund(orderId);
   return { ok: true };
 }
 

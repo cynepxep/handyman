@@ -152,6 +152,12 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 тест сверяет файл с кодом и прогоняет события «симулятором GTM» — `packages/core/test/gtm-container.test.ts`) и кнопка «Скачать» в «Интеграциях» (`integrations/gtm-container/route.ts`).
 ID в контейнер не вписываются — теги берут их из `hm_config`; пустой ID — триггер-исключение «Блок — нет …». **Новое событие сайта** → GA4-тег появится сам (из `ANALYTICS_EVENTS`),
 параметры — `GA4_EVENT_PARAMS`, Meta/TikTok — `PIXEL_EVENTS`; затем `pnpm gtm:container` и новая `GTM_CONTAINER_VERSION`. Код тегов — только ES5. Инструкция владельцу — `docs/ANALYTICS.md`.
+**А3** покупка с сервера (Meta Conversions API, TikTok Events API, GA4 Measurement Protocol): тела запросов, SHA-256, куки — `core/src/ad-events.ts` (вход
+`@handyman/core/ad-events`, node:crypto — не в браузер); очередь `AdEvent` — `db/src/ad-events.ts`: `queueAdPurchase` из `createOrderRecord` (только сайт и «1 клік»,
+при включённой аналитике), `queueAdRefund` из `setOrderStatus` (отмена/возврат → GA4 `refund`), повторы — `processAdEvents` в `runJobs`. Куки/IP/браузер —
+`adContextFromRequest()` (`lib/shop/analytics.ts`) → `PlaceOptions.adContext` → `Order.adContext` (IP и браузер стираются после отправки). `event_id`/`transaction_id` =
+номер заказа (склейка с браузером). Без ключа: не production — заглушка (`AdEvent.stub`), production — кабинет пропускается. В тестах сеть — `setAnalyticsFetch`,
+фоновые — `adEventsSettled()`. Блок в заказе — `orders/[id]/ad-events-block.tsx`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -205,7 +211,7 @@ ID в контейнер не вписываются — теги берут и�
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 18 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+», аналитика — только при включённой); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 410 проверок (core 250 + интеграционные db 160). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 430 проверок (core 261 + интеграционные db 169). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

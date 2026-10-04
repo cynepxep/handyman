@@ -19,7 +19,8 @@
     "./errors": "./src/errors.ts",
     "./launch-check": "./src/launch-check.ts",
     "./sitemap": "./src/sitemap.ts",
-    "./gtm": "./src/gtm-container.ts"
+    "./gtm": "./src/gtm-container.ts",
+    "./ad-events": "./src/ad-events.ts"
   },
   "scripts": {
     "test": "tsx --test test/*.test.ts",

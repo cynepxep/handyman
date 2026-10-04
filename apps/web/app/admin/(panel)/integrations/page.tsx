@@ -4,6 +4,8 @@ import Link from "next/link";
 import { integrationsOverview, secretsKeySource, type FieldState } from "@handyman/db/integrations";
 import { loadKeycrmSettings } from "@handyman/db/keycrm";
 import { loadAnalyticsSettings } from "@handyman/db/analytics";
+import { adEventsOverview } from "@handyman/db/ad-events";
+import { AD_PLATFORMS, AD_PLATFORM_RU } from "@handyman/core/ad-events";
 import { GTM_CONTAINER_VERSION } from "@handyman/core/gtm";
 import { requireOwner } from "@/lib/auth";
 import { SubmitButton } from "../import/client-bits";
@@ -23,7 +25,7 @@ function FieldNow({ f }: { f: FieldState }) {
 export default async function IntegrationsPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string; s?: string }> }) {
   await requireOwner();
   const sp = await searchParams;
-  const [list, keycrm, analytics] = await Promise.all([integrationsOverview(), loadKeycrmSettings(), loadAnalyticsSettings()]);
+  const [list, keycrm, analytics, adServer] = await Promise.all([integrationsOverview(), loadKeycrmSettings(), loadAnalyticsSettings(), adEventsOverview()]);
 
   return (
     <>
@@ -58,6 +60,25 @@ export default async function IntegrationsPage({ searchParams }: { searchParams:
               <SubmitButton pendingText="…" primary={!analytics.enabled && it.configured}>{analytics.enabled ? "Выключить" : "Включить"}</SubmitButton>
               {!it.configured && !analytics.enabled && <small className="adm-muted">Без ID контейнера включение ничего не загрузит.</small>}
             </form>
+          )}
+          {it.id === "analytics" && (
+            <p style={{ margin: "6px 0" }}>
+              Покупка с сервера (шаг А3):{" "}
+              {AD_PLATFORMS.map((p) => {
+                const m = adServer.modes[p];
+                const st = adServer.stats[p];
+                return (
+                  <span key={p} style={{ marginRight: 10 }}>
+                    {AD_PLATFORM_RU[p].split(" (")[0]}{" "}
+                    <span className={m === "live" ? "adm-chip ok" : m === "stub" ? "adm-chip warn" : "adm-chip"}>{m === "live" ? "ключ задан" : m === "stub" ? "заглушка" : "нет ключа"}</span>
+                    {st.sent || st.failed || st.stub ? (
+                      <small className="adm-muted"> за 7 дней: {[st.sent && `ушло ${st.sent}`, st.stub && `заглушка ${st.stub}`, st.failed && `не ушло ${st.failed}`].filter(Boolean).join(", ")}</small>
+                    ) : null}
+                  </span>
+                );
+              })}
+              {!adServer.enabled && <small className="adm-muted">— работает только при включённой аналитике.</small>}
+            </p>
           )}
           {it.id === "analytics" && (
             <div className="adm-row" style={{ margin: "6px 0", alignItems: "center" }}>

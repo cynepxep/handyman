@@ -44,7 +44,8 @@
     "./rate-limit": "./src/rate-limit.ts",
     "./launch-check": "./src/launch-check.ts",
     "./sitemap": "./src/sitemap.ts",
-    "./analytics": "./src/analytics.ts"
+    "./analytics": "./src/analytics.ts",
+    "./ad-events": "./src/ad-events.ts"
   },
   "scripts": {
     "generate": "prisma generate",
