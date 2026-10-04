@@ -2,10 +2,13 @@
 // витрины (группа → подгруппа → категория каталога), названия — украинские (одинаковые в отчётах для обоих языков сайта).
 import "server-only";
 import { menuPlaceOf } from "@handyman/core/catalog";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { UTM_COOKIE, analyticsItem, parseUtm, type AnalyticsItem, type PurchaseLine, type Utm } from "@handyman/core/shop";
+import { adContextFrom, type AdContext } from "@handyman/core/ad-events";
 import { prisma } from "@handyman/db";
+import { analyticsConfig } from "@handyman/db/analytics";
 import { quoteCart } from "@handyman/db/orders";
+import { ipFrom } from "@/lib/request-ip";
 import { getCategoryStats } from "./catalog";
 import { getShopContent } from "./content";
 
@@ -58,6 +61,25 @@ export async function purchaseLinesWithCategories(lines: Array<PurchaseLine & { 
 export async function utmFromCookie(): Promise<Utm | null> {
   try {
     return parseUtm((await cookies()).get(UTM_COOKIE)?.value ?? null);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Шаг А3: куки рекламы (_fbp, _fbc, _ttp, _ga), адрес, браузер и страница покупателя — для покупки с сервера (Meta, TikTok, GA4).
+ * Только при включённой аналитике (иначе ничего не сохраняем). Ошибка — пусто: заказу это не мешает.
+ */
+export async function adContextFromRequest(utm: Utm | null): Promise<AdContext | null> {
+  try {
+    const cfg = await analyticsConfig();
+    if (!cfg.enabled) return null;
+    const [jar, h] = await Promise.all([cookies(), headers()]);
+    const all: Record<string, string> = {};
+    for (const c of jar.getAll()) if (c.name.startsWith("_")) all[c.name] = c.value;
+    return adContextFrom({
+      cookies: all, ga4Id: cfg.ids.ga4Id, ip: ipFrom(h), ua: h.get("user-agent") ?? "", referer: h.get("referer") ?? "", utm,
+    });
   } catch {
     return null;
   }

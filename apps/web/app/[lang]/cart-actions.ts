@@ -12,7 +12,7 @@ import { getShopContent } from "@/lib/shop/content";
 import { getClient, refCodeFromCookie } from "@/lib/client-auth";
 import { logError } from "@handyman/db/errors";
 import { guardForm } from "@/lib/antispam";
-import { utmFromCookie } from "@/lib/shop/analytics";
+import { adContextFromRequest, utmFromCookie } from "@/lib/shop/analytics";
 
 /** Этап 5: приглашение засчитываем, если это первый заказ покупателя (и его ещё никто не пригласил). */
 async function creditReferral(orderNo: string) {
@@ -90,7 +90,8 @@ export async function placeOrderAction(lang: unknown, form: Record<string, unkno
     const bad = await guardForm("order", form);
     if (bad) return { ok: false, errors: {}, message: t(bad) };
     const client = await getClient();
-    const r = await placeOrder(form, { lang: l, isTest: await isStaff(), clientId: client?.id, utm: await utmFromCookie() });
+    const utm = await utmFromCookie();
+    const r = await placeOrder(form, { lang: l, isTest: await isStaff(), clientId: client?.id, utm, adContext: await adContextFromRequest(utm) });
     if (!r.ok) return { ok: false, errors: Object.fromEntries(Object.entries(r.errors).map(([k, key]) => [k, t(key ?? "err.server")])) };
     if (!r.duplicate) await creditReferral(r.no);
     return { ok: true, url: shopHref(l, paths.order(r.no, r.accessKey)) };
@@ -110,7 +111,8 @@ export async function oneClickAction(lang: unknown, form: { sku?: unknown; qty?:
     const bad = await guardForm("order", form);
     if (bad) return { ok: false, message: t(bad) };
     const client = await getClient();
-    const r = await placeOneClick(form, { lang: l, isTest: await isStaff(), clientId: client?.id, utm: await utmFromCookie() });
+    const utm = await utmFromCookie();
+    const r = await placeOneClick(form, { lang: l, isTest: await isStaff(), clientId: client?.id, utm, adContext: await adContextFromRequest(utm) });
     if (r.ok && !r.duplicate) await creditReferral(r.no);
     if (!r.ok) return { ok: false, message: t(r.error) };
     // номер и ключ — только для события покупки (шаг А1); повтор того же заказа ключ не получает

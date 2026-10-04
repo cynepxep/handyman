@@ -25,7 +25,8 @@ export async function saveAnalyticsSettings(enabled: boolean, who: string): Prom
   analyticsChanged();
 }
 
-export type AnalyticsConfig = { on: boolean; ids: AnalyticsIds };
+/** `on` — грузить контейнер GTM на витрине; `enabled` — включатель (покупка с сервера, шаг А3, работает и без GTM). */
+export type AnalyticsConfig = { on: boolean; enabled: boolean; ids: AnalyticsIds };
 
 let memo: { at: number; v: AnalyticsConfig } | null = null;
 const TTL = 30_000;
@@ -51,7 +52,7 @@ export async function analyticsConfig(): Promise<AnalyticsConfig> {
     gtmId: ok("gtmId", gtmId), ga4Id: ok("ga4Id", ga4Id), adsConversionId: ok("adsConversionId", adsConversionId),
     adsPurchaseLabel: ok("adsPurchaseLabel", adsPurchaseLabel), metaPixelId: ok("metaPixelId", metaPixelId), tiktokPixelId: ok("tiktokPixelId", tiktokPixelId),
   };
-  const v = { on: settings.enabled && Boolean(ids.gtmId), ids };
+  const v = { on: settings.enabled && Boolean(ids.gtmId), enabled: settings.enabled, ids };
   memo = { at: Date.now(), v };
   return v;
 }

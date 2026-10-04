@@ -224,6 +224,15 @@ export function analyticsIdError(field: string, raw: string): string | null {
       return /^\d{10,20}$/.test(v) ? null : "ID пикселя Meta — только цифры (обычно 15–16), Events Manager → Источники данных.";
     case "tiktokPixelId":
       return /^[A-Z0-9]{10,40}$/.test(v) ? null : "ID пикселя TikTok — большие латинские буквы и цифры (вида «C1ABCDEF2GHIJ3KLMN4O»), TikTok Ads → Events Manager.";
+    // шаг А3: ключи для покупки с сервера
+    case "metaCapiToken":
+    case "tiktokToken":
+      return /^[A-Za-z0-9_|.-]{20,500}$/.test(v) ? null : "Токен — длинная строка из латинских букв и цифр без пробелов: скопируйте его целиком.";
+    case "ga4ApiSecret":
+      return /^[A-Za-z0-9_-]{10,64}$/.test(v) ? null : "Секрет API — латинские буквы, цифры, «-» и «_» (столбец «Значение секретного ключа» в GA4), не его название.";
+    case "metaTestCode":
+    case "tiktokTestCode":
+      return /^TEST[A-Za-z0-9]{1,20}$/.test(v) ? null : "Код тестовых событий выглядит как «TEST12345» — скопируйте его со страницы тестовых событий.";
   }
   return null;
 }

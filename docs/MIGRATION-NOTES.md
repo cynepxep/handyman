@@ -283,3 +283,16 @@ manual», сумма, **зачтено** `paid` и возвращено `refunde
 - Без миграции: `Setting` «analytics.settings» (`enabled`, кто и когда включил), ID кабинетов — в `IntegrationSecret` (`analytics.gtmId|ga4Id|
   adsConversionId|adsPurchaseLabel|metaPixelId|tiktokPixelId`), результат проверки — в «integrations.checks».
 В старом проекте аналитики и меток рекламы не было.
+
+## Покупка с сервера (шаг А3) — миграция `20261004150000_ad_events`
+
+Только добавления:
+- `Order.adContext` (JSON) — что браузер покупателя оставил при оформлении (только при включённой аналитике): куки рекламы `_fbp`, `_fbc`
+  (или собранная из `fbclid`), `_ttp`, `ttclid`, GA4 `client_id` из `_ga` и номер сессии из `_ga_<поток>`, адрес (IP), браузер (User-Agent), страница
+  оформления без параметров. **Адрес и браузер стираются**, когда покупка ушла во все кабинеты (или больше не повторяется).
+- Таблица `AdEvent` — очередь отправки покупки в Meta Conversions API, TikTok Events API, GA4 Measurement Protocol и возврата в GA4: `orderId`
+  (удаление заказа удаляет и строки), `platform` (meta | tiktok | ga4), `kind` (purchase | refund), `state` (queued | sending | sent | error),
+  `attempts`, `nextTryAt` (задан — повтор сам; пусто у ошибки — без повторов), `error`, `sentAt`, `stub` (заглушка: ключа нет, в сеть не ходили).
+  Уникальность (`orderId`, `platform`, `kind`) — одна покупка и один возврат на кабинет.
+- Без миграции: ключи `analytics.metaCapiToken|metaTestCode|tiktokToken|tiktokTestCode|ga4ApiSecret` — в `IntegrationSecret` (шифруются, как остальные).
+В старом проекте этого не было.
