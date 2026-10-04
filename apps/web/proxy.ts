@@ -6,6 +6,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { routeStorefront } from "@handyman/core/site/routes";
+import { UTM_COOKIE, UTM_COOKIE_DAYS, utmFromParams } from "@handyman/core/shop/analytics";
 
 const SESSION_COOKIE = "hm_staff_session";
 
@@ -26,6 +27,11 @@ export function proxy(request: NextRequest) {
   const ref = request.nextUrl.searchParams.get("ref");
   if (ref && /^[A-Za-z0-9]{4,16}$/.test(ref) && !request.cookies.has("hm_ref")) {
     res.cookies.set("hm_ref", ref.toUpperCase(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 86400 });
+  }
+  // шаг А1: метки рекламы (utm_*, gclid, fbclid, ttclid) — запоминаем последний рекламный переход на 30 дней, при заказе они попадут в заказ
+  const utm = utmFromParams(request.nextUrl.searchParams, pathname);
+  if (utm) {
+    res.cookies.set(UTM_COOKIE, JSON.stringify(utm), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: UTM_COOKIE_DAYS * 86400 });
   }
   return res;
 }

@@ -13,6 +13,7 @@ import { StockBadge } from "../ui";
 import { btn } from "../ui";
 import { useShopCart } from "./cart-context";
 import { cartStore, useCart } from "./store";
+import { trackItems } from "../analytics";
 
 export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
   compact?: boolean; onNavigate?: () => void; footer?: (hasLines: boolean) => React.ReactNode; emptyExtra?: React.ReactNode;
@@ -73,16 +74,16 @@ export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
                 {v && <StockBadge level={v.stock} labels={labels.stock} />}
                 <div className="hm-cart-row">
                   <div className="hm-stepper" role="group" aria-label={labels.qtyGroup}>
-                    <button type="button" aria-label={labels.qtyDec} onClick={() => cartStore.setQty(l.sku, l.qty - 1)}>−</button>
+                    <button type="button" aria-label={labels.qtyDec} onClick={() => { cartStore.setQty(l.sku, l.qty - 1); trackItems("remove_from_cart", [{ sku: l.sku, qty: 1, atQty: l.qty }]); }}>−</button>
                     <span aria-live="polite">{l.qty}</span>
-                    <button type="button" aria-label={labels.qtyInc} onClick={() => cartStore.setQty(l.sku, l.qty + 1)}>+</button>
+                    <button type="button" aria-label={labels.qtyInc} onClick={() => { cartStore.setQty(l.sku, l.qty + 1); trackItems("add_to_cart", [{ sku: l.sku, qty: 1, atQty: l.qty + 1 }]); }}>+</button>
                   </div>
                   <span className="hm-price">{v ? formatPrice(unit(l.sku, l.qty) * l.qty) : "…"}</span>
                 </div>
                 {v && v.qty === l.qty && v.price < v.basePrice && <p className="hm-cart-note is-ok">{labels.qtyApplied.replace("{price}", formatPrice(v.price))}</p>}
                 {v && v.qty === l.qty && v.next && <p className="hm-cart-note">{labels.qtyHint.replace("{n}", String(v.next.more)).replace("{price}", formatPrice(v.next.price))}</p>}
               </div>
-              <button type="button" className="hm-iconbtn hm-cart-remove" onClick={() => cartStore.remove(l.sku)} aria-label={labels.remove.replace("{name}", v?.name ?? l.sku)}>✕</button>
+              <button type="button" className="hm-iconbtn hm-cart-remove" onClick={() => { cartStore.remove(l.sku); trackItems("remove_from_cart", [{ sku: l.sku, qty: l.qty }]); }} aria-label={labels.remove.replace("{name}", v?.name ?? l.sku)}>✕</button>
             </li>
           );
         })}

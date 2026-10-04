@@ -13,6 +13,9 @@ import { FilterSheet, FilterSide, LoadMore, SortSelect, type FilterLabels } from
 import { Icon } from "./icons";
 import { ProductCard, cardLabels } from "./product-card";
 import { Breadcrumbs, Pager, btn } from "./ui";
+import { TrackList, TrackSearch } from "./analytics";
+import { LIST_ITEMS_MAX, analyticsItem } from "@handyman/core/shop";
+import { analyticsCategoryNames } from "@/lib/shop/analytics";
 
 export type ListingProps = {
   c: ShopContent;
@@ -64,6 +67,14 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
   }
 
   const { result, cards, quick, parts, mine } = data;
+  // шаг А1: view_item_list / select_item — первые товары списка (по-украински, с брендом и категориями меню), поиск — search
+  const listId = resolved.key.kind === "group" ? `group:${resolved.key.group}`
+    : resolved.key.kind === "sub" ? `sub:${resolved.key.group}/${resolved.key.sub}`
+    : resolved.key.kind === "task" ? `task:${resolved.key.task}` : "search";
+  const catsOf = await analyticsCategoryNames();
+  const listItems = result.items.slice(0, LIST_ITEMS_MAX).map((it, i) =>
+    analyticsItem({ sku: it.sku, name: it.nameUk, brand: it.brand, categories: catsOf(it.categoryId), price: it.price, listId, listName: title, index: (result.page - 1) * PER_PAGE + i }),
+  );
   const partHref = (part?: string) => {
     const next: ListingState = { ...state, page: 1 };
     if (part) next.part = part;
@@ -169,6 +180,7 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
             </ul>
           )}
 
+          {q && <TrackSearch term={q} />}
           {cards.length === 0 ? (
             <div className="hm-empty">
               <h2 className="hm-h2">{q && !hasFilters(state) ? t("search.empty.title", { q }) : t("category.empty")}</h2>
@@ -186,6 +198,9 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
             <>
               {/* заголовок для экранного диктора: названия товаров в карточках — h3, им нужен h2 выше */}
               <h2 className="hm-vh">{goods(result.total)}</h2>
+              <TrackList listId={listId} listName={title} items={listItems} dedupe={`${result.page}${listingQuery(state, q)}`} />
+              {/* data-a-list — нажатие на товар отсюда (и из «Показати ще») считается select_item этого списка */}
+              <div data-a-list={listId} style={{ display: "contents" }}>
               <ul className="hm-grid">
                 {cards.map((card, i) => (
                   <Fragment key={card.id}>
@@ -207,6 +222,7 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
                 perPage={PER_PAGE}
                 labels={{ card: cl, more: t("category.more"), loading: t("listing.loading"), shown: t("category.shown") }}
               />
+              </div>
               <Pager
                 page={result.page}
                 pages={result.pages}

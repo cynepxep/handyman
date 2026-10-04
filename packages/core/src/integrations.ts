@@ -1,6 +1,7 @@
 // «Интеграции» (шаг 3.1): какие внешние сервисы есть, какие у них ключи, как ключи шифруются и как понять ответ проверки подключения.
 // Чистая логика без базы и сети. Модуль использует node:crypto — свой вход `@handyman/core/integrations`, в браузер не импортировать.
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
+import { analyticsIdError } from "./shop/analytics";
 
 export type IntegrationField = {
   /** ключ поля внутри сервиса: telegram.botToken → «botToken» */
@@ -25,7 +26,7 @@ export type IntegrationDef = {
   required: string[];
 };
 
-export type IntegrationId = "telegram" | "novaposhta" | "mono" | "checkbox" | "keycrm" | "sms" | "backup";
+export type IntegrationId = "telegram" | "novaposhta" | "mono" | "checkbox" | "keycrm" | "sms" | "backup" | "analytics";
 
 export const INTEGRATIONS: IntegrationDef[] = [
   {
@@ -105,6 +106,22 @@ export const INTEGRATIONS: IntegrationDef[] = [
     ],
     required: ["endpoint", "bucket", "accessKey", "secretKey"],
   },
+  {
+    // шаг А1: не секреты (ID видны в коде страницы), но хранятся здесь же, рядом с остальными сервисами
+    id: "analytics",
+    title: "Аналитика и реклама (Google Tag Manager)",
+    what: "Статистика сайта и учёт покупок для рекламы: Google Analytics 4, Google Ads, Meta (Facebook/Instagram) Pixel, TikTok Pixel. На сайт ставится только контейнер Google Tag Manager, остальные ID он получает отсюда. Сайт сообщает о просмотрах товаров, корзине, оформлении, покупке (один раз на заказ; тестовые и заказы из браузера с админкой — нет), поиске, звонках и Telegram. Включается переключателем ниже.",
+    stub: "Ничего не загружается и никуда не отправляется.",
+    fields: [
+      { key: "gtmId", label: "ID контейнера Google Tag Manager", env: "GTM_ID", secret: false, hint: "Вида GTM-ABC1234: tagmanager.google.com, вверху рядом с названием контейнера." },
+      { key: "ga4Id", label: "Google Analytics 4: идентификатор потока", env: "GA4_ID", secret: false, hint: "Вида G-ABC123DEF4: Google Analytics → Администратор → Потоки данных → ваш сайт." },
+      { key: "adsConversionId", label: "Google Ads: идентификатор конверсии", env: "GOOGLE_ADS_ID", secret: false, hint: "Вида AW-123456789: Google Ads → Цели → Конверсии → «Покупка» → настройка тега." },
+      { key: "adsPurchaseLabel", label: "Google Ads: метка конверсии «Покупка»", env: "GOOGLE_ADS_PURCHASE_LABEL", secret: false, hint: "Часть после «/» в «AW-123456789/AbC-dEf_123»." },
+      { key: "metaPixelId", label: "Meta Pixel (Facebook/Instagram): ID", env: "META_PIXEL_ID", secret: false, hint: "Только цифры: Meta Events Manager → Источники данных → ваш пиксель." },
+      { key: "tiktokPixelId", label: "TikTok Pixel: ID", env: "TIKTOK_PIXEL_ID", secret: false, hint: "Вида C1ABCDEF2GHIJ3KLMN4O: TikTok Ads Manager → Инструменты → Events." },
+    ],
+    required: ["gtmId"],
+  },
 ];
 
 export const integrationById = (id: string) => INTEGRATIONS.find((i) => i.id === id) ?? null;
@@ -162,6 +179,7 @@ export function validateField(id: IntegrationId, field: string, raw: string): st
   if (id === "backup" && field === "endpoint" && !validStorageEndpoint(v)) return "Адрес хранилища — вида https://… (как в кабинете хранилища), без названия корзины в конце.";
   if (id === "backup" && field === "bucket" && !/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(v)) return "Название корзины — 3–63 знака: маленькие латинские буквы, цифры, «-» и «.».";
   if (id === "backup" && field === "region" && !/^[a-z0-9-]{2,40}$/.test(v)) return "Регион — латинские буквы, цифры и «-», например eu-central-1.";
+  if (id === "analytics") return analyticsIdError(field, v);
   return null;
 }
 
@@ -250,4 +268,16 @@ export function readTurboSmsCheck(status: number, body: unknown): CheckResult {
     return { ok: true, message: `Токен принят.${bal ? ` Баланс: ${bal} грн.` : ""}` };
   }
   return { ok: false, message: `TurboSMS не принял токен${str(b.response_status) ? `: ${str(b.response_status)}` : ""}.` };
+}
+
+/**
+ * Аналитика (шаг А1): GET https://www.googletagmanager.com/gtm.js?id=GTM-… — Google отдаёт скрипт только опубликованного контейнера,
+ * на неизвестный или ни разу не опубликованный ID — 404. `filled` — какие ещё ID вписаны (для подсказки), `enabled` — включатель.
+ */
+export function readGtmCheck(status: number, gtmId: string, filled: string[], enabled: boolean): CheckResult {
+  const also = filled.length ? ` Вписаны также: ${filled.join(", ")}.` : " Остальные ID (GA4, Google Ads, Meta, TikTok) не вписаны — контейнер их не получит.";
+  const off = enabled ? "" : " Аналитика пока выключена — включите переключателем ниже, когда будете готовы.";
+  if (status === 200) return { ok: true, message: `Контейнер ${gtmId} найден и опубликован.${also}${off} Что теги срабатывают — проверьте «Предпросмотром» в Tag Manager.` };
+  if (status === 404) return { ok: false, message: `Google не нашёл опубликованный контейнер ${gtmId}: проверьте ID или нажмите в Tag Manager «Отправить» (опубликовать). Пока он не опубликован, сайт грузит пустой контейнер — это не мешает покупателям.` };
+  return { ok: false, message: `Google Tag Manager ответил ошибкой ${status}.` };
 }

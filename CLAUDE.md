@@ -142,6 +142,12 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
+**А1** аналитика: ID кабинетов — поле `analytics.*` в `INTEGRATIONS`, включатель — Setting «analytics.settings» (`db/src/analytics.ts`, `analyticsConfig()`); на витрине —
+ранний скрипт `analyticsInitScript` + `<AnalyticsTags>` в `app/[lang]/layout.tsx` (не при входе в админку). Событие из браузера — `track(event, data)` /
+`trackItems(event, [{ sku, qty, atQty }])` из `components/shop/analytics.tsx` (товары и цены собирает сервер, `analytics-actions.ts`); новое событие — в
+`ANALYTICS_EVENTS` (+ `ECOMMERCE_EVENTS`, если с товарами) в `core/src/shop/analytics.ts`. Покупка — только `claimPurchase` (флаг `Order.analyticsAt`, один раз;
+тестовые/«подозрительные»/сотрудник — нет). Метки рекламы — кука `hm_utm` (`proxy.ts`) → `PlaceOptions.utm` → `Order.utm`. Звонки/мессенджеры считаются сами по
+`href` (`tel:`, `t.me`, `viber:`) — новые ссылки ничего не требуют. Нажатие на товар в списке — `select_item`, если карточка внутри `[data-a-list]` и у неё `data-sku`.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -194,8 +200,8 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm infra:up` / `infra:down` | Postgres, Redis, Meilisearch в Docker |
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
-| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 383 проверки (core 227 + интеграционные db 156). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 18 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+», аналитика — только при включённой); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
+| `pnpm test` | 399 проверок (core 239 + интеграционные db 160). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

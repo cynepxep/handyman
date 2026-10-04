@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 import { prisma, type Prisma, type OrderStatus } from "./client";
 import {
   ACTION_STATUSES, CANCEL_REASON_RU, DUPLICATE_ORDER_MS, cartSignature, SELLER_SETTING_KEY, clientDiscountPct, kyivDayStart, needsCancelReason, parseSeller, type TierKey,
-  type ManualOrderInput, type OrderFilters, type SellerDetails,
+  type ManualOrderInput, type OrderFilters, type SellerDetails, type Utm,
 } from "@handyman/core/shop";
 import {
   CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, qtyPrices, unitPriceAt, type QtyPrice, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, lineStockLevel, validateCheckout,
@@ -132,7 +132,11 @@ const NP_RU: Record<string, string> = { warehouse: "отделение", postoma
 
 export type PlaceResult = { ok: true; no: string; accessKey: string; total: number; dueNow: number; duplicate?: boolean } | { ok: false; errors: CheckoutErrors };
 /** `clientId` — покупатель вошёл в кабинет (Этап 5): заказ — ему, скидка — его (личная или по уровню). Гостю скидки уровня нет. */
-export type PlaceOptions = { lang: "uk" | "ru"; isTest?: boolean; clientId?: string | null };
+export type PlaceOptions = {
+  lang: "uk" | "ru"; isTest?: boolean; clientId?: string | null;
+  /** шаг А1: метки рекламного перехода из куки hm_utm (откуда пришёл покупатель) */
+  utm?: Utm | null;
+};
 
 /** Скидка покупателя для заказа (Этап 5): личная или по уровню (если уровни включены). */
 export async function clientDiscountFor(clientId: string | null | undefined): Promise<number> {
@@ -182,6 +186,7 @@ async function createOrderRecord(p: {
   discountClientId?: string | null;
   /** шаг 8.3: тот же телефон и та же корзина за 10 минут — второй заказ не создаём, отдаём первый (HM_ORDER_DEDUPE=off — только тесты) */
   dedupe?: boolean;
+  utm?: Utm | null;
 }): Promise<CreatedOrder> {
   const clientPct = await clientDiscountFor(p.discountClientId !== undefined ? p.discountClientId : p.sessionClientId);
   const totals = computeTotals(p.lines, p.pay, p.settings, clientPct);
@@ -225,6 +230,7 @@ async function createOrderRecord(p: {
         npCityRef: p.npCityRef ?? null, npPointRef: p.npPointRef ?? null, pickupWarehouseId: p.pickupWarehouseId ?? null,
         comment: p.comment ?? null, noCallback: p.noCallback ?? false, isTest: p.isTest, suspicious: blocked ? "blocked" : null,
         recipientName: p.name, recipientPhone: p.phone, source: p.source, createdBy: p.createdBy ?? null, lang: p.lang === "ru" ? "RU" : "UK", accessKey,
+        utm: p.utm ? (p.utm as Prisma.InputJsonValue) : undefined,
         items: { create: p.lines.map((l, i) => ({ productId: l.productId, sku: l.sku, name: l.nameUk, qty: l.qty, unitPrice: totals.unitPrices[i], unitCost: costs.get(l.productId) ?? null })) },
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") + (blocked ? ". ⚠️ Подозрительный: покупатель в чёрном списке — в KeyCRM сам не уйдёт" : "") } },
       },
@@ -320,7 +326,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     npType: v.delivery === "np" ? v.npType : null, npPoint: v.delivery === "np" ? npPoint : null,
     npCityRef: v.delivery === "np" ? (v.npCityRef ?? null) : null, npPointRef,
     pickupWarehouseId: pickup?.id ?? null,
-    comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте", sessionClientId: opts.clientId,
+    comment: v.comment ?? null, noCallback: v.noCallback, history: "Заказ создан на сайте", sessionClientId: opts.clientId, utm: opts.utm,
   });
   // повтор той же корзины (второе нажатие, обновили страницу) — показываем первый заказ, менеджеру второй раз не пишем
   if (rec.duplicate) return { ok: true, duplicate: true, ...rec.duplicate };
@@ -355,6 +361,7 @@ export async function placeOneClick(
   const rec = await createOrderRecord({
     lines: quote.lines, pay: "later", delivery: "to_confirm", settings, phone, name, lang: opts.lang, isTest: opts.isTest ?? false,
     source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId, dedupe: !opts.isTest,
+    utm: opts.utm,
   });
   if (rec.duplicate) return { ok: true, duplicate: true, no: rec.duplicate.no, accessKey: rec.duplicate.accessKey };
   const { order, totals, took, short } = rec;

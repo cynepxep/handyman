@@ -16,6 +16,10 @@ import { getClient } from "@/lib/client-auth";
 import { MiniAppBridge } from "@/components/shop/miniapp-bridge";
 import { CartSync } from "@/components/shop/cart/cart-sync";
 import { FavSync } from "@/components/shop/fav-store";
+import { AnalyticsTags } from "@/components/shop/analytics";
+import { analyticsConfig } from "@handyman/db/analytics";
+import { analyticsInitScript } from "@handyman/core/shop";
+import Script from "next/script";
 import "@/components/shop/shop.css";
 
 // Переменные шрифты (все начертания в одном файле): вместо 10 файлов ~330 КБ — 4 (кириллица и латиница: цифры цен — в латинице).
@@ -54,7 +58,9 @@ export async function generateMetadata({ params }: LayoutProps<"/[lang]">): Prom
 export default async function ShopRootLayout({ children, params }: LayoutProps<"/[lang]">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
-  const [c, staff, client] = await Promise.all([getShopContent(lang), getStaffSession().catch(() => null), getClient()]);
+  const [c, staff, client, analytics] = await Promise.all([
+    getShopContent(lang), getStaffSession().catch(() => null), getClient(), analyticsConfig().catch(() => null),
+  ]);
   // сотрудник с правом «Тексты» видит кнопку «✎ Редагувати тексти» (покупатели — нет)
   const canEditTexts = staff?.permissions.includes("texts.edit") ?? false;
   return (
@@ -73,6 +79,13 @@ export default async function ShopRootLayout({ children, params }: LayoutProps<"
         <MiniAppBridge loggedIn={Boolean(client)} />{/* Этап 5: вход в Telegram Mini App */}
         <CartSync loggedIn={Boolean(client)} />{/* шаг 5.5: общая корзина сайт ↔ Mini App */}
         <FavSync loggedIn={Boolean(client)} />
+        {/* шаг А1: контейнер Google Tag Manager — если аналитика включена; в браузере с входом в админку не грузится (не засорять рекламу) */}
+        {analytics?.on && !staff && (
+          <>
+            <Script id="hm-analytics" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: analyticsInitScript(analytics.ids) }} />
+            <AnalyticsTags gtmId={analytics.ids.gtmId} />
+          </>
+        )}
       </body>
     </html>
   );

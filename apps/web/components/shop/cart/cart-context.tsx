@@ -13,6 +13,7 @@ import { CartLines } from "./cart-view";
 import { PhoneInput } from "./phone-input";
 import { useFillTimer } from "../fill-timer";
 import { cartStore, useCart } from "./store";
+import { trackItems, trackPurchase } from "../analytics";
 
 const SHOWN_KEY = "hm.cartShown";
 
@@ -85,6 +86,8 @@ export function ShopCartProvider({ lang, labels, checkoutHref, cartHref, childre
     },
     addToCart: (sku, from, qty = 1) => {
       cartStore.add(sku, qty);
+      // шаг А1: add_to_cart — цена опта считается от того, сколько стало в корзине
+      trackItems("add_to_cart", [{ sku, qty, atQty: cartStore.get().find((l) => l.sku === sku)?.qty ?? qty }]);
       let shown = false;
       try {
         shown = sessionStorage.getItem(SHOWN_KEY) === "1";
@@ -159,7 +162,15 @@ function OneClickForm({ sku, name, onClose }: { sku: string; name: string; onClo
       className="hm-modal-body"
       onSubmit={(e) => {
         e.preventDefault();
-        start(async () => setResult(await oneClickAction(lang, { sku, qty: 1, phone, name: who, website: trap, fillMs: fillMs() })));
+        start(async () => {
+          const r = await oneClickAction(lang, { sku, qty: 1, phone, name: who, website: trap, fillMs: fillMs() });
+          setResult(r);
+          // шаг А1: «1 клік» — и товар «в корзине», и покупка (один раз на заказ; сервер решает, считать ли)
+          if (r.ok) {
+            trackItems("add_to_cart", [{ sku, qty: 1 }]);
+            if (r.no && r.k) trackPurchase(r.no, r.k);
+          }
+        });
       }}
     >
       <div className="hm-drawer-head">

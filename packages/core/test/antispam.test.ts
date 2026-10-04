@@ -50,11 +50,13 @@ const base = (): LaunchFacts => ({
     { id: "telegram", title: "Telegram-бот", configured: true, check: { ok: true, at: "2026-09-29T10:00:00Z" } },
     { id: "mono", title: "monobank", configured: false, check: null },
     { id: "backup", title: "Облако", configured: true, check: { ok: true, at: "2026-09-29T10:00:00Z" } },
+    { id: "analytics", title: "Аналитика", configured: true, check: { ok: true, at: "2026-09-29T10:00:00Z" } },
   ],
   openErrors: 0,
   indexing: { open: true, at: "2026-09-30T09:00:00Z" },
   sitemap: { urls: 20_000, products: 9_900 },
   searchConsole: { code: true, verified: true },
+  analytics: { enabled: true },
 });
 const NOW = new Date("2026-09-30T12:00:00Z");
 const byId = (f: LaunchFacts) => Object.fromEntries(launchChecklist(f, NOW).map((i) => [i.id, i.status]));

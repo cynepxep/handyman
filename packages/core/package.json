@@ -12,6 +12,7 @@
     "./site/listing": "./src/site/listing.ts",
     "./shop": "./src/shop/index.ts",
     "./shop/warehouse": "./src/shop/warehouse.ts",
+    "./shop/analytics": "./src/shop/analytics.ts",
     "./telegram": "./src/shop/telegram-logic.ts",
     "./integrations": "./src/integrations.ts",
     "./backups": "./src/backups.ts",

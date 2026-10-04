@@ -726,6 +726,8 @@ model Order {
   shopDeliveryCost Decimal      @default(0) @db.Decimal(10, 2) // шаг 4.5: доставка за счёт магазина (для прибыли)
   doneAt         DateTime? // шаг 4.5: когда стал «Выполнен» (месяц выручки); при уходе из «Выполнен» — пусто
   suspicious     String? // шаг 8.3: «подозрительный» — почему (blocked — покупатель в чёрном списке); сам в KeyCRM не уходит
+  analyticsAt    DateTime? // шаг А1: когда событие покупки (purchase) отдано в браузер — второй раз не отдаётся
+  utm            Json? // шаг А1: метки рекламного перехода (utm_*, gclid, fbclid, ttclid, страница входа) из куки hm_utm
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
 

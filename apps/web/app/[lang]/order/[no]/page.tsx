@@ -16,6 +16,7 @@ import { formatPrice } from "@/components/shop/format";
 import { Icon } from "@/components/shop/icons";
 import { btn } from "@/components/shop/ui";
 import { PayBlock } from "@/components/shop/pay-block";
+import { TrackPurchase } from "@/components/shop/analytics";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/order/[no]">): Promise<Metadata> {
   const { lang, no } = await params;
@@ -52,6 +53,8 @@ export default async function ThanksPage({ params, searchParams }: PageProps<"/[
 
   return (
     <section className="hm-section hm-thanks">
+      {/* шаг А1: purchase — один раз на заказ (флаг в базе ставит сервер); без включённой аналитики ничего не делает */}
+      <TrackPurchase no={o.no} k={key} />
       <h1 className="hm-h1">{t("thanks.title", { no: o.no })}</h1>
       <div className="hm-panel">
         <p className="hm-muted">{t("thanks.number")}</p>

@@ -27,6 +27,8 @@ export type LaunchFacts = {
   sitemap: { urls: number; products: number };
   /** Google Search Console (шаг Л1): вписан ли код подтверждения и отметил ли владелец «подтверждено» */
   searchConsole: { code: boolean; verified: boolean };
+  /** аналитика (шаг А1): включатель «Аналитика включена» в «Интеграциях» (ID контейнера — в integrations, id «analytics») */
+  analytics: { enabled: boolean };
 };
 
 /** Шаблонные значения из .env.example — на сервере их быть не должно. */
@@ -161,7 +163,7 @@ export function launchChecklist(f: LaunchFacts, now: Date = new Date()): LaunchI
 
   // --- интеграции: подключённые должны пройти «Проверить подключение»
   for (const it of f.integrations) {
-    if (it.id === "backup") continue; // выше, в «Резервных копиях»
+    if (it.id === "backup" || it.id === "analytics") continue; // выше, в «Резервных копиях»; аналитика — ниже, в «Работе сайта»
     const needed = it.id === "telegram"; // без бота менеджеры не узнают о заказах
     const st: LaunchStatus = !it.configured ? (needed ? "warn" : "info") : !it.check ? "warn" : it.check.ok ? "ok" : "fail";
     add({
@@ -193,6 +195,18 @@ export function launchChecklist(f: LaunchFacts, now: Date = new Date()): LaunchI
     detail: f.searchConsole.verified ? "Сайт подтверждён в Search Console."
       : f.searchConsole.code ? "Код вписан — осталось нажать «Подтвердить» в Search Console и поставить отметку ниже." : "Код подтверждения не вписан.",
     fix: "Раздел «Google Search Console» ниже на этой странице — по шагам.",
+  });
+  // шаг А1: желательно, но не обязательно — без аналитики магазин работает, просто нет статистики и учёта покупок для рекламы
+  const an = f.integrations.find((i) => i.id === "analytics");
+  add({
+    id: "analytics", group: E, title: "Аналитика подключена (Google Tag Manager)",
+    status: an?.configured && f.analytics.enabled && an.check?.ok ? "ok" : "warn",
+    detail: !an?.configured ? "ID контейнера Google Tag Manager не вписан — статистики посещений и учёта покупок для рекламы нет."
+      : !f.analytics.enabled ? "ID вписан, но аналитика выключена — на сайте ничего не загружается."
+      : !an.check ? "Аналитика включена, но «Проверить подключение» ещё не нажимали."
+      : an.check.ok ? "Контейнер опубликован, события покупок и корзины уходят в Tag Manager."
+      : "Аналитика включена, но Google не нашёл опубликованный контейнер — проверьте ID или опубликуйте контейнер.",
+    fix: "«Интеграции» → «Аналитика и реклама»: вписать ID, «Проверить подключение», включить переключатель.",
   });
   const idxEarly = f.indexing.open && !(f.production && /^https:\/\//i.test(url));
   add({
