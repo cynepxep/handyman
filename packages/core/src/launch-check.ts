@@ -23,6 +23,10 @@ export type LaunchFacts = {
   openErrors: number;
   /** открыт ли сайт для поисковиков (переключатель владельца на этой же странице, шаг 8.5) */
   indexing: { open: boolean; at: string | null };
+  /** карта сайта (шаг Л1): сколько адресов в ней (оба языка) */
+  sitemap: { urls: number; products: number };
+  /** Google Search Console (шаг Л1): вписан ли код подтверждения и отметил ли владелец «подтверждено» */
+  searchConsole: { code: boolean; verified: boolean };
 };
 
 /** Шаблонные значения из .env.example — на сервере их быть не должно. */
@@ -175,6 +179,21 @@ export function launchChecklist(f: LaunchFacts, now: Date = new Date()): LaunchI
     detail: f.openErrors === 0 ? "В журнале ошибок пусто." : `Открытых ошибок: ${f.openErrors}.`,
     fix: "«Ошибки» — разобрать и закрыть.",
   });
+  const base = /^https?:\/\/[^/\s]+/i.test(url) ? url.replace(/\/+$/, "") : "https://<домен>";
+  add({
+    id: "sitemap", group: E, title: "Карта сайта для Google (sitemap.xml)",
+    status: f.sitemap.products === 0 ? "warn" : f.indexing.open ? "ok" : "info",
+    detail: f.sitemap.products === 0 ? "В карте нет товаров (каталог не загружен?)."
+      : f.indexing.open ? `Адресов: ${f.sitemap.urls}, ${base}/sitemap.xml.` : `Готова (адресов: ${f.sitemap.urls}), Google увидит её после открытия сайта.`,
+    fix: "Загрузить каталог («Импорт»). Карта собирается сама: товары, разделы и страницы попадают в неё без ручной работы.",
+  });
+  add({
+    id: "search-console", group: E, title: "Google Search Console подтверждён",
+    status: f.searchConsole.verified ? "ok" : f.searchConsole.code || f.indexing.open ? "warn" : "info",
+    detail: f.searchConsole.verified ? "Сайт подтверждён в Search Console."
+      : f.searchConsole.code ? "Код вписан — осталось нажать «Подтвердить» в Search Console и поставить отметку ниже." : "Код подтверждения не вписан.",
+    fix: "Раздел «Google Search Console» ниже на этой странице — по шагам.",
+  });
   const idxEarly = f.indexing.open && !(f.production && /^https:\/\//i.test(url));
   add({
     id: "indexing", group: E, title: "Сайт открыт для Google",
@@ -214,6 +233,18 @@ export function robotsBlocks(open: boolean, pathWithQuery: string): boolean {
     const re = new RegExp("^" + rule.split("*").map((x) => x.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*"));
     return re.test(pathWithQuery);
   });
+}
+
+/**
+ * Код подтверждения Google Search Console из того, что вставил владелец: весь мета-тег
+ * `<meta name="google-site-verification" content="КОД" />` или только КОД. Пусто — null; непохоже на код — "invalid".
+ */
+export function parseGoogleVerification(input: string): string | null | "invalid" {
+  const s = input.trim();
+  if (!s) return null;
+  const m = /content\s*=\s*["']([^"']*)["']/i.exec(s);
+  const code = (m ? m[1] : s).trim();
+  return /^[A-Za-z0-9_-]{10,100}$/.test(code) ? code : "invalid";
 }
 
 export function launchSummary(items: LaunchItem[]): { ok: number; fail: number; warn: number; info: number; ready: boolean } {

@@ -42,7 +42,8 @@
     "./errors": "./src/errors.ts",
     "./health": "./src/health.ts",
     "./rate-limit": "./src/rate-limit.ts",
-    "./launch-check": "./src/launch-check.ts"
+    "./launch-check": "./src/launch-check.ts",
+    "./sitemap": "./src/sitemap.ts"
   },
   "scripts": {
     "generate": "prisma generate",

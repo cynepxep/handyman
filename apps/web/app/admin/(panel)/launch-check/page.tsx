@@ -1,9 +1,12 @@
 // «Проверка перед запуском» (шаг 8.3) — только владелец: что готово к переезду на сервер и открытию сайта, а что нет.
 // Правила — @handyman/core/launch-check, факты — @handyman/db/launch-check. Значения ключей не показываются.
 import { launchSummary, type LaunchItem, type LaunchStatus } from "@handyman/core/launch-check";
-import { launchCheck, loadIndexing } from "@handyman/db/launch-check";
+import { launchCheck, loadIndexing, loadSearchConsole } from "@handyman/db/launch-check";
+import { sitemapStats } from "@handyman/db/sitemap";
+import { sitemapRootUrl } from "@handyman/core/sitemap";
 import { requireOwner } from "@/lib/auth";
-import { closeIndexingAction, openIndexingAction } from "./actions";
+import { siteUrl } from "@/lib/shop/content";
+import { closeIndexingAction, openIndexingAction, saveSearchConsoleAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +16,9 @@ const WORD: Record<LaunchStatus, string> = { ok: "готово", fail: "не г�
 export default async function LaunchCheckPage({ searchParams }: { searchParams: Promise<{ ok?: string; error?: string }> }) {
   await requireOwner();
   const sp = await searchParams;
-  const [items, indexing] = await Promise.all([launchCheck(), loadIndexing()]);
+  const [items, indexing, sc, map] = await Promise.all([launchCheck(), loadIndexing(), loadSearchConsole(), sitemapStats().catch(() => null)]);
+  const mapUrl = sitemapRootUrl(siteUrl());
+  const fmt = (iso: string) => new Date(iso).toLocaleString("ru-RU", { timeZone: "Europe/Kyiv" });
   const sum = launchSummary(items);
   const groups = [...new Set(items.map((i) => i.group))];
 
@@ -45,6 +50,39 @@ export default async function LaunchCheckPage({ searchParams }: { searchParams: 
           </ul>
         </section>
       ))}
+
+      <section className="adm-card" id="search-console" aria-labelledby="lc-sc">
+        <h2 id="lc-sc" style={{ marginTop: 0 }}>Google Search Console и карта сайта</h2>
+        <p>
+          Карта сайта (<code>sitemap.xml</code>) — список всех страниц магазина для Google: главная, каталог, разделы, задачи, страницы и товары
+          на двух языках. Собирается сама, ничего вписывать не нужно.{" "}
+          {map ? <>Адресов в ней сейчас: <b>{map.urls}</b> (товаров — {map.products}).</> : "Сейчас посчитать не удалось (база недоступна)."}{" "}
+          {/* карта — обычный адрес сайта (не страница админки), поэтому <a>, а не Link */}
+          <a href="/sitemap.xml" target="_blank" rel="noreferrer">Посмотреть карту</a>
+          {!indexing.open && <span className="adm-muted"> (пока сайт закрыт, её видите только вы — Google получит «нет такой страницы»)</span>}.
+        </p>
+        <p className="adm-muted">Search Console — бесплатный сервис Google: сколько страниц попало в поиск, по каким запросам находят магазин, какие ошибки. Порядок в день запуска:</p>
+        <ol className="adm-muted" style={{ marginTop: 0, paddingLeft: 22 }}>
+          <li>Откройте <code>search.google.com/search-console</code> под своим Google-аккаунтом → «Добавить ресурс» → справа «Префикс URL» → впишите адрес сайта (<code>{siteUrl().origin}</code>).</li>
+          <li>Способ подтверждения «Тег HTML» → «Копировать». Вставьте скопированное в поле ниже и нажмите «Сохранить» — тег сразу появится на главной.</li>
+          <li>Вернитесь в Search Console и нажмите «Подтвердить». Получилось — поставьте ниже отметку «Подтверждено» и сохраните. (Если подтвердили иначе, например записью у регистратора домена, — поле можно оставить пустым и просто поставить отметку.)</li>
+          <li>После кнопки «Открыть сайт для Google» (ниже): в Search Console → «Файлы Sitemap» → впишите <code>sitemap.xml</code> → «Отправить». Полный адрес: <code>{mapUrl}</code>.</li>
+          <li>Через 1–3 дня — раздел «Страницы»: сколько страниц в поиске и почему остальные нет.</li>
+        </ol>
+        <form action={saveSearchConsoleAction} style={{ display: "grid", gap: 10, justifyItems: "start", maxWidth: 640 }}>
+          <label style={{ display: "grid", gap: 4, width: "100%" }}>
+            <span>Код подтверждения (тег из Search Console или только код)</span>
+            <input className="adm-input wide" name="code" defaultValue={sc.code ?? ""} maxLength={500} autoComplete="off" spellCheck={false}
+              placeholder='<meta name="google-site-verification" content="…" />' />
+          </label>
+          <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+            <input type="checkbox" name="verified" value="yes" defaultChecked={Boolean(sc.verifiedAt)} style={{ marginTop: 4 }} />
+            <span>Подтверждено: Search Console написал «Право собственности подтверждено»</span>
+          </label>
+          <button className="adm-btn primary" type="submit">Сохранить</button>
+          {sc.verifiedAt && <span className="adm-muted">Подтверждено {fmt(sc.verifiedAt)}{sc.by ? ` (${sc.by})` : ""}.</span>}
+        </form>
+      </section>
 
       <section className="adm-card" id="indexing" aria-labelledby="lc-idx">
         <h2 id="lc-idx" style={{ marginTop: 0 }}>Открытие сайта для Google</h2>
