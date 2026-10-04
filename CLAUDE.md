@@ -128,7 +128,8 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 файл `.data\moved-to-server.txt` на ПК → «Обновить сайт» не запускает сайт. Бот на сервере — долгий опрос (вебхук не регистрируется). **Открытие для Google** —
 кнопка в «Проверке перед запуском» (Setting `site.indexing`, `loadIndexing`/`saveIndexing`; `robotsRules` в `core/src/launch-check.ts` → `app/robots.ts`;
 `<meta robots>` витрины — `shopRobots()` из `lib/shop/indexing.ts`). Новая служебная страница витрины, которую не надо показывать Google, — в `ROBOTS_PRIVATE_PATHS`
-и `robots: { index: false }` у страницы. **Этап 8 завершён** — дальше правки владельца (`docs/QUESTIONS-TO-OWNER.md`) и переезд по `docs/LAUNCH.md`.
+и `robots: { index: false }` у страницы. **Этап 8 завершён.** Дальше (2026-10-04) — блоки **«Запуск» Л1–Л5** и **«Аналитика» А1–А6** (`docs/PLAN-TO-LAUNCH.md`, раздел «Запуск и аналитика»;
+владелец называет их «Этап 1. Launch blocker» и «Этап 2. Analytics» — это не Этапы 1–2 ТЗ), вопросы Д71–Д77; правки владельца — `docs/QUESTIONS-TO-OWNER.md`.
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
