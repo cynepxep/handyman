@@ -7,6 +7,7 @@ import Image from "next/image";
 import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import { quoteCartAction, type CartQuote } from "@/app/[lang]/cart-actions";
+import { unitPriceAt } from "@handyman/core/shop";
 import { formatPrice } from "../format";
 import { StockBadge } from "../ui";
 import { btn } from "../ui";
@@ -51,7 +52,12 @@ export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
   // пока сервер считает — показываем прошлый расчёт (если количество поменялось, суммы обновятся через мгновение)
   const data = quote?.data;
   const byS = new Map(data?.lines.map((l) => [l.sku, l]));
-  const subtotal = data ? lines.reduce((a, l) => a + (byS.get(l.sku)?.price ?? 0) * l.qty, 0) : null;
+  // цена за штуку — для текущего количества (опт), а не для прошлого, пока сервер считает (шаг Л2)
+  const unit = (sku: string, qty: number) => {
+    const v = byS.get(sku);
+    return v ? (v.qty === qty ? v.price : unitPriceAt(v.basePrice, v.tiers, qty)) : 0;
+  };
+  const subtotal = data ? Math.round(lines.reduce((a, l) => a + unit(l.sku, l.qty) * l.qty, 0) * 100) / 100 : null;
 
   return (
     <div className={`hm-cartbox${compact ? " is-compact" : ""}`}>
@@ -71,7 +77,7 @@ export function CartLines({ compact, onNavigate, footer, emptyExtra }: {
                     <span aria-live="polite">{l.qty}</span>
                     <button type="button" aria-label={labels.qtyInc} onClick={() => cartStore.setQty(l.sku, l.qty + 1)}>+</button>
                   </div>
-                  <span className="hm-price">{v ? formatPrice(v.price * l.qty) : "…"}</span>
+                  <span className="hm-price">{v ? formatPrice(unit(l.sku, l.qty) * l.qty) : "…"}</span>
                 </div>
                 {v && v.qty === l.qty && v.price < v.basePrice && <p className="hm-cart-note is-ok">{labels.qtyApplied.replace("{price}", formatPrice(v.price))}</p>}
                 {v && v.qty === l.qty && v.next && <p className="hm-cart-note">{labels.qtyHint.replace("{n}", String(v.next.more)).replace("{price}", formatPrice(v.next.price))}</p>}

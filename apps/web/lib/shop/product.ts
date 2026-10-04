@@ -34,7 +34,8 @@ export const loadProduct = cache(async (sku: string) => {
     price,
     oldPrice: old && old > price ? old : null,
     discountPct: old && old > price ? Math.round((1 - price / old) * 100) : 0,
-    available: p.supplierAvailable,
+    /** можно купить без ожидания «під замовлення» — как в списках и поиске (наш склад или поставщик) */
+    available: stockLevel(availableQty(p.stockItems), p.supplierAvailable) !== "order",
     /** наш склад в Одессе / у поставщика / под заказ */
     stock: stockLevel(availableQty(p.stockItems), p.supplierAvailable),
     brand: p.brand?.name ?? null,

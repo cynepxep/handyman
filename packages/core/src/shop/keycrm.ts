@@ -90,7 +90,7 @@ export function keycrmManagerComment(o: KeycrmOrderInput): string {
     `Заказ ${o.no} с сайта${o.source && SOURCE_NOTE[o.source] ? `. ${SOURCE_NOTE[o.source]}` : ""}`,
     `Оплата: ${PAY_MODE_RU[o.payMode] ?? o.payMode}${o.dueNow > 0 && o.dueNow < o.total - 0.005 ? `, сейчас ${money(o.dueNow)}` : ""}`,
     o.paid > 0 ? `Оплачено картой: ${money(o.paid)}` : "",
-    o.discountPct > 0 ? `Скидка клиента ${o.discountPct}% уже учтена в ценах` : "",
+    o.discountPct > 0 ? `Скидка ${o.discountPct}% (клиента и/или за полную оплату) уже учтена в ценах` : "",
     o.delivery === "TO_CONFIRM" ? "Доставку и оплату уточнить по телефону" : "",
     o.noCallback ? "Просит не звонить для уточнения" : "",
     `Сумма на сайте: ${money(o.total)}`,

@@ -55,12 +55,18 @@ export type LowStockHit = { productId: string; sku: string; name: string; availa
 
 /**
  * Зарезервировать под заказ то, что есть на нашем складе (сколько доступно, не больше). Возвращает товары, у которых изменился
- * доступный остаток, и те, что при этом «перешли» порог минимального остатка (для уведомления менеджеру).
+ * доступный остаток, те, что при этом «перешли» порог минимального остатка (для уведомления менеджеру), и сколько удалось
+ * отложить по каждому товару (`took`; шаг Л2 — если последний товар одновременно купили двое, второму не достанется).
+ * Товары резервируются по порядку productId: два заказа с одними и теми же товарами не ждут друг друга по кругу (deadlock).
  */
-export async function reserveForOrder(tx: Prisma.TransactionClient, orderId: string, lines: Array<{ productId: string | null; qty: number }>): Promise<{ changed: string[]; low: LowStockHit[] }> {
+export async function reserveForOrder(
+  tx: Prisma.TransactionClient, orderId: string, lines: Array<{ productId: string | null; qty: number }>,
+): Promise<{ changed: string[]; low: LowStockHit[]; took: Map<string, number> }> {
   const changed: string[] = [];
   const low: LowStockHit[] = [];
-  for (const l of lines) {
+  const tookBy = new Map<string, number>();
+  const sorted = [...lines].sort((a, b) => (a.productId ?? "").localeCompare(b.productId ?? ""));
+  for (const l of sorted) {
     if (!l.productId || l.qty <= 0) continue;
     const items = await tx.stockItem.findMany({ where: { productId: l.productId }, orderBy: { onHand: "desc" } });
     const before = availableQty(items);
@@ -80,12 +86,13 @@ export async function reserveForOrder(tx: Prisma.TransactionClient, orderId: str
       took += take;
     }
     if (!took) continue;
+    tookBy.set(l.productId, (tookBy.get(l.productId) ?? 0) + took);
     changed.push(l.productId);
     const p = await tx.product.findUnique({ where: { id: l.productId }, select: { sku: true, nameUk: true, minStock: true } });
     const after = before - took;
     if (p && isLowStock(after, p.minStock) && !isLowStock(before, p.minStock)) low.push({ productId: l.productId, sku: p.sku, name: p.nameUk, available: after, minStock: p.minStock });
   }
-  return { changed: [...new Set(changed)], low };
+  return { changed: [...new Set(changed)], low, took: tookBy };
 }
 
 async function orderMoves(tx: Prisma.TransactionClient | typeof prisma, orderId: string) {

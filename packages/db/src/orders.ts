@@ -9,7 +9,7 @@ import {
   type ManualOrderInput, type OrderFilters, type SellerDetails,
 } from "@handyman/core/shop";
 import {
-  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, qtyPrices, unitPriceAt, type QtyPrice, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, stockLevel, validateCheckout,
+  CHECKOUT_SETTING_KEY, ORDER_STATUS_RU, cleanCart, qtyPrices, unitPriceAt, type QtyPrice, computeTotals, formatPhone, normalizePhone, orderNumber, parseCheckoutSettings, lineStockLevel, validateCheckout,
   type CartLineInput, type CheckoutErrors, type CheckoutSettings, type DeliveryChoice, type PayChoice, type StockLevel,
 } from "@handyman/core/shop";
 import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
@@ -56,7 +56,11 @@ export type QuoteLine = {
   tiers: QtyPrice[];
   oldPrice: number | null;
   image: string | null;
+  /** наличие при этом количестве (шаг Л2: «в Одессе» — только если свободного хватает на всё) */
   stock: StockLevel;
+  /** свободно на нашем складе, шт. (на складе − в резерве) */
+  ownQty: number;
+  supplierAvailable: boolean;
   qty: number;
 };
 
@@ -112,7 +116,8 @@ export async function quoteCart(rawItems: unknown, opts: { clientId?: string | n
     lines.push({
       productId: r.id, sku: r.sku, nameUk: r.nameUk, nameRu: r.nameRu, price: unitPriceAt(basePrice, tiers, it.qty), basePrice, tiers,
       oldPrice: old && old > basePrice ? old : null,
-      image: r.images[0] ? pickImage(r.images[0], styleOn) : null, stock: stockLevel(own.get(r.id) ?? 0, r.supplierAvailable), qty: it.qty,
+      image: r.images[0] ? pickImage(r.images[0], styleOn) : null, qty: it.qty,
+      stock: lineStockLevel(own.get(r.id) ?? 0, it.qty, r.supplierAvailable), ownQty: own.get(r.id) ?? 0, supplierAvailable: r.supplierAvailable,
     });
   }
   return { lines, missing };
@@ -173,10 +178,12 @@ async function createOrderRecord(p: {
   noCallback?: boolean;
   history: string;
   sessionClientId?: string | null;
+  /** шаг Л2: чья скидка (личная/уровня) — заказ по звонку: покупатель по телефону (сотруднику можно верить); иначе — вошедший */
+  discountClientId?: string | null;
   /** шаг 8.3: тот же телефон и та же корзина за 10 минут — второй заказ не создаём, отдаём первый (HM_ORDER_DEDUPE=off — только тесты) */
   dedupe?: boolean;
 }): Promise<CreatedOrder> {
-  const clientPct = await clientDiscountFor(p.sessionClientId);
+  const clientPct = await clientDiscountFor(p.discountClientId !== undefined ? p.discountClientId : p.sessionClientId);
   const totals = computeTotals(p.lines, p.pay, p.settings, clientPct);
   const accessKey = randomBytes(12).toString("base64url");
   const created = await prisma.$transaction(async (tx) => {
@@ -222,20 +229,50 @@ async function createOrderRecord(p: {
         history: { create: { text: p.history + (p.isTest ? " (ТЕСТОВЫЙ: заказ сотрудника)" : "") + (blocked ? ". ⚠️ Подозрительный: покупатель в чёрном списке — в KeyCRM сам не уйдёт" : "") } },
       },
     });
-    // резерв на нашем складе (шаг 4.4): товар остаётся на полке, но покупателям его «доступно» меньше
-    const { changed, low } = await reserveForOrder(tx, order.id, p.lines.filter((l) => l.stock === "local"));
-    return { order, changed, low };
+    // резерв на нашем складе (шаг 4.4): товар остаётся на полке, но покупателям его «доступно» меньше.
+    // Шаг Л2: откладываем, сколько есть, и по строкам «у поставщика» (часть есть у нас). Если последний товар одновременно
+    // купил другой покупатель, резерв меньше, чем обещала корзина, — пишем в историю и менеджеру.
+    const { changed, low, took } = await reserveForOrder(tx, order.id, p.lines);
+    const short = shortOf(p.lines, took);
+    if (short.length) await tx.orderHistory.create({ data: { orderId: order.id, text: `⚠️ ${shortText(short)}` } });
+    return { order, changed, low, took, short };
   });
   if ("duplicate" in created && created.duplicate) return { duplicate: created.duplicate };
   if (created.changed.length) await reindexSafely(() => reindexProducts(created.changed));
   if (!p.isTest) await notifyLowStock(created.low);
   // шаг 3.5: в очередь KeyCRM (если передача включена; тестовые — только кнопкой). Модуль грузится здесь: keycrm.ts сам импортирует orders.ts
   if (!p.isTest) await (await import("./keycrm")).afterOrderCreated(created.order.id);
-  return { duplicate: null, order: created.order, totals, accessKey };
+  return { duplicate: null, order: created.order, totals, accessKey, took: created.took, short: created.short };
+}
+
+type ShortLine = { nameUk: string; qty: number; took: number; supplierAvailable: boolean };
+
+/** Строки, где корзина обещала «в Одессе», а отложить удалось меньше (последний товар одновременно забрал другой заказ). */
+function shortOf(lines: QuoteLine[], took: Map<string, number>): ShortLine[] {
+  return lines
+    .filter((l) => l.stock === "local" && (took.get(l.productId) ?? 0) < l.qty)
+    .map((l) => ({ nameUk: l.nameUk, qty: l.qty, took: took.get(l.productId) ?? 0, supplierAvailable: l.supplierAvailable }));
+}
+
+const shortText = (short: ShortLine[]) =>
+  `На складе не хватило (одновременно купил другой покупатель): ${short
+    .map((x) => `${x.nameUk} — отложено ${x.took} из ${x.qty}, остальное ${x.supplierAvailable ? "у поставщика" : "ПОД ЗАКАЗ"}`)
+    .join("; ")}`;
+
+/** Пометка строки для менеджера: со склада / частично / у поставщика / под заказ (по тому, что реально отложено). */
+function stockNote(l: QuoteLine, took: Map<string, number>): string {
+  const got = took.get(l.productId) ?? 0;
+  if (got >= l.qty) return " — со склада";
+  const rest = l.supplierAvailable ? "у поставщика" : "ПОД ЗАКАЗ";
+  if (got > 0) return ` — со склада ${got} из ${l.qty}, остальное ${rest}`;
+  return l.stock === "local" ? ` — ⚠️ на складе уже нет, ${rest}` : l.supplierAvailable ? "" : " — ПОД ЗАКАЗ";
 }
 
 type CreatedOrder =
-  | { duplicate: null; order: Prisma.OrderGetPayload<object>; totals: ReturnType<typeof computeTotals>; accessKey: string }
+  | {
+      duplicate: null; order: Prisma.OrderGetPayload<object>; totals: ReturnType<typeof computeTotals>; accessKey: string;
+      took: Map<string, number>; short: ShortLine[];
+    }
   | { duplicate: { no: string; accessKey: string; total: number; dueNow: number } };
 
 function managerText(o: { no: string; isTest: boolean; suspicious: string | null }, head: string, body: string[]) {
@@ -254,7 +291,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
   const qtyBySku = new Map(v.items.map((i) => [i.sku, i.qty]));
   const lines = quote.lines.map((l) => {
     const qty = qtyBySku.get(l.sku) ?? l.qty;
-    return { ...l, qty, price: unitPriceAt(l.basePrice, l.tiers, qty) };
+    return { ...l, qty, price: unitPriceAt(l.basePrice, l.tiers, qty), stock: lineStockLevel(l.ownQty, qty, l.supplierAvailable) };
   });
   const name = `${v.lastName} ${v.firstName}`.trim();
 
@@ -287,7 +324,7 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
   });
   // повтор той же корзины (второе нажатие, обновили страницу) — показываем первый заказ, менеджеру второй раз не пишем
   if (rec.duplicate) return { ok: true, duplicate: true, ...rec.duplicate };
-  const { order, totals, accessKey } = rec;
+  const { order, totals, accessKey, took, short } = rec;
   const delivery =
     v.delivery === "np" ? `Нова Пошта: ${v.city}, ${npPointRef ? npPoint : `${NP_RU[v.npType ?? "warehouse"]} ${npPoint}`}`
     : v.delivery === "pickup" ? `Самовывоз${pickup ? `: ${pickup.cityUk}, ${pickup.addressUk}` : " из магазина"}`
@@ -296,7 +333,8 @@ export async function placeOrder(raw: Record<string, unknown>, opts: PlaceOption
     `${name}, ${formatPhone(v.phone)}${v.noCallback ? " (просит не звонить)" : ""}`,
     delivery,
     `Оплата: ${PAY_RU[v.pay]}. Сумма ${money(totals.total)}, сейчас ${money(totals.dueNow)}`,
-    ...lines.map((l) => `• ${l.nameUk} × ${l.qty}${l.price < l.basePrice ? ` (опт: ${money(l.price)}/шт.)` : ""}${l.stock === "order" ? " — ПОД ЗАКАЗ" : l.stock === "local" ? " — со склада" : ""}`),
+    ...lines.map((l) => `• ${l.nameUk} × ${l.qty}${l.price < l.basePrice ? ` (опт: ${money(l.price)}/шт.)` : ""}${stockNote(l, took)}`),
+    short.length ? `⚠️ ${shortText(short)}` : "",
     v.comment ? `Комментарий: ${v.comment}` : "",
   ]), order.id).catch((e) => logError("[orders] уведомление не сохранено", e));
   return { ok: true, no: order.no, accessKey, total: totals.total, dueNow: totals.dueNow };
@@ -319,11 +357,13 @@ export async function placeOneClick(
     source: "one_click", history: "Заказ «Купить в 1 клик»: перезвонить, уточнить доставку и оплату", sessionClientId: opts.clientId, dedupe: !opts.isTest,
   });
   if (rec.duplicate) return { ok: true, duplicate: true, no: rec.duplicate.no, accessKey: rec.duplicate.accessKey };
-  const { order } = rec;
+  const { order, totals, took, short } = rec;
   const l = quote.lines[0];
+  // сумма — из заказа (со скидкой вошедшего покупателя), как в KeyCRM и в карточке заказа
   await notifyManagers(managerText(order, "⚡ Купить в 1 клик", [
     `${name || "Без имени"}, ${formatPhone(phone)} — перезвонить`,
-    `• ${l.nameUk} × ${l.qty} = ${money(l.price * l.qty)}${l.stock === "order" ? " — ПОД ЗАКАЗ" : ""}`,
+    `• ${l.nameUk} × ${l.qty} = ${money(totals.total)}${totals.discountPct > 0 ? ` (скидка ${totals.discountPct}%)` : ""}${stockNote(l, took)}`,
+    short.length ? `⚠️ ${shortText(short)}` : "",
   ]), order.id).catch((e) => logError("[orders] уведомление не сохранено", e));
   return { ok: true, no: order.no, accessKey: order.accessKey ?? "" };
 }
@@ -382,9 +422,13 @@ export async function listOrders(opts: ListOrdersOptions = {}) {
   return { total, page, pages: Math.max(1, Math.ceil(total / perPage)), rows, sum: sum._sum.total?.toNumber() ?? 0, actionCount: action };
 }
 
-/** Заказ по звонку: менеджер вносит телефон, товары и доставку; цены — из базы (как на сайте). */
+/**
+ * Заказ по звонку: менеджер вносит телефон, товары и доставку; цены — из базы (как на сайте). Шаг Л2: покупатель с этим телефоном
+ * получает и опт своего уровня, и свою скидку (личную или уровня) — как если бы оформил сам, войдя в кабинет.
+ */
 export async function placeManualOrder(v: ManualOrderInput, who: string): Promise<{ ok: true; id: string; no: string } | { ok: false; error: string }> {
   const quote = await quoteCart(v.items, { phone: v.phone });
+  const known = await prisma.client.findUnique({ where: { phone: v.phone }, select: { id: true } });
   if (quote.missing.length) return { ok: false, error: `Товар не найден или скрыт: ${quote.missing.join(", ")}.` };
   const settings = await loadCheckoutSettings();
   const pickup = v.delivery === "pickup" ? await prisma.warehouse.findFirst({ where: { isPickup: true }, orderBy: [{ isDefault: "desc" }, { sort: "asc" }] }) : null;
@@ -394,7 +438,7 @@ export async function placeManualOrder(v: ManualOrderInput, who: string): Promis
     city: v.delivery === "np" ? v.city : v.delivery === "courier" ? "Одеса" : pickup?.cityUk ?? null,
     address: v.delivery === "courier" ? v.address : pickup?.addressUk ?? null,
     npType: v.delivery === "np" ? "warehouse" : null, npPoint: v.delivery === "np" ? v.npPoint : null,
-    pickupWarehouseId: pickup?.id ?? null, comment: v.comment || null,
+    pickupWarehouseId: pickup?.id ?? null, comment: v.comment || null, discountClientId: known?.id ?? null,
     history: `Заказ создан менеджером по звонку (${who})`,
   });
   if (rec.duplicate) return { ok: false, error: "Такой заказ уже есть." }; // без dedupe не бывает

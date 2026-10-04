@@ -135,6 +135,10 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 кэш кусками — `lib/shop/sitemap.ts`. Пока сайт закрыт для Google — 404 (вошедшим в админку — видна); строка `Sitemap:` в robots — только после открытия
 (`robotsConfig`). Новый вид страниц витрины для Google — добавить в `sitemapPagePaths`. Код Google Search Console — Setting `site.searchConsole`
 (`loadSearchConsole`/`saveSearchConsole`, форма в «Проверке перед запуском»), мета-тег — `shopVerification()` в `app/[lang]/layout.tsx`.
+**Л2** сверка цен и остатков (тест-сверка — `packages/db/test/launch-reconcile.test.ts`: поиск → корзина → оформление → заказ → mono → чек → KeyCRM; новое место,
+где показывается цена или наличие, — добавить туда). Наличие **строки корзины** — `lineStockLevel(ownQty, qty, supplierAvailable)` («в Одессе» — только если хватает
+на всё количество); резерв — по всем строкам, `reserveForOrder` возвращает `took` (сколько отложено), недостача из-за одновременной покупки — в историю заказа и менеджеру.
+Заказ по звонку — скидка покупателя по телефону (`discountClientId`). Запись в поиск — с `?primaryKey=id` (индекс мог ещё не существовать).
 Миграция при запущенном сайте: `prisma migrate diff --from-schema-datasource … --to-schema-datamodel … --script` → файл миграции → `migrate deploy` → `prisma generate`
 (файл движка может быть занят — JS и типы всё равно обновятся). **После этого `next dev` обязательно перезапустить** (иначе падают его рабочие процессы).
 Чужой `next dev` на :3100 без разрешения владельца не останавливать; своя копия для проверки — `pnpm build` + `next start -p 3200`, временный вход через `HM_TMP_LOGIN=1`.
@@ -191,7 +195,7 @@ Id чека в Checkbox = наш UUID (повтор не задвоит). Без
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 15 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+»); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 374 проверки (core 226 + интеграционные db 148). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 383 проверки (core 227 + интеграционные db 156). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

@@ -11,6 +11,15 @@ export function stockLevel(ownQty: number, supplierAvailable: boolean): StockLev
   return supplierAvailable ? "supplier" : "order";
 }
 
+/**
+ * Наличие строки корзины/заказа (шаг Л2): «на складе в Одессе» — только если свободного хватает на всё количество.
+ * Не хватает — заказ всё равно ждёт поставщика (отправляем целиком): «у поставщика» или «під замовлення».
+ * Сколько есть — всё равно резервируется под заказ (reserveForOrder).
+ */
+export function lineStockLevel(ownQty: number, qty: number, supplierAvailable: boolean): StockLevel {
+  return stockLevel(ownQty >= Math.max(1, qty) ? ownQty : 0, supplierAvailable);
+}
+
 /** Для сортировки: чем быстрее можно отправить, тем выше в списке. */
 export const STOCK_RANK: Record<StockLevel, 2 | 1 | 0> = { local: 2, supplier: 1, order: 0 };
 

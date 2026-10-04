@@ -6,7 +6,7 @@
 
 import { prisma, Prisma } from "./client";
 import {
-  NOTIFY_SETTING_KEY, dailyDue, deltaText, kyivClock, normalizeNotify, periodRange, salesDropped, shiftCloseDue, weeklyDue, type NotifySettings,
+  NOTIFY_SETTING_KEY, availableQty, dailyDue, deltaText, kyivClock, normalizeNotify, periodRange, salesDropped, shiftCloseDue, weeklyDue, type NotifySettings,
 } from "@handyman/core/shop";
 import { notifyManagers, retryOutbox } from "./notify";
 import { salesReport, productsReport } from "./reports";
@@ -57,7 +57,9 @@ export async function dailySummaryText(s: NotifySettings, ymd?: string): Promise
     prisma.order.count({ where: { isTest: false, status: { in: ["NEW", "NO_ANSWER", "AWAITING_SUPPLIER"] } } }),
     lowStockList(5),
     prisma.task.count({ where: { done: false, dueAt: { lt: new Date() } } }),
-    prisma.product.findMany({ where: { isHit: true, visible: true, supplierAvailable: false, stockItems: { none: { onHand: { gt: 0 } } } }, select: { nameUk: true }, take: 5 }),
+    // шаг Л2: «нет у нас» — свободного (на складе − в резерве) не осталось, как видит покупатель
+    prisma.product.findMany({ where: { isHit: true, visible: true, supplierAvailable: false }, select: { nameUk: true, stockItems: { select: { onHand: true, reserved: true } } } })
+      .then((rows) => rows.filter((r) => availableQty(r.stockItems) <= 0).slice(0, 5)),
   ]);
   const c = today.cur;
   const lines = [
