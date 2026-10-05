@@ -6,7 +6,7 @@
 import { createHash } from "node:crypto";
 import { prisma, Prisma } from "./client";
 import { TIER_RU, clientDiscountPct, formatPhone, normalizePhone, type TierKey } from "@handyman/core/shop";
-import { botLang, mainKeyboard, parseStart, shopUrlFor, whichButton } from "@handyman/core/telegram";
+import { botLang, isChatIdCommand, mainKeyboard, parseStart, shopUrlFor, whichButton } from "@handyman/core/telegram";
 import { fillText, resolveTexts } from "@handyman/core/site";
 import { ensureRefCode, linkTelegramPhone, loadLoyalty, setReferrer } from "./clients";
 import { loadContacts, loadTextOverrides } from "./site-content";
@@ -31,7 +31,9 @@ const displayName = (u: { first_name?: string; last_name?: string }) => [u.first
 /** Обработать одно обновление от Telegram. Сообщения из групп (чат менеджеров) не трогаем — только личные. */
 export async function handleUpdate(u: TgUpdate): Promise<void> {
   const m = u.message;
-  if (!m || !m.from || m.from.is_bot || m.chat.type !== "private") return;
+  if (!m || !m.from || m.from.is_bot) return;
+  if (isChatIdCommand(m.text)) return onChatId(m); // служебная команда — работает и в группе менеджеров
+  if (m.chat.type !== "private") return;
   const tgId = BigInt(m.from.id);
   const client = await prisma.client.findUnique({ where: { tgId }, select: { id: true, phone: true, lang: true, name: true, tier: true, manualDiscountPct: true } });
   const lang = botLang(client?.lang ?? null, m.from.language_code);
@@ -73,6 +75,16 @@ export async function handleUpdate(u: TgUpdate): Promise<void> {
   const who = [displayName(m.from), m.from.username ? `@${m.from.username}` : "", client?.phone ? formatPhone(client.phone) : ""].filter(Boolean).join(", ");
   await notifyManagers(`💬 Сообщение в боте от ${who || "покупателя"}:\n${text.slice(0, 1500)}`);
   await send(m.chat.id, t["bot.msg.received"], kb(Boolean(client?.phone)));
+}
+
+/** «/chatid»: ID этого чата — чтобы владелец вписал его в «Интеграции» (сюда будут приходить заказы и заявки). Сам ID ничего не открывает. */
+async function onChatId(m: TgMessage) {
+  const id = String(m.chat.id);
+  const current = await secret("telegram.adminChatId");
+  const text = current === id
+    ? `✅ Этот чат уже выбран для менеджеров (ID ${id}): сюда приходят заказы и заявки «Передзвоніть мені».`
+    : `ID этого чата: ${id}\nЧтобы сюда приходили заказы и заявки «Передзвоніть мені»: админка → «Интеграции» → Telegram → «Чат менеджеров (ID)» — вставьте это число и сохраните.`;
+  await tg("sendMessage", { chat_id: m.chat.id, text, disable_web_page_preview: true });
 }
 
 async function onContact(m: TgMessage, t: Record<string, string>, lang: "uk" | "ru", kb: (hasPhone: boolean) => unknown) {

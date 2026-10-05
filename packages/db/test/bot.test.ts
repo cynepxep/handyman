@@ -57,6 +57,23 @@ test("/start — приветствие и кнопка «Поделиться �
   assert.equal(sent.length, n);
 });
 
+test("/chatid: бот отвечает ID чата (в личке и в группе), выбранный чат узнаёт; в «Сообщения менеджерам» не уходит", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  const before = await prisma.outbox.count();
+  await bot.handleUpdate(msg(1004, { text: "/chatid" }));
+  assert.match(lastText(), /^ID этого чата: 1004\n.*«Интеграции»/);
+  await bot.handleUpdate(msg(-100777, { text: "/chatid@HandymanShopOd_bot" }, "supergroup"));
+  assert.match(lastText(), /^ID этого чата: -100777/);
+  process.env.ADMIN_CHAT_ID = "1004";
+  try {
+    await bot.handleUpdate(msg(1004, { text: "/chatid" }));
+    assert.match(lastText(), /^✅ Этот чат уже выбран/);
+  } finally {
+    process.env.ADMIN_CHAT_ID = "";
+  }
+  assert.equal(await prisma.outbox.count(), before);
+});
+
 test("номер: свой контакт привязывает Telegram к клиенту с заказами; «телеграм-дубль» сливается; чужой контакт — отказ", async (t) => {
   if (!ready) return t.skip(skipMsg);
   const r = await orders.placeManualOrder({ phone: "+380935557700", name: "Петренко Іван", items: [{ sku, qty: 1 }], delivery: "to_confirm", pay: "later", city: "", npPoint: "", address: "", comment: "", isTest: false }, "test");

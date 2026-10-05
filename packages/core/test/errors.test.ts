@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  alertReason, alertText, backupLevel, diskLevel, errorFingerprint, healthStatus, isNextControlFlow, jobsLevel, makeErrorEntry, maskSensitive, maskUrl,
+  alertReason, alertText, backupLevel, diskLevel, errorFingerprint, healthStatus, isNextControlFlow, telegramHealth, jobsLevel, makeErrorEntry, maskSensitive, maskUrl,
   normalizeMessage, parseLogArgs, stackTop, type ErrorGroupState,
 } from "../src/errors";
 
@@ -125,4 +125,16 @@ test("здоровье: уровни и итог для внешнего сто�
   assert.equal(healthStatus([{ key: "db", level: "ok", text: "" }, { key: "backup", level: "bad", text: "" }]), "ok");
   assert.equal(healthStatus([{ key: "db", level: "bad", text: "" }]), "error");
   assert.equal(healthStatus([{ key: "search", level: "bad", text: "" }]), "error");
+  assert.equal(healthStatus([{ key: "telegram", level: "bad", text: "" }]), "ok", "сторож не будят из-за Telegram");
+});
+
+test("здоровье: сообщения в Telegram — нет ID чата / последнее не ушло / всё хорошо", () => {
+  const noChat = telegramHealth({ token: true, chat: false, last: null, sentDay: 0 });
+  assert.equal(noChat.level, "bad");
+  assert.match(noChat.text, /не указан ID чата для уведомлений.*\/chatid/);
+  assert.match(telegramHealth({ token: false, chat: false, last: null, sentDay: 0 }).text, /токен бота и ID чата/);
+  const failed = telegramHealth({ token: true, chat: true, last: { state: "FAILED", error: "Telegram 400: chat not found" }, sentDay: 3 });
+  assert.equal(failed.level, "bad");
+  assert.match(failed.text, /chat not found/);
+  assert.deepEqual(telegramHealth({ token: true, chat: true, last: { state: "SENT", error: null }, sentDay: 3 }), { level: "ok", text: "настроены; за сутки отправлено: 3" });
 });

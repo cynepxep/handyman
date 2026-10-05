@@ -215,7 +215,7 @@ export function alertText(items: Array<{ reason: "new" | "spike"; source: ErrorS
 // ---------- здоровье ----------
 
 export type HealthLevel = "ok" | "warn" | "bad";
-export type HealthCheck = { key: "db" | "search" | "jobs" | "disk" | "backup" | "errors"; level: HealthLevel; text: string };
+export type HealthCheck = { key: "db" | "search" | "jobs" | "disk" | "backup" | "errors" | "telegram"; level: HealthLevel; text: string };
 export const HEALTH_LABEL_RU: Record<HealthCheck["key"], string> = {
   db: "База данных",
   search: "Поиск",
@@ -223,7 +223,22 @@ export const HEALTH_LABEL_RU: Record<HealthCheck["key"], string> = {
   disk: "Место на диске",
   backup: "Резервная копия",
   errors: "Ошибки за сутки",
+  telegram: "Сообщения в Telegram",
 };
+
+/**
+ * Сообщения о заказах и заявках в Telegram: без токена бота или ID чата — не уходят вовсе (плохо);
+ * последнее сообщение не отправилось — плохо (с причиной от Telegram); иначе — хорошо.
+ */
+export function telegramHealth(p: { token: boolean; chat: boolean; last: { state: string; error: string | null } | null; sentDay: number }): { level: HealthLevel; text: string } {
+  const how = "«Интеграции» → Telegram; свой ID чата бот подскажет командой /chatid";
+  if (!p.token || !p.chat) {
+    const miss = [!p.token && "токен бота", !p.chat && "ID чата для уведомлений"].filter(Boolean).join(" и ");
+    return { level: "bad", text: `не уходят: не указан ${miss} — ${how}` };
+  }
+  if (p.last?.state === "FAILED") return { level: "bad", text: `последнее не отправлено (${(p.last.error ?? "ошибка").slice(0, 120)}) — проверьте ${how}` };
+  return { level: "ok", text: `настроены; за сутки отправлено: ${p.sentDay}` };
+}
 
 /** Фоновые задачи идут раз в минуту: 10 минут тишины — внимание, час — плохо. */
 export function jobsLevel(lastRunAt: Date | null, now = new Date(), workerOff = false): HealthLevel {

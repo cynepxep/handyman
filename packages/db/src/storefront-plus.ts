@@ -353,7 +353,8 @@ export async function runWatches(now = new Date(), fetchImpl: typeof fetch = fet
 
 /**
  * Заявка на звонок: задача «📞 Перезвонить» в разделе «Задачи» (срок — сейчас) и сообщение менеджерам.
- * Повтор с того же номера за 30 минут не создаёт новую задачу; больше 20 заявок за 10 минут со всего сайта — отказ (защита от потока).
+ * Повтор с того же номера за 30 минут не создаёт новую задачу, но сообщение «повторно» менеджерам уходит (человек ждёт звонка);
+ * больше 20 заявок за 10 минут со всего сайта — отказ (защита от потока).
  */
 export async function requestCallback(raw: Record<string, unknown>, opts: { productId?: string | null; clientId?: string | null; lang: "uk" | "ru" }): Promise<{ ok: true; phone: string } | { ok: false; error: string }> {
   const check = validateCallback(raw);
@@ -362,15 +363,19 @@ export async function requestCallback(raw: Record<string, unknown>, opts: { prod
   const shown = formatPhone(phone);
   const now = Date.now();
   const dup = await prisma.task.findFirst({ where: { who: "сайт", done: false, title: { contains: shown }, createdAt: { gte: new Date(now - 30 * 60_000) } }, select: { id: true } });
-  if (dup) return { ok: true, phone: shown };
-  if ((await prisma.task.count({ where: { who: "сайт", createdAt: { gte: new Date(now - 10 * 60_000) } } })) >= 20) return { ok: false, error: "err.tooMany" };
+  if (!dup && (await prisma.task.count({ where: { who: "сайт", createdAt: { gte: new Date(now - 10 * 60_000) } } })) >= 20) return { ok: false, error: "err.tooMany" };
   const product = opts.productId ? await prisma.product.findUnique({ where: { id: opts.productId }, select: { sku: true, nameUk: true } }) : null;
-  const client = opts.clientId ? { id: opts.clientId } : await prisma.client.findUnique({ where: { phone }, select: { id: true } });
   const blocked = await isPhoneBlocked(phone); // шаг 8.3: чёрный список — заявку принимаем, менеджер видит пометку
+  const message = `${blocked ? "⚠️ ПОДОЗРИТЕЛЬНЫЙ (чёрный список) · " : ""}📞 ${dup ? "Повторно просят" : "Просят"} перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? `\nТовар: ${product.nameUk} (${product.sku})` : ""}${note ? `\n${note}` : ""}${dup ? "\nЗадача уже есть в «Задачах»." : ""}`;
+  if (dup) {
+    await notifyManagers(message).catch(() => {});
+    return { ok: true, phone: shown };
+  }
+  const client = opts.clientId ? { id: opts.clientId } : await prisma.client.findUnique({ where: { phone }, select: { id: true } });
   const title = `${blocked ? "⚠️ чёрный список · " : ""}📞 Перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? ` — ${product.nameUk} (${product.sku})` : ""}${note ? ` · ${note}` : ""}${opts.lang === "ru" ? " · рус." : ""}`;
   // срок — сейчас, напоминание уже отправлено этим же сообщением (фоновые задачи не повторят)
   await prisma.task.create({ data: { title: title.slice(0, 300), dueAt: new Date(now), notifiedAt: new Date(now), who: "сайт", clientId: client?.id ?? null } });
-  await notifyManagers(`${blocked ? "⚠️ ПОДОЗРИТЕЛЬНЫЙ (чёрный список) · " : ""}📞 Просят перезвонить: ${name ? `${name}, ` : ""}${shown}${product ? `\nТовар: ${product.nameUk} (${product.sku})` : ""}${note ? `\n${note}` : ""}`).catch(() => {});
+  await notifyManagers(message).catch(() => {});
   return { ok: true, phone: shown };
 }
 

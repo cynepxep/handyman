@@ -4,12 +4,12 @@
 import { statfs } from "node:fs/promises";
 import { prisma } from "./client";
 import {
-  HEALTH_LABEL_RU, backupLevel, diskLevel, healthStatus, jobsLevel, type HealthCheck, type HealthLevel,
+  HEALTH_LABEL_RU, backupLevel, diskLevel, healthStatus, jobsLevel, telegramHealth, type HealthCheck, type HealthLevel,
 } from "@handyman/core/errors";
 import { formatBytes } from "@handyman/core/backups";
 import { backupDir, listBackups } from "./backups";
 import { errorSummary } from "./errors";
-import { projectRoot } from "./integrations";
+import { projectRoot, secret } from "./integrations";
 
 export const JOBS_LAST_RUN_KEY = "worker.lastRun";
 
@@ -106,6 +106,22 @@ export async function healthReport(now = new Date()): Promise<HealthReport> {
       add("errors", s.newDay ? "warn" : "ok", s.activeDay ? `видов ошибок: ${s.activeDay}, из них новых: ${s.newDay}; открыто всего: ${s.open}` : `нет (открыто всего: ${s.open})`);
     } catch {
       /* таблицы может не быть до миграции */
+    }
+  }
+
+  // сообщения в Telegram (новые заказы, «Передзвоніть мені»): настроены ли и ушло ли последнее
+  if (dbOk) {
+    try {
+      const [token, chat, last, sentDay] = await Promise.all([
+        secret("telegram.botToken"),
+        secret("telegram.adminChatId"),
+        prisma.outbox.findFirst({ where: { audience: "manager", state: { in: ["SENT", "FAILED"] } }, orderBy: { createdAt: "desc" }, select: { state: true, error: true } }),
+        prisma.outbox.count({ where: { audience: "manager", state: "SENT", createdAt: { gte: new Date(now.getTime() - 24 * 3600_000) } } }),
+      ]);
+      const r = telegramHealth({ token: Boolean(token), chat: Boolean(chat), last, sentDay });
+      add("telegram", r.level, r.text);
+    } catch {
+      /* ключи не читаются — не мешаем остальным проверкам */
     }
   }
 

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { botLang, mainKeyboard, parseStart, shopUrlFor, signInitData, verifyInitData, whichButton } from "../src/shop/telegram-logic";
+import { botLang, isChatIdCommand, mainKeyboard, parseStart, shopUrlFor, signInitData, verifyInitData, whichButton } from "../src/shop/telegram-logic";
 import { defaultTexts } from "../src/site";
 
 test("/start: вход, реферал, привязка; мусор и чужие команды", () => {
@@ -9,6 +9,14 @@ test("/start: вход, реферал, привязка; мусор и чужи
   assert.deepEqual(parseStart("/start@HandymanShopOd_bot ref_OLYA2026"), { isStart: true, payload: { kind: "ref", code: "OLYA2026" } });
   assert.deepEqual(parseStart("/start hack"), { isStart: true, payload: null });
   assert.equal(parseStart("привет").isStart, false);
+});
+
+test("/chatid: в личке и в группе (с именем бота); другое — нет", () => {
+  assert.equal(isChatIdCommand("/chatid"), true);
+  assert.equal(isChatIdCommand(" /chatid@HandymanShopOd_bot "), true);
+  assert.equal(isChatIdCommand("/chatid 123"), false);
+  assert.equal(isChatIdCommand("chatid"), false);
+  assert.equal(isChatIdCommand(undefined), false);
 });
 
 test("язык: сохранённый у клиента важнее языка Telegram; ru → русский, остальное → украинский", () => {
