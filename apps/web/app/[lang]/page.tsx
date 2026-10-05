@@ -1,4 +1,4 @@
-// Главная: шапка с поиском, дальше блоки в порядке из админки «Сайт → Главная» (баннер, задачи, батарея, разделы, хиты, акции, новинки,
+// Главная: шапка с поиском, дальше блоки в порядке из админки «Сайт → Главная» (баннер, задачи, батарея, разделы, «Є в наявності», хиты, акции, новинки,
 // «Ви переглядали», доверие, «Не знайшли? Підберемо»). Надписи — «Сайт → Тексты», задачи и разделы — «Сайт → Меню и задачи». Пустые блоки не показываются.
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,7 +6,7 @@ import { slugOf } from "@handyman/core/catalog";
 import { countWord, isShopLang, listingQuery, paths, shopHref } from "@handyman/core/site";
 import { getShopContent } from "@/lib/shop/content";
 import { getSearchHints } from "@/lib/shop/search-hints";
-import { getBatteries, getFlaggedCards, getMenuView, getSaleCards, type ShopCard } from "@/lib/shop/catalog";
+import { getBatteries, getFlaggedCards, getInstockCards, getMenuView, getSaleCards, type ShopCard } from "@/lib/shop/catalog";
 import { loadHomeSettings } from "@handyman/db/site-content";
 import { DEFAULT_HOME, type HomeBlock } from "@handyman/core/site";
 import { PromoBanner } from "@/components/shop/promo-banner";
@@ -25,10 +25,11 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const { t, pick } = c;
   const home = await loadHomeSettings().catch(() => null);
   const on = (id: HomeBlock) => home ? home.blocks.some((b) => b.id === id && b.on) : true;
-  const [menu, batteries, sale, hits, news, homeBanners] = await Promise.all([
+  const [menu, batteries, sale, hits, news, homeBanners, instock] = await Promise.all([
     getMenuView(c.menu), on("battery") ? getBatteries() : [], on("sale") ? getSaleCards(lang) : [],
     on("hits") ? getFlaggedCards(lang, "hit") : null, on("new") ? getFlaggedCards(lang, "isNew") : null,
     on("banner") ? bannersFor("home") : [],
+    on("instock") && home?.instock.length ? getInstockCards(lang, home.instock) : [],
   ]);
   const homeBanner = homeBanners[0] ?? null;
   const cl = cardLabels(t);
@@ -110,6 +111,8 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
         </section>
       
     ),
+    // товары, которые владелец выбрал сам (что есть на руках, из видео в TikTok); распроданные скрываются сами
+    instock: rail("instock", t("home.instock.title"), instock),
     hits: hits && rail("hits", t("home.hits.title"), hits.cards, shopHref(lang, paths.hits())),
     sale: rail("sale", t("home.sale.title"), sale),
     new: news && rail("new", t("home.new.title"), news.cards, shopHref(lang, paths.news())),

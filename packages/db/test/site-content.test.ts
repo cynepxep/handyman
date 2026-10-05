@@ -105,3 +105,19 @@ test("меню: без правок — стандартное; сохранён
   assert.equal(await site.hasCustomMenu(), false);
   assert.equal((await site.loadMenuConfig()).groups[0].nameUk, defaultMenuConfig().groups[0].nameUk);
 });
+
+test("главная: «Є в наявності» из карточки товара — добавить первым, убрать; остальные настройки не теряются", async (t) => {
+  if (!dbReady) return t.skip(skipMsg);
+  const s = await site.loadHomeSettings();
+  await site.saveHomeSettings({ ...s, hints: { max: 3, hidden: ["болт"] }, instock: ["A1"] }, "owner");
+  assert.equal(await site.setHomeInstock("B2", true, "owner"), true);
+  assert.equal(await site.setHomeInstock("B2", true, "owner"), false, "уже первый — ничего не меняется");
+  let h = await site.loadHomeSettings();
+  assert.deepEqual(h.instock, ["B2", "A1"]);
+  assert.equal(h.hints.max, 3);
+  assert.equal(await site.setHomeInstock("A1", false, "owner"), true);
+  assert.equal(await site.setHomeInstock("Z9", false, "owner"), false);
+  h = await site.loadHomeSettings();
+  assert.deepEqual(h.instock, ["B2"]);
+  assert.equal(await prisma.auditLog.count({ where: { action: "site.home.instock" } }), 2);
+});

@@ -8,7 +8,8 @@ import { setStockLevels, stockByWarehouse } from "@handyman/db/warehouses";
 import { SupplierUserError, setProductsBrand } from "@handyman/db/suppliers";
 import { requirePermission } from "@/lib/auth";
 import { parseMoney } from "@/lib/catalog";
-import { catalogChanged } from "@/lib/shop/cache";
+import { catalogChanged, shopChanged } from "@/lib/shop/cache";
+import { setHomeInstock } from "@handyman/db/site-content";
 import {
   PlusUserError, addPackaging, addPriceBreak, addToCompatGroup, createCompatGroup, deleteQtyRule, removeFromCompatGroup,
 } from "@handyman/db/storefront-plus";
@@ -135,7 +136,11 @@ export async function setFlagsAction(formData: FormData): Promise<void> {
       ...(await setProductFlag([id], "isNew", formData.get("isNew") === "on", session.username)),
     ];
     if (changed.length) await reindexSafely(() => reindexProducts([id]));
-    return changed.length ? "Отметки сохранены — на сайте уже видно." : "Ничего не изменилось.";
+    // «Є в наявності» на главной — список артикулов в настройках главной, не поле товара
+    const product = await prisma.product.findUnique({ where: { id }, select: { sku: true } });
+    const home = product ? await setHomeInstock(product.sku, formData.get("instock") === "on", session.username) : false;
+    if (home) shopChanged();
+    return changed.length || home ? "Отметки сохранены — на сайте уже видно." : "Ничего не изменилось.";
   });
 }
 

@@ -6,6 +6,7 @@ import { loadCategories, money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { Gallery } from "./gallery";
 import { stockByWarehouse } from "@handyman/db/warehouses";
+import { loadHomeSettings } from "@handyman/db/site-content";
 import {
   acceptPriceAction, addCompatAction, addQtyPriceAction, deleteQtyPriceAction, removeCompatAction, saveProductAction, setFlagsAction, setOwnStockAction, unlockFieldAction,
 } from "../actions";
@@ -66,6 +67,7 @@ export default async function ProductPage({
   const lockedFields = new Set(p.fieldLocks.map((l) => l.fieldName));
   const mark = (f: string) => (lockedFields.has(f) ? " 🔒" : "");
   const own = p.stockItems.reduce((a, x) => a + x.onHand, 0);
+  const onHome = (await loadHomeSettings()).instock.includes(p.sku);
 
   return (
     <>
@@ -80,6 +82,7 @@ export default async function ProductPage({
         {own > 0 && <span className="adm-chip ok">на нашем складе: {own} шт.</span>}
         {p.isHit && <span className="adm-chip warn">хит</span>}
         {p.isNew && <span className="adm-chip warn">новинка</span>}
+        {onHome && <span className="adm-chip warn">на главной: «Є в наявності»</span>}
         <span className={p.supplierAvailable ? "adm-chip ok" : "adm-chip"}>{p.supplierAvailable ? "В наличии у поставщика" : "Под заказ"}</span>
         {!p.visible && <span className="adm-chip bad">скрыт с сайта</span>}
         {p.missingFromFeedSince && <span className="adm-chip warn">нет в фиде с {p.missingFromFeedSince.toLocaleDateString("ru-RU")}</span>}
@@ -123,9 +126,14 @@ export default async function ProductPage({
           <b>Отметки на сайте:</b>
           <label className="adm-row" style={{ gap: 6 }}><input type="checkbox" name="isHit" defaultChecked={p.isHit} disabled={!canEdit} /> Хит</label>
           <label className="adm-row" style={{ gap: 6 }}><input type="checkbox" name="isNew" defaultChecked={p.isNew} disabled={!canEdit} /> Новинка</label>
+          <label className="adm-row" style={{ gap: 6 }}><input type="checkbox" name="instock" defaultChecked={onHome} disabled={!canEdit} /> На главной в «Є в наявності»</label>
           {canEdit && <SubmitButton pendingText="Сохраняю…">Сохранить отметки</SubmitButton>}
         </div>
-        <p className="adm-muted" style={{ marginTop: 6 }}>Хиты и новинки показываются на главной (если блоки включены в «Сайт → Главная») и со значком на карточке товара. Импорт отметки не трогает.</p>
+        <p className="adm-muted" style={{ marginTop: 6 }}>
+          Хиты и новинки показываются на главной (если блоки включены в «Сайт → Главная») и со значком на карточке товара. Импорт отметки не трогает.
+          «Є в наявності» — полка на главной сразу после каталога (для тех, кто пришёл с видео): товар встанет в ней первым; если распродан — скроется сам.
+          Весь список и порядок — в <Link className="adm-link" href="/admin/site/home#instock">«Сайт → Главная»</Link>.
+        </p>
       </form>
 
       <div className="adm-card">
