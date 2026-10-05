@@ -20,6 +20,9 @@ export function parseStart(text: string): { isStart: boolean; payload: StartPayl
   return { isStart: true, payload: pm ? { kind: pm[1] as "login" | "ref" | "link", code: pm[2] } : null };
 }
 
+/** «/chatid» (в группе — «/chatid@ИмяБота»): бот отвечает ID этого чата — его вписывают в «Интеграции → Чат менеджеров (ID)». */
+export const isChatIdCommand = (text: string | undefined) => /^\/chatid(?:@\w+)?$/i.test(String(text ?? "").trim());
+
 /** Язык ответов: сохранённый у клиента → язык Telegram (ru → русский, остальное → украинский). */
 export function botLang(clientLang: "UK" | "RU" | null | undefined, telegramLang: string | undefined): "uk" | "ru" {
   if (clientLang) return clientLang === "RU" ? "ru" : "uk";

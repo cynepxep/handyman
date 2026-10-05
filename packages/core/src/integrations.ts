@@ -36,7 +36,7 @@ export const INTEGRATIONS: IntegrationDef[] = [
     stub: "Сообщения сохраняются в заказе и «Уведомлениях», но никуда не уходят; вход через Telegram не работает.",
     fields: [
       { key: "botToken", label: "Токен бота", env: "BOT_TOKEN", secret: true, hint: "Выдаёт @BotFather в Telegram: строка вида 123456789:AA…" },
-      { key: "adminChatId", label: "Чат менеджеров (ID)", env: "ADMIN_CHAT_ID", secret: false, hint: "Число; для группы начинается с «-». Сюда приходят заказы и сводки." },
+      { key: "adminChatId", label: "Чат менеджеров (ID)", env: "ADMIN_CHAT_ID", secret: false, hint: "Число; для группы начинается с «-». Сюда приходят заказы, заявки «Передзвоніть мені» и сводки. Свой ID подскажет бот: напишите ему /chatid." },
     ],
     required: ["botToken"],
   },

@@ -228,6 +228,11 @@ test("«Передзвоніть мені»: задача менеджерам �
   assert.equal(tasks.length, 1);
   assert.match(tasks[0].title, /Перезвонить: Петро, \+380 \(93\) 000-11-22 — .+\(/);
   assert.ok(tasks[0].notifiedAt && tasks[0].dueAt, "напоминание уже отправлено — фоновые задачи не повторят");
+  // каждая заявка — сообщение менеджерам, повторная — с пометкой (задача не дублируется, но человек ждёт звонка)
+  const msgs = await prisma.outbox.findMany({ where: { text: { contains: "+380 (93) 000-11-22" } }, orderBy: { createdAt: "asc" } });
+  assert.equal(msgs.length, 2);
+  assert.match(msgs[0].text, /^📞 Просят перезвонить: Петро, \+380 \(93\) 000-11-22\nТовар: /);
+  assert.match(msgs[1].text, /^📞 Повторно просят перезвонить: \+380 \(93\) 000-11-22\nЗадача уже есть/);
   assert.deepEqual(await plus.requestCallback({ phone: "12" }, { lang: "uk" }), { ok: false, error: "errPhone" });
 
   // слияние «телеграм-дубля» с клиентом по телефону: подписки и отзывы переходят, одинаковые не дублируются
