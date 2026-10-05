@@ -16,25 +16,25 @@
   .adm { --adm-accent: #6cb2ff; --adm-ok: #57c078; --adm-warn: #ffb257; --adm-bad: #ff8a80; }
 }
 
-.adm-bar { border-bottom: 1px solid var(--adm-line); background: var(--adm-soft); }
-.adm-bar-in { max-width: 1180px; margin: 0 auto; padding: 0 16px; display: flex; align-items: center; gap: 12px; }
+/* компьютер: разделы списком слева (закреплён, прокручивается сам по себе), справа — страница */
+.adm-side { position: fixed; top: 0; bottom: 0; left: 0; width: var(--adm-side-w); z-index: 20; display: flex; flex-direction: column;
+  border-right: 1px solid var(--adm-line); background: color-mix(in srgb, var(--foreground) 4%, var(--background)); }
+.adm-shell { --adm-side-w: 220px; }
+.adm-main { margin-left: var(--adm-side-w); min-width: 0; }
+.adm-side .adm-brand { padding: 14px 18px 8px; font-size: 17px; }
+.adm-snav { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px 12px; scrollbar-width: thin; }
+.adm-snav-group { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--adm-muted); padding: 14px 10px 4px; }
+.adm-snav a { display: block; padding: 6px 10px; border-radius: 8px; line-height: 1.3; }
+.adm-snav a:hover { background: var(--adm-soft); }
+.adm-snav a[aria-current="page"] { background: color-mix(in srgb, var(--adm-accent) 14%, transparent); color: var(--adm-accent); font-weight: 600; }
+.adm-side .adm-user { flex-direction: column; align-items: stretch; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--adm-line); white-space: normal; }
+.adm-side .adm-user span { display: inline; }
+/* телефон: полоса сверху с «☰ Разделы» */
+.adm-topbar { display: none; border-bottom: 1px solid var(--adm-line); background: var(--adm-soft); }
+.adm-topbar-in { padding: 0 12px; display: flex; align-items: center; gap: 12px; }
 .adm-brand { font-weight: 700; padding: 12px 0; white-space: nowrap; }
-.adm-nav-wrap { position: relative; flex: 1; min-width: 0; display: flex; }
-.adm-nav { display: flex; gap: 2px; overflow-x: auto; flex: 1; min-width: 0; scrollbar-width: none; }
-.adm-nav::-webkit-scrollbar { display: none; }
-.adm-nav.dragging { cursor: grabbing; user-select: none; }
-.adm-nav.dragging a { pointer-events: none; }
-.adm-nav-arrow { position: absolute; top: 0; bottom: 0; z-index: 2; width: 34px; border: 0; padding: 0; font-size: 22px; line-height: 1; cursor: pointer;
-  color: var(--foreground); }
-.adm-nav-arrow.left { left: 0; background: linear-gradient(to right, color-mix(in srgb, var(--foreground) 6%, var(--background)) 60%, transparent); text-align: left; padding-left: 4px; }
-.adm-nav-arrow.right { right: 0; background: linear-gradient(to left, color-mix(in srgb, var(--foreground) 6%, var(--background)) 60%, transparent); text-align: right; padding-right: 4px; }
-.adm-nav-arrow:hover { color: var(--adm-accent); }
-.adm-nav a { padding: 12px 12px; white-space: nowrap; border-bottom: 3px solid transparent; }
-.adm-nav a:hover { background: var(--adm-soft); }
-.adm-nav a[aria-current="page"] { border-bottom-color: var(--adm-accent); font-weight: 600; }
 .adm-user { display: flex; align-items: center; gap: 10px; color: var(--adm-muted); font-size: 13px; white-space: nowrap; }
 .adm-user span { display: none; }
-@media (min-width: 760px) { .adm-user span { display: inline; } }
 
 .adm-page { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
 .adm-page h1 { font-size: 24px; margin-bottom: 4px; }
@@ -191,7 +191,8 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-print-table tfoot td { border: 0; }
 .adm-print-box { font-size: 18px; text-align: center; width: 32px; }
 @media print {
-  .adm-bar, .no-print { display: none !important; }
+  .adm-topbar, .adm-side, .no-print { display: none !important; }
+  .adm-main { margin-left: 0; }
   .adm-page { padding: 0; max-width: none; }
   .adm, .adm-print { color: #000; background: #fff; font-size: 12pt; }
   .adm-print-table th, .adm-print-table td { border-color: #999; }
@@ -214,7 +215,7 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-bars-axis { display: flex; justify-content: space-between; font-size: 12px; color: var(--adm-muted); padding-top: 4px; }
 
 /* ---------- меню на телефоне: «☰ Разделы» по группам (шаг 4.8) ---------- */
-.adm-mnav { display: none; position: relative; flex: 1; }
+.adm-mnav { display: block; position: relative; flex: 1; }
 .adm-mnav > summary { list-style: none; padding: 10px 12px; min-height: 44px; border-radius: 10px; font-weight: 600; cursor: pointer; display: flex; align-items: center; }
 .adm-mnav > summary::-webkit-details-marker { display: none; }
 .adm-mnav[open] > summary { background: var(--adm-soft); }
@@ -224,8 +225,9 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-mnav-list a { display: flex; align-items: center; min-height: 44px; padding: 0 12px; border-radius: 10px; }
 .adm-mnav-list a:hover, .adm-mnav-list a[aria-current="page"] { background: var(--adm-soft); font-weight: 600; }
 @media (max-width: 760px) {
-  .adm-nav-wrap { display: none; }
-  .adm-mnav { display: block; }
+  .adm-side { display: none; }
+  .adm-main { margin-left: 0; }
+  .adm-topbar { display: block; }
 }
 
 /* «Ошибки» и «Здоровье сайта» (шаг 8.2) */
