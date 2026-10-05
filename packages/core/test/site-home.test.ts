@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DEFAULT_HOME, HOME_BLOCKS, bannerVisible, mergeHints, normalizeQuery, parseHidden, deliveryPageDraft, parseHomeSettings, renderPageBody, safeBannerHref, validateHomeForm, listingQuery, parseListing, clearFilters,
+  DEFAULT_HOME, HOME_BLOCKS, INSTOCK_MAX, bannerVisible, parseInstockSkus, toggleInstock, mergeHints, normalizeQuery, parseHidden, deliveryPageDraft, parseHomeSettings, renderPageBody, safeBannerHref, validateHomeForm, listingQuery, parseListing, clearFilters,
 } from "../src/site";
 import { DEFAULT_CHECKOUT } from "../src/shop";
 
@@ -15,11 +15,36 @@ test("главная: без настроек — все блоки по пор�
 
 test("главная: сохранённый порядок, выключенные блоки, мусор и новые блоки", () => {
   const s = parseHomeSettings({ blocks: [{ id: "sale", on: false }, { id: "hits" }, { id: "xxx" }, { id: "sale" }, 5], banner: { on: true, titleUk: "Знижки", href: "javascript:alert(1)", image: "http://x/a.png" } });
-  assert.deepEqual(s.blocks.slice(0, 2), [{ id: "sale", on: false }, { id: "hits", on: true }]);
-  assert.equal(s.blocks.length, HOME_BLOCKS.length); // остальные дописаны в конец
+  assert.deepEqual(s.blocks.slice(0, 2), [{ id: "banner", on: true }, { id: "tasks", on: true }]); // первые по умолчанию — в начало
+  assert.deepEqual(s.blocks.filter((b) => b.id === "sale" || b.id === "hits"), [{ id: "sale", on: false }, { id: "hits", on: true }]); // сохранённый порядок не тронут
+  assert.equal(s.blocks.length, HOME_BLOCKS.length);
   assert.equal(s.banner.href, ""); // опасная ссылка отброшена
   assert.equal(s.banner.image, ""); // только https
   assert.equal(bannerVisible(s.banner), true);
+});
+
+test("главная: новый блок «Є в наявності» встаёт сразу после «Каталога», а не в конец", () => {
+  // так сохранено у владельца до появления блока: свой порядок, «Каталог» поднят выше задач
+  const old = ["banner", "groups", "tasks", "battery", "hits", "sale", "new", "viewed", "trust", "help"].map((id) => ({ id, on: id !== "battery" }));
+  const s = parseHomeSettings({ blocks: old });
+  assert.deepEqual(s.blocks.map((b) => b.id), ["banner", "groups", "instock", "tasks", "battery", "hits", "sale", "new", "viewed", "trust", "help"]);
+  assert.equal(s.blocks.find((b) => b.id === "instock")?.on, true);
+  assert.equal(s.blocks.find((b) => b.id === "battery")?.on, false);
+  assert.deepEqual(s.instock, []);
+});
+
+test("главная: список «Є в наявності» — артикулы по порядку, без повторов и мусора", () => {
+  assert.deepEqual(parseInstockSkus(" 000237651 \n\nAB-12, 000237651; X9 "), ["000237651", "AB-12", "X9"]);
+  assert.deepEqual(parseInstockSkus(["a", 5, "b", "x".repeat(41)]), ["a", "b"]);
+  assert.equal(parseInstockSkus(Array.from({ length: 100 }, (_, i) => `s${i}`).join("\n")).length, INSTOCK_MAX);
+  assert.deepEqual(parseHomeSettings({ instock: ["1", "2", "1"] }).instock, ["1", "2"]);
+  // из карточки товара: добавленный — первым (свежее видео), повторное добавление поднимает наверх, снятие убирает
+  assert.deepEqual(toggleInstock(["a", "b"], "c", true), ["c", "a", "b"]);
+  assert.deepEqual(toggleInstock(["a", "b"], "b", true), ["b", "a"]);
+  assert.deepEqual(toggleInstock(["a", "b"], "a", false), ["b"]);
+  const form: Record<string, string> = { "instock.skus": "111\n222\n111" };
+  const r = validateHomeForm(form);
+  assert.ok(r.ok && r.value.instock.join() === "111,222");
 });
 
 test("главная: форма админки — порядок по номерам, проверки баннера", () => {

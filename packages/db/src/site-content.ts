@@ -4,7 +4,7 @@
 
 import { prisma, type Prisma } from "./client";
 import {
-  CONTACTS_SETTING_KEY, HOME_SETTING_KEY, TEXT_BY_KEY, parseHomeSettings, type HomeSettings, missingVars, normalizeTextEdit, parseContacts, resolveTexts, toDbLocale,
+  CONTACTS_SETTING_KEY, HOME_SETTING_KEY, TEXT_BY_KEY, parseHomeSettings, type HomeSettings, toggleInstock, missingVars, normalizeTextEdit, parseContacts, resolveTexts, toDbLocale,
   type Contacts, type Lang, type TextOverrideRow,
 } from "@handyman/core/site";
 import { MENU_SETTING_KEY, defaultMenuConfig, parseMenuConfig, type MenuConfig } from "@handyman/core/catalog";
@@ -156,8 +156,21 @@ export async function loadHomeSettings(): Promise<HomeSettings> {
 export async function saveHomeSettings(value: HomeSettings, who: string): Promise<void> {
   await prisma.$transaction([
     prisma.setting.upsert({ where: { key: HOME_SETTING_KEY }, update: { value: json(value) }, create: { key: HOME_SETTING_KEY, value: json(value) } }),
-    prisma.auditLog.create({ data: { who, action: "site.home.edit", details: { on: value.blocks.filter((b) => b.on).map((b) => b.id), banner: value.banner.on } } }),
+    prisma.auditLog.create({ data: { who, action: "site.home.edit", details: { on: value.blocks.filter((b) => b.on).map((b) => b.id), banner: value.banner.on, instock: value.instock.length } } }),
   ]);
+}
+
+/** Галочка «На главной в «Є в наявності»» из карточки товара: добавить (первым) или убрать. Возвращает, изменилось ли что-то. */
+export async function setHomeInstock(sku: string, on: boolean, who: string): Promise<boolean> {
+  const cur = await loadHomeSettings();
+  const next = toggleInstock(cur.instock, sku, on);
+  if (next.join("\n") === cur.instock.join("\n")) return false;
+  const value: HomeSettings = { ...cur, instock: next };
+  await prisma.$transaction([
+    prisma.setting.upsert({ where: { key: HOME_SETTING_KEY }, update: { value: json(value) }, create: { key: HOME_SETTING_KEY, value: json(value) } }),
+    prisma.auditLog.create({ data: { who, action: "site.home.instock", target: sku, details: { on, count: next.length } } }),
+  ]);
+  return true;
 }
 
 // ---------- всё сразу для витрины ----------
