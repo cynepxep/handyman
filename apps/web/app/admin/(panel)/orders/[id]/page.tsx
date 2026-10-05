@@ -11,11 +11,11 @@ import { orderReceipts, receiptMode, receiptableOf } from "@handyman/db/receipts
 import { keycrmMode, loadKeycrmSettings, pendingNotifsOf } from "@handyman/db/keycrm";
 import { adEventsOf } from "@handyman/db/ad-events";
 import { TaskForm, TaskList } from "../../tasks/tasks-block";
-import { CANCEL_REASONS, CANCEL_REASON_RU, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, keycrmStatusName, parseUtm, utmLabel } from "@handyman/core/shop";
+import { CANCEL_REASONS, CANCEL_REASON_RU, orderDeleteBlock, DELIVERY_RU, NP_TYPE_RU, ORDER_SOURCE_RU, ORDER_STATUS_RU, PAY_MODE_RU, SUSPICIOUS_RU, formatPhone, keycrmStatusName, parseUtm, utmLabel } from "@handyman/core/shop";
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
-import { clearSuspiciousAction, retryMessageAction, setStatusAction, setTtnAction } from "../actions";
+import { clearSuspiciousAction, deleteOrderAction, retryMessageAction, setStatusAction, setTtnAction } from "../actions";
 import { statusChip } from "../status-chip";
 import { CopyButton, StatusForm } from "./status-form";
 import { PaymentsBlock } from "./payments-block";
@@ -54,6 +54,9 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
   // шаг А1: откуда пришёл покупатель (метки рекламного перехода за 30 дней до заказа)
   const utm = parseUtm(o.utm);
   const utmText = utmLabel(utm);
+  const canDelete = session.permissions.includes("orders.delete");
+  const deleteBlock = canDelete ? orderDeleteBlock({ invoices: invoices.map((i) => ({ ...i, paid: i.paid.toNumber() })), receipts }) : null;
+  const keycrmReal = Boolean(o.keycrmId && !o.keycrmStub);
 
   return (
     <>
@@ -247,6 +250,27 @@ export default async function OrderPage({ params, searchParams }: { params: Prom
           </>
         )}
       </section>
+
+      {canDelete && (
+        <details className="adm-card">
+          <summary><b>Удалить заказ</b></summary>
+          <p className="adm-muted">
+            Для тестовых, ошибочных и спам-заказов. Заказ исчезнет из списка, отчётов и статистики без возможности вернуть (номер {o.no} не освободится).
+            Отложенный на складе товар вернётся в продажу; уже списанный (отправленный) — нет: если товар на самом деле не уходил, сначала поставьте
+            статус «Отменён». Если покупатель просто передумал — лучше «Отменён»: заказ останется в истории клиента.
+          </p>
+          {keycrmReal && <p className="adm-chip warn">Заказ есть в KeyCRM (№ {o.keycrmId}) — там его нужно удалить отдельно.</p>}
+          {deleteBlock ? (
+            <p className="adm-flash err">{deleteBlock}</p>
+          ) : (
+            <form action={deleteOrderAction} className="adm-row">
+              <input type="hidden" name="id" value={o.id} />
+              <label><input type="checkbox" name="confirm" required /> Подтверждаю удаление</label>
+              <button type="submit" className="adm-btn adm-danger">Удалить заказ {o.no}</button>
+            </form>
+          )}
+        </details>
+      )}
     </>
   );
 }

@@ -24,7 +24,8 @@ const daysAgo = (n: number) => new Date(Date.now() - n * 86400_000).toLocaleDate
 export default async function OrdersPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const session = await requirePermission("orders.view");
   const canEdit = session.permissions.includes("orders.edit");
-  const f = parseOrderFilters(await searchParams, { statuses: ORDER_STATUSES, pays: PAYS, deliveries: DELIVERIES });
+  const sp = await searchParams;
+  const f = parseOrderFilters(sp, { statuses: ORDER_STATUSES, pays: PAYS, deliveries: DELIVERIES });
   const { total, page, pages, rows, sum, actionCount } = await listOrders(f);
   const filtered = Boolean(f.q || f.status || f.source || f.pay || f.delivery || f.from || f.to || f.test !== "all");
   const quick = [
@@ -47,6 +48,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         Все заказы: с сайта, «Купить в 1 клик» и принятые по телефону. Новые сверху. Нажмите на номер, чтобы открыть заказ: товары, покупатель, доставка,
         статус, сообщения покупателю, печать. «Тест» — заказы сотрудников, в статистике не считаются.
       </p>
+      {sp.ok && <p className="adm-flash ok">{sp.ok}</p>}
       <nav className="adm-tabs" aria-label="Быстрые фильтры">
         {quick.map((q) => <Link key={q.label} href={q.to} aria-current={q.on ? "page" : undefined}>{q.label}</Link>)}
       </nav>

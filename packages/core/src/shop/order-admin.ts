@@ -1,6 +1,7 @@
 // Заказы в админке (шаг 4.3): фильтры списка, причины отмены, заказ по звонку, реквизиты продавца для счёта. Чистая логика без базы.
 
 import { normalizePhone } from "./order";
+import { MONO_PENDING } from "./payments";
 
 // ---------- источники и «требуют действия» ----------
 
@@ -140,4 +141,26 @@ export function validateSeller(raw: Record<string, unknown>): { ok: true; value:
   if (v.iban && !/^UA\d{27}$/.test(v.iban)) return { ok: false, error: "IBAN — это UA и 27 цифр, например UA213223130000026007233566001." };
   if (v.code && !/^(\d{8}|\d{10})$/.test(v.code)) return { ok: false, error: "Код ЄДРПОУ — 8 цифр, ІПН ФОП — 10 цифр." };
   return { ok: true, value: v };
+}
+
+// ---------- удаление заказа ----------
+
+export type OrderDeleteFacts = {
+  invoices: Array<{ stub: boolean; status: string; paid: number; checkUntil: Date | null }>;
+  receipts: Array<{ stub: boolean }>;
+};
+
+/**
+ * Можно ли удалить заказ совсем (а не просто отменить). Нельзя, если по нему прошли настоящие деньги или есть ссылка на оплату,
+ * которой покупатель ещё может заплатить, или пробит настоящий кассовый чек (он уже в налоговой). Тестовые счета и чеки не мешают.
+ * Возвращает понятную причину отказа или null.
+ */
+export function orderDeleteBlock(f: OrderDeleteFacts): string | null {
+  const real = f.invoices.filter((i) => !i.stub);
+  if (real.some((i) => i.paid > 0)) return "Заказ оплачен картой. Удалить нельзя — поставьте статус «Отменён» (и при необходимости верните деньги).";
+  if (real.some((i) => (MONO_PENDING as string[]).includes(i.status) || i.checkUntil)) {
+    return "По заказу есть ссылка на оплату, которой покупатель ещё может заплатить. Сначала отмените её в блоке «Оплата картой».";
+  }
+  if (f.receipts.some((r) => !r.stub)) return "По заказу пробит кассовый чек — он уже в налоговой. Удалить нельзя, поставьте статус «Отменён».";
+  return null;
 }

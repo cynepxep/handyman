@@ -93,3 +93,72 @@ test("реквизиты продавца: сохраняются и читаю�
   await orders.saveSeller({ name: "ФОП Тест", code: "1234567890", iban: "UA213223130000026007233566001", bank: "", address: "", note: "" }, "test");
   assert.equal((await orders.loadSeller()).name, "ФОП Тест");
 });
+
+test("удаление заказа: резерв возвращается, задачи и уведомления удаляются, гарантия остаётся без ссылки, запись в журнале", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  const pA = await prisma.product.findUniqueOrThrow({ where: { sku: skuA } });
+  await orders.setOwnStock(pA.id, 5, "test");
+  const r = await orders.placeManualOrder(manual({ phone: "+380931230077" }), "x");
+  assert.ok(r.ok);
+  const item = await prisma.stockItem.findFirstOrThrow({ where: { productId: pA.id } });
+  assert.equal(item.reserved, 2);
+  await prisma.task.create({ data: { title: "Перезвонить", orderId: r.id, who: "x" } });
+  const sc = await prisma.serviceCase.create({ data: { orderId: r.id, productName: "Дриль", problem: "не крутить", who: "x" } });
+  await prisma.outbox.create({ data: { chatId: "1", orderId: r.id, text: "новый заказ" } });
+
+  const d = await orders.deleteOrder(r.id, "Владелец");
+  assert.deepEqual(d, { ok: true, no: r.no });
+  assert.equal(await prisma.order.count({ where: { id: r.id } }), 0);
+  assert.equal((await prisma.stockItem.findUniqueOrThrow({ where: { id: item.id } })).reserved, 0);
+  assert.equal(await prisma.task.count({ where: { orderId: r.id } }), 0);
+  assert.equal(await prisma.outbox.count({ where: { orderId: r.id } }), 0);
+  assert.equal((await prisma.serviceCase.findUniqueOrThrow({ where: { id: sc.id } })).orderId, null);
+  const log = await prisma.auditLog.findFirstOrThrow({ where: { action: "order.delete", target: r.no } });
+  assert.equal(log.who, "Владелец");
+  assert.equal((log.details as { items: unknown[] }).items.length, 2);
+  assert.equal((await orders.deleteOrder(r.id, "x")).ok, false); // второй раз — «не найден», без падения
+});
+
+test("удаление заказа: оплаченный, с живой ссылкой на оплату или с настоящим чеком — нельзя; тестовые счета не мешают", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  const mk = async () => {
+    const r = await orders.placeManualOrder(manual({ phone: "+380931230078" }), "x");
+    assert.ok(r.ok);
+    return r.id;
+  };
+  const inv = (orderId: string, over: Record<string, unknown>) =>
+    prisma.payInvoice.create({ data: { id: `del-${Math.random()}`, orderId, kind: "full", amount: 100, pageUrl: "https://pay.mbnk.biz/x", createdBy: "сайт", ...over } });
+
+  const paid = await mk();
+  await inv(paid, { status: "success", paid: 100 });
+  const r1 = await orders.deleteOrder(paid, "x");
+  assert.ok(!r1.ok && /оплачен/.test(r1.error));
+
+  const pending = await mk();
+  await inv(pending, { status: "created" });
+  const r2 = await orders.deleteOrder(pending, "x");
+  assert.ok(!r2.ok && /ссылка на оплату/.test(r2.error));
+
+  const receipt = await mk();
+  await prisma.fiscalReceipt.create({ data: { id: `rc-${Math.random()}`, orderId: receipt, kind: "sell", payType: "CASH", amount: 100, goods: [], createdBy: "x" } });
+  const r3 = await orders.deleteOrder(receipt, "x");
+  assert.ok(!r3.ok && /чек/.test(r3.error));
+  assert.equal(await prisma.order.count({ where: { id: { in: [paid, pending, receipt] } } }), 3);
+
+  const stub = await mk();
+  await inv(stub, { status: "success", paid: 100, stub: true });
+  await prisma.fiscalReceipt.create({ data: { id: `rc-${Math.random()}`, orderId: stub, kind: "sell", payType: "CASHLESS", amount: 100, goods: [], stub: true, createdBy: "x" } });
+  assert.equal((await orders.deleteOrder(stub, "x")).ok, true);
+  assert.equal(await prisma.payInvoice.count({ where: { orderId: stub } }), 0);
+});
+
+test("удаление выполненного заказа пересчитывает сумму покупок клиента", async (t) => {
+  if (!ready) return t.skip(skipMsg);
+  const r = await orders.placeManualOrder(manual({ phone: "+380931230079" }), "x");
+  assert.ok(r.ok);
+  await orders.setOrderStatus(r.id, "DONE", "x");
+  const o = await prisma.order.findUniqueOrThrow({ where: { id: r.id }, include: { client: true } });
+  assert.equal(o.client.spent.toString(), o.total.toString());
+  assert.ok((await orders.deleteOrder(r.id, "x")).ok);
+  assert.equal((await prisma.client.findUniqueOrThrow({ where: { id: o.clientId } })).spent.toNumber(), 0);
+});
