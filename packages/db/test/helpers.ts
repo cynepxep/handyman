@@ -32,7 +32,7 @@ export async function setupTestDb() {
     const imp = await import("../src/catalog-import");
     const prod = await import("../src/catalog-products");
     await prisma.$queryRaw`select 1`;
-    await prisma.$executeRawUnsafe('TRUNCATE "Supplier","Brand","Category","Product","ImportRun","AuditLog","FeedCategoryMap","TextOverride","Page","Setting","Order","Client","Outbox","Warehouse","StockItem","SearchQueryDay","MediaSyncRun","ErrorLog","RateLimit" RESTART IDENTITY CASCADE');
+    await prisma.$executeRawUnsafe('TRUNCATE "Supplier","Brand","Category","Product","ImportRun","AuditLog","FeedCategoryMap","TextOverride","Page","Setting","Order","Client","Outbox","Warehouse","StockItem","SearchQueryDay","MediaSyncRun","ErrorLog","RateLimit","MetricDay","MetricSeen" RESTART IDENTITY CASCADE');
     await prisma.category.createMany({
       data: [["ak", "Акумуляторний"], ["el", "Електро"], ["gr", "Садова"], ["hand", "Ручний"], ["acc", "Аксесуари"], ["bld", "Будівельне"], ["pw", "Силова"]]
         .map(([id, n], sort) => ({ id, nameUk: n, nameRu: n, sort })),

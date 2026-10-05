@@ -175,6 +175,9 @@ ID в контейнер не вписываются — теги берут и�
 `adContextFromRequest()` (`lib/shop/analytics.ts`) → `PlaceOptions.adContext` → `Order.adContext` (IP и браузер стираются после отправки). `event_id`/`transaction_id` =
 номер заказа (склейка с браузером). Без ключа: не production — заглушка (`AdEvent.stub`), production — кабинет пропускается. В тестах сеть — `setAnalyticsFetch`,
 фоновые — `adEventsSettled()`. Блок в заказе — `orders/[id]/ad-events-block.tsx`.
+**Метрики** (просьба владельца 2026-10-05): вкладка «Отчёты → Метрики» (`reports/metrics.tsx`, данные — `db/src/metrics.ts`, формулы — `core/src/shop/metrics.ts`).
+Свой счётчик воронки без cookies (`MetricDay`/`MetricSeen`, соль дня): визит — `MetricsBeacon` в layout витрины, корзина/оформление — `countStep()` из
+`components/shop/metrics-beacon.tsx` (уже вызывается в `trackItems`). Расход на рекламу для CAC/ROAS — `Expense` с категорией «Реклама», канал — по названию.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 
@@ -229,7 +232,7 @@ ID в контейнер не вписываются — теги берут и�
 | `pnpm db:migrate:dev --name <имя>` | новая миграция после правки `schema.prisma` (+ генерация клиента) |
 | `pnpm db:seed` | стартовые данные (осторожно: перезаписывает права ролей) |
 | `pnpm test:e2e` | Тесты в браузере (Playwright + установленный Chrome, телефон 412 px), 18 сценариев витрины (в т. ч. Нова Пошта пальцем, «Обране», «Витрина+», аналитика — только при включённой); сайт на :3100 должен работать (или запустится сам). Заказы не создают |
-| `pnpm test` | 430 проверок (core 261 + интеграционные db 169). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
+| `pnpm test` | 437 проверок (core 266 + интеграционные db 171). Интеграционные идут на базе `handyman_test` и индексе `products_test` |
 | `pnpm typecheck` | `tsc` во всех пакетах (у сайта сначала `next typegen`) |
 | `pnpm --filter web lint`, `pnpm build` | линтер, боевая сборка |
 | `pnpm search:reindex` | полная пересборка поискового индекса |

@@ -4,17 +4,18 @@ import { DELIVERY_RU, ORDER_SOURCE_RU, PAY_MODE_RU, WEEKDAYS_RU, humanMinutes, p
 import { requirePermission } from "@/lib/auth";
 import { money } from "@/lib/catalog";
 import { Bars, CountTable, PeriodPicker, Stat } from "./bits";
+import { Metrics } from "./metrics";
 
 export const dynamic = "force-dynamic";
 
 type SP = { tab?: string; period?: string; from?: string; to?: string };
-const TABS: Array<[string, string]> = [["sales", "Продажи"], ["products", "Товары"], ["orders", "Заказы"], ["catalog", "Каталог"]];
+const TABS: Array<[string, string]> = [["metrics", "Метрики"], ["sales", "Продажи"], ["products", "Товары"], ["orders", "Заказы"], ["catalog", "Каталог"]];
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<SP> }) {
   const session = await requirePermission("orders.view");
   const fin = session.permissions.includes("finance.view");
   const sp = await searchParams;
-  const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : "sales";
+  const tab = TABS.some(([k]) => k === sp.tab) ? sp.tab! : "metrics";
   const p = periodRange(sp);
   const periodQs = new URLSearchParams({ period: p.kind, ...(p.kind === "custom" ? { from: p.fromYmd, to: p.toYmd } : {}) });
   const exportHref = `/admin/reports/export?${new URLSearchParams({ tab, ...Object.fromEntries(periodQs) })}`;
@@ -33,6 +34,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
         {TABS.map(([k, l]) => <Link key={k} href={`/admin/reports?${new URLSearchParams({ tab: k, ...Object.fromEntries(periodQs) })}`} aria-current={tab === k ? "page" : undefined}>{l}</Link>)}
       </nav>
       {tab !== "catalog" && <PeriodPicker base="/admin/reports" p={p} extra={{ tab }} />}
+      {tab === "metrics" && <Metrics p={p} fin={fin} />}
       {tab === "sales" && <Sales p={p} fin={fin} />}
       {tab === "products" && <Products p={p} fin={fin} />}
       {tab === "orders" && <Orders p={p} />}
@@ -56,7 +58,7 @@ async function Sales({ p, fin }: { p: ReturnType<typeof periodRange>; fin: boole
         <Stat value={c.lost} label={`отмен и возвратов${fin && c.lostSum ? ` на ${money(c.lostSum)}` : ""}`} cur={c.lost} prev={v.lost} invert tone={c.lost ? "warn" : ""} />
         {fin && c.discounts > 0 && <Stat value={money(c.discounts)} label="скидок дали" cur={c.discounts} prev={v.discounts} invert />}
       </div>
-      <p className="adm-muted">Сравнение — с предыдущими {p.days} дн. Конверсия (посетители → покупка) появится с аналитикой сайта на Этапе 6.</p>
+      <p className="adm-muted">Сравнение — с предыдущими {p.days} дн. Посетители и конверсия — во вкладке «Метрики».</p>
       {p.days > 1 && (
         <Bars
           title={fin ? "Продажи по дням, ₴" : "Заказы по дням"} tableLabel="День"

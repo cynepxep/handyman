@@ -296,3 +296,13 @@ manual», сумма, **зачтено** `paid` и возвращено `refunde
   Уникальность (`orderId`, `platform`, `kind`) — одна покупка и один возврат на кабинет.
 - Без миграции: ключи `analytics.metaCapiToken|metaTestCode|tiktokToken|tiktokTestCode|ga4ApiSecret` — в `IntegrationSecret` (шифруются, как остальные).
 В старом проекте этого не было.
+
+## «Отчёты → Метрики» — миграция `20261005120000_metrics`
+
+Только добавления:
+- `MetricDay` — свой счётчик воронки по дням: `day` (дата по Киеву), `step` (visit | cart | checkout), `channel` (google | meta | tiktok | other | none —
+  по рекламным меткам из куки `hm_utm`), `count` (уникальных посетителей за день). Ключ — (`day`, `step`, `channel`).
+- `MetricSeen` — кто уже посчитан сегодня: (`day`, `step`, `visitor`), `visitor` — 16 знаков sha256(соль дня + адрес + браузер). Адрес и браузер
+  не хранятся; строки старше вчера удаляются при смене соли (первый визит нового дня).
+- Без миграции: `Setting` «metrics.salt» (`day`, `salt`) — соль дня, меняется каждый день.
+В старом проекте этого не было.
