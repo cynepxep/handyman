@@ -303,6 +303,9 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-menu-card { display: none; }
 .hm-menu-head { display: flex; gap: 12px; align-items: center; padding: 10px 14px; min-height: 68px; border-bottom: 1px solid var(--c-line); }
 .hm-menu-head:hover b { text-decoration: underline; text-underline-offset: 3px; }
+/* «Є в наявності» в каталоге — одна строка-ссылка без подразделов, выделена рамкой цвета бренда */
+.hm-menu-instock { box-shadow: inset 0 0 0 2px var(--c-primary), var(--shadow); }
+.hm-menu-instock .hm-menu-head { border-bottom: 0; }
 .hm-menu-links { padding: 6px 0; }
 .hm-menu-links a { display: flex; justify-content: space-between; gap: 12px; align-items: center; min-height: 36px; padding: 4px 14px; }
 .hm-menu-links a:hover { background: var(--c-bg); }
