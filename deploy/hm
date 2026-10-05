@@ -11,6 +11,7 @@
 #   backup-now                — резервная копия сейчас (как кнопка в админке «Резервные копии»)
 #   backup-check [копия]      — проверить восстановление копии во временную базу (рабочую не трогает)
 #   backup-restore <копия> --yes — ВОССТАНОВИТЬ копию в рабочую базу (сайт должен быть остановлен; docs/BACKUPS.md)
+#   notify "текст"            — сообщение в чат менеджеров (автообновление сайта, deploy/auto-update.sh)
 set -e
 TOOLS=/app/tools
 cd "$TOOLS"
@@ -66,6 +67,7 @@ case "$cmd" in
   backup-now) exec "$TSX" scripts/backup.ts now "$@" ;;
   backup-check) exec "$TSX" scripts/backup.ts check "$@" ;;
   backup-restore) exec "$TSX" scripts/backup.ts restore "$@" ;;
-  help|-h|--help) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//' ;;
+  notify) exec "$TSX" scripts/notify.ts "$@" ;;
+  help|-h|--help) sed -n '2,16p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) echo "[hm] неизвестная команда: $cmd (список — hm help)" >&2; exit 2 ;;
 esac
