@@ -10,7 +10,7 @@ const ACTION_RU: Record<string, string> = {
   "security.2fa.on": "Включил код из приложения", "security.2fa.off": "Выключил код из приложения", "security.recovery.new": "Новые коды восстановления", "security.password": "Сменил пароль",
   "security.sessions.kill": "Выход со всех устройств", "security.settings": "Правила входа",
   "staff.create": "Добавил сотрудника", "staff.update": "Изменил сотрудника", "staff.password.reset": "Сбросил пароль сотруднику", "staff.2fa.reset": "Сбросил код сотруднику",
-  "order.status": "Статус заказа", "order.manual": "Заказ по звонку", "client.edit": "Правка клиента", "stock.set": "Остаток товара", "stock.receive": "Приход на склад", "stock.inventory": "Инвентаризация",
+  "order.status": "Статус заказа", "order.manual": "Заказ по звонку", "order.delete": "Удаление заказа", "client.edit": "Правка клиента", "stock.set": "Остаток товара", "stock.receive": "Приход на склад", "stock.inventory": "Инвентаризация",
   "stock.settings": "Минимум/закупка товара", "template.edit": "Правка шаблона", "template.create": "Новый шаблон", "template.delete": "Удалил шаблон", "shop.checkout.edit": "Настройки оформления",
   "shop.loyalty.edit": "Уровни скидок", "shop.seller.edit": "Реквизиты для счёта", "finance.settings": "Настройки финансов", "finance.expense.add": "Добавил расход", "finance.expense.delete": "Удалил расход",
   "finance.expense.copy": "Скопировал расходы", "task.delete": "Удалил задачу", "errors.close": "Закрыл ошибки", "errors.reopen": "Открыл ошибку снова",

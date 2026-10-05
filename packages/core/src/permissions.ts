@@ -5,6 +5,7 @@ export const PERMISSIONS = [
   "orders.view",
   "orders.edit",
   "orders.history",
+  "orders.delete",
   "clients.view",
   "clients.edit",
   "products.view",
@@ -33,6 +34,7 @@ export const PERMISSION_LABELS_RU: Record<Permission, string> = {
   "orders.view": "Заказы: просмотр",
   "orders.edit": "Заказы: изменение статуса, сообщения",
   "orders.history": "Заказы: подробная история и переписка",
+  "orders.delete": "Заказы: удаление (тестовые, ошибочные, спам)",
   "clients.view": "Клиенты: просмотр",
   "clients.edit": "Клиенты: контакты, личная скидка",
   "products.view": "Товары: просмотр",
@@ -69,8 +71,8 @@ export const DEFAULT_ROLES: RoleSeed[] = [
     key: "admin",
     title: "Главный администратор",
     builtin: true,
-    // деньги и маржу по ТЗ видит только владелец — главному администратору финансы и возврат денег не даём (владелец может включить галочкой)
-    permissions: PERMISSIONS.filter((p) => p !== "staff.manage" && p !== "settings.edit" && p !== "finance.view" && p !== "payments.refund"),
+    // деньги и маржу по ТЗ видит только владелец — главному администратору финансы, возврат денег и удаление заказов не даём (владелец может включить галочкой)
+    permissions: PERMISSIONS.filter((p) => p !== "staff.manage" && p !== "settings.edit" && p !== "finance.view" && p !== "payments.refund" && p !== "orders.delete"),
   },
   {
     key: "manager",
