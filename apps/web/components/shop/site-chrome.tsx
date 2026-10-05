@@ -46,13 +46,14 @@ export async function SiteHeader({ c, loggedIn }: { c: ShopContent; loggedIn: bo
   };
   // «Часто шукають» в строке поиска: те же подсказки, что на главной (ваши + частые запросы покупателей)
   const popular = (await getSearchHints(c)).map((h) => h.text).slice(0, 6);
+  // Тёмная полоса над шапкой: пункт, у которого в «Тексты» вписан «-», не показывается (так владелец его выключает)
+  const trust = ([["header.trust.warranty", undefined], ["header.trust.return", undefined], ["header.trust.delivery", "hm-hide-sm"]] as const)
+    .filter(([key]) => t(key).trim() !== "-");
   return (
     <header className="hm-header">
       <div className="hm-topline">
         <div className="hm-topline-in">
-          <span>{t("header.trust.warranty")}</span>
-          <span>{t("header.trust.return")}</span>
-          <span className="hm-hide-sm">{t("header.trust.delivery")}</span>
+          {trust.map(([key, cls]) => <span key={key} className={cls}>{t(key)}</span>)}
           <span className="hm-topline-end">
             {phone && <a className="hm-hide-sm" href={telHref(phone)}>{phone}</a>}
             <LangSwitch lang={lang} label={t("header.lang")} />
@@ -80,7 +81,7 @@ export async function SiteHeader({ c, loggedIn }: { c: ShopContent; loggedIn: bo
           <HeaderCart />
         </span>
       </div>
-      {links.length > 0 && (
+      {links.length > 0 && t("header.help.lead").trim() !== "-" && (
         <div className="hm-contacts">
           <span className="hm-contacts-lead">{t("header.help.lead")}</span>
           {links.map((l) => <ContactPill key={l.label} {...l} />)}
