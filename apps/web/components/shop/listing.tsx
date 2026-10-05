@@ -11,6 +11,8 @@ import { PER_PAGE, type ListingData, type ResolvedListing } from "@/lib/shop/lis
 import { contactLinks } from "./site-chrome";
 import { FilterSheet, FilterSide, LoadMore, SortSelect, type FilterLabels } from "./listing-client";
 import { Icon } from "./icons";
+import { CallbackButton } from "./plus";
+import { callbackLabels } from "@/lib/shop/cart-labels";
 import { ProductCard, cardLabels } from "./product-card";
 import { Breadcrumbs, Pager, btn } from "./ui";
 import { TrackList, TrackSearch } from "./analytics";
@@ -192,6 +194,7 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
                     <Icon name={h.icon} size={20} />{h.label}
                   </a>
                 ))}
+                <CallbackButton lang={lang} labels={callbackLabels(t)} variant="secondary" />
               </div>
             </div>
           ) : (
