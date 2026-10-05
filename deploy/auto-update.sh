@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Автообновление сайта на сервере: раз в 5 минут (таймер systemd, ставит deploy/install-auto-update.sh) проверяет, появилась ли
 # на GitHub новая версия в main, и если да — запускает deploy/update.sh (копия → pull → сборка → перезапуск → проверка → откат при сбое).
-# Итог — сообщением в чат менеджеров (hm notify). Версию, которая не поднялась, повторно не собирает — ждёт следующей.
+# В чат менеджеров (hm notify) пишет только о проблемах (не обновилось, версия расходится); удачное обновление — только в журнал. Версию, которая не поднялась, повторно не собирает — ждёт следующей.
 #   bash deploy/auto-update.sh            — проверить сейчас (то же, что делает таймер)
 #   touch .auto-update/off                 — приостановить автообновление; rm .auto-update/off — включить снова
 # Журнал — .auto-update/log (последние запуски), подробности последнего обновления — update-last.log.
@@ -56,8 +56,8 @@ UPDATE=(bash deploy/update.sh)
 [ -n "${HM_UPDATE_CMD:-}" ] && UPDATE=("$HM_UPDATE_CMD")
 if "${UPDATE[@]}" > /dev/null 2>&1; then
   rm -f "$STATE/failed" "$STATE/diverged"
-  log "готово: сайт обновлён до $SHORT"
-  notify "✅ Сайт обновлён: $SUBJECT ($SHORT)"
+  # удачное обновление — только в журнал (владелец: в Telegram — только ошибки)
+  log "готово: сайт обновлён до $SHORT «$SUBJECT»"
 else
   echo "$REMOTE" > "$STATE/failed"
   REASON=$(grep -m1 "НЕ ПОЛУЧИЛОСЬ" update-last.log 2>/dev/null | sed "s/^НЕ ПОЛУЧИЛОСЬ: //" | cut -c1-400 || true)
