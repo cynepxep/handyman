@@ -300,22 +300,21 @@ export function CompareView({ lang, labels, catalogHref }: { lang: ShopLang; lab
 
 export type CallbackLabels = { btn: string; title: string; lead: string; phone: string; name: string; send: string; sending: string; close: string };
 
-/** className — вид кнопки снаружи (например, btn("secondary") в блоке «Не знайшли?»); без него — «таблетка» или ссылка (variant). */
-export function CallbackButton({ lang, productId, labels, variant = "pill", className }: { lang: ShopLang; productId?: string; labels: CallbackLabels; variant?: "pill" | "link"; className?: string }) {
+export function CallbackButton({ lang, productId, labels, variant = "pill" }: { lang: ShopLang; productId?: string; labels: CallbackLabels; variant?: "pill" | "link" | "secondary" }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(0);
   return (
     <>
       <button
         type="button"
-        className={className ?? (variant === "pill" ? "hm-pill" : "hm-linkbtn")}
+        className={variant === "pill" ? "hm-pill" : variant === "secondary" ? btn("secondary") : "hm-linkbtn"}
         data-action="callback"
         onClick={() => {
           setOpen((n) => n + 1);
           dlg.current?.showModal();
         }}
       >
-        {(className || variant === "pill") && <Icon name="phone" size={className ? 20 : 18} />}{labels.btn}
+        {variant !== "link" && <Icon name="phone" size={variant === "pill" ? 18 : 20} />}{labels.btn}
       </button>
       <dialog ref={dlg} className="hm-modal" aria-label={labels.title} onClick={(e) => e.target === dlg.current && dlg.current?.close()}>
         {open > 0 && <CallbackForm key={open} lang={lang} productId={productId} labels={labels} onClose={() => dlg.current?.close()} />}
@@ -363,6 +362,34 @@ function CallbackForm({ lang, productId, labels, onClose }: { lang: ShopLang; pr
           </button>
         </>
       )}
+    </form>
+  );
+}
+
+/** Главная, блок «Передзвонимо»: телефон и кнопка прямо на странице, без окна (та же заявка, что у «Передзвоніть мені»). */
+export function CallbackInline({ lang, labels }: { lang: ShopLang; labels: CallbackLabels }) {
+  const [phone, setPhone] = useState("");
+  const [trap, setTrap] = useState("");
+  const [result, setResult] = useState<{ ok: boolean; message: string } | null>(null);
+  const [pending, start] = useTransition();
+  const fillMs = useFillTimer();
+  if (result?.ok) return <p className="hm-alert hm-alert-ok" role="status">{result.message}</p>;
+  return (
+    <form
+      className="hm-callback-form"
+      data-action="callback-home"
+      onSubmit={(e) => {
+        e.preventDefault();
+        start(async () => setResult(await callbackAction(lang, { phone, website: trap, fillMs: fillMs() })));
+      }}
+    >
+      <label htmlFor="cbh-phone" className="hm-vh">{labels.phone}</label>
+      <PhoneInput id="cbh-phone" value={phone} onChange={setPhone} invalid={result ? !result.ok : false} describedBy={result && !result.ok ? "cbh-err" : undefined} />
+      <input className="hm-trap" tabIndex={-1} autoComplete="off" aria-hidden="true" name="website" value={trap} onChange={(e) => setTrap(e.target.value)} />
+      <button type="submit" className={btn("primary")} aria-busy={pending} disabled={pending}>
+        {pending ? <><span className="hm-spinner" aria-hidden="true" />{labels.sending}</> : <><Icon name="phone" size={20} />{labels.send}</>}
+      </button>
+      {result && !result.ok && <p id="cbh-err" className="hm-field-error" role="alert">{result.message}</p>}
     </form>
   );
 }

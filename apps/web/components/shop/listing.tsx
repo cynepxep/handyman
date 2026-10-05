@@ -194,7 +194,7 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
                     <Icon name={h.icon} size={20} />{h.label}
                   </a>
                 ))}
-                <CallbackButton lang={lang} labels={callbackLabels(t)} className={btn("secondary")} />
+                <CallbackButton lang={lang} labels={callbackLabels(t)} variant="secondary" />
               </div>
             </div>
           ) : (

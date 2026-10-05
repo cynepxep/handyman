@@ -1,4 +1,4 @@
-// Главная: шапка с поиском, дальше блоки в порядке из админки «Сайт → Главная» (баннер, задачи, батарея, разделы, «Є в наявності», хиты, акции, новинки,
+// Главная: шапка с поиском, дальше блоки в порядке из админки «Сайт → Главная» (баннер, «Передзвонимо», задачи, батарея, разделы, «Є в наявності», хиты, акции, новинки,
 // «Ви переглядали», доверие, «Не знайшли? Підберемо»). Надписи — «Сайт → Тексты», задачи и разделы — «Сайт → Меню и задачи». Пустые блоки не показываются.
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -17,7 +17,7 @@ import { ProductCard, cardLabels } from "@/components/shop/product-card";
 import { contactLinks } from "@/components/shop/site-chrome";
 import { GroupTile, TaskTile } from "@/components/shop/tiles";
 import { btn } from "@/components/shop/ui";
-import { CallbackButton } from "@/components/shop/plus";
+import { CallbackButton, CallbackInline } from "@/components/shop/plus";
 import { callbackLabels } from "@/lib/shop/cart-labels";
 
 export default async function HomePage({ params }: PageProps<"/[lang]">) {
@@ -35,6 +35,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   ]);
   const homeBanner = homeBanners[0] ?? null;
   const cl = cardLabels(t);
+  const cb = callbackLabels(t);
   const rail = (id: string, title: string, cards: ShopCard[], allHref?: string, allLabel = t("home.all")) =>
     cards.length > 0 && (
       <section key={id} className="hm-section" aria-labelledby={`h-${id}`}>
@@ -51,9 +52,8 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const tasks = menu.tasks.filter((x) => !x.task.hidden && x.total > 0);
   const groups = menu.groups.filter((g) => !g.group.hidden && g.total > 0);
   const hints = await getSearchHints(c);
-  // Кнопки «Не знайшли?»: Telegram, Viber и звонок — только те, что владелец заполнил в «Сайт → Контакти»;
-  // «Передзвоніть мені» — всегда (иначе без контактов блок без единой кнопки).
-  const helpLinks = contactLinks(c, t("help.call")).map((l) => (l.icon === "telegram" ? { ...l, label: t("help.telegram") } : l));
+  // Кнопки «Не знайшли?»: Telegram и звонок — только те, что владелец заполнил в «Сайт → Контакти»; «Передзвоніть мені» — всегда.
+  const phone = contactLinks(c, t("help.call")).find((l) => l.icon === "phone");
   // «Яка у вас батарея?» ведёт в раздел, где быстрый выбор — серия батареи (по умолчанию «Акумуляторний інструмент»), с уже выбранной серией.
   const batteryGroup = c.menu.groups.find((g) => !g.hidden && g.quickPick.includes("series"));
   const batteryHref = (series: string) =>
@@ -64,6 +64,16 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const blocks: Record<HomeBlock, React.ReactNode> = {
     // баннер главной — из «Реклама и баннеры» (место «Главная»); несколько — первый по порядку
     banner: homeBanner ? <PromoBanner key="banner" banner={homeBanner} lang={lang} /> : null,
+    // «Передзвонимо»: телефон прямо на главной — заявка в «Задачи» и в Telegram (как «Передзвоніть мені»)
+    callback: (
+      <section key="callback" className="hm-callback" aria-labelledby="h-callback">
+        <div>
+          <h2 id="h-callback" className="hm-h2">{t("home.callback.title")}</h2>
+          <p>{t("home.callback.text")}</p>
+        </div>
+        <CallbackInline lang={lang} labels={cb} />
+      </section>
+    ),
     tasks: tasks.length > 0 && (
       <section key="tasks" className="hm-section" aria-labelledby="h-tasks">
           <h2 id="h-tasks" className="hm-h2">{t("home.tasks.title")}</h2>
@@ -132,12 +142,9 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
         <h2 id="h-help" className="hm-h2">{t("help.title")}</h2>
         <p>{t("help.text")}</p>
         <div className="hm-help-btns">
-          {helpLinks.map((l, i) => (
-            <a key={l.href} className={btn(i === 0 ? "primary" : "secondary")} href={l.href} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noopener">
-              <Icon name={l.icon === "telegram" ? "chat" : l.icon} size={20} />{l.label}
-            </a>
-          ))}
-          <CallbackButton lang={lang} labels={callbackLabels(t)} className={btn(helpLinks.length === 0 ? "primary" : "secondary")} />
+          {c.contacts.telegram && <a className={btn("primary")} href={c.contacts.telegram} target="_blank" rel="noopener"><Icon name="chat" size={20} />{t("help.telegram")}</a>}
+          {phone && <a className={btn("secondary")} href={phone.href}><Icon name="phone" size={20} />{phone.label}</a>}
+          <CallbackButton lang={lang} labels={cb} variant="secondary" />
         </div>
       </section>
     ),

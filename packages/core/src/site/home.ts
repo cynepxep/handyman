@@ -5,12 +5,13 @@ import { parseHidden } from "./search-hints";
 
 export const HOME_SETTING_KEY = "shop.home";
 
-export const HOME_BLOCKS = ["banner", "tasks", "battery", "groups", "instock", "hits", "sale", "new", "viewed", "trust", "help"] as const;
+export const HOME_BLOCKS = ["banner", "callback", "tasks", "battery", "groups", "instock", "hits", "sale", "new", "viewed", "trust", "help"] as const;
 export type HomeBlock = (typeof HOME_BLOCKS)[number];
 
 /** Подписи блоков для админки (по-русски). */
 export const HOME_BLOCK_RU: Record<HomeBlock, string> = {
   banner: "Баннер акции",
+  callback: "«Передзвонимо» — поле для телефона прямо на главной (заявка приходит в «Задачи» и в Telegram)",
   tasks: "«Що потрібно зробити?» — задачи",
   battery: "«Яка у вас батарея?»",
   groups: "Разделы каталога",
