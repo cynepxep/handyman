@@ -49,7 +49,7 @@ EOF
 systemctl daemon-reload
 systemctl enable --now "$UNIT.timer"
 echo "Автообновление включено: каждые 5 минут сервер проверяет GitHub (ветка main) и сам обновляет сайт."
-echo "Журнал: $DIR/.auto-update/log; итог каждого обновления приходит в чат менеджеров."
+echo "Журнал: $DIR/.auto-update/log; в чат менеджеров приходит сообщение, только если обновление не удалось."
 echo "Проверяю обновления сейчас…"
 systemctl start "$UNIT.service" || true
 tail -n 3 "$DIR/.auto-update/log" 2>/dev/null || echo "(новых версий нет — сайт уже последней версии)"
