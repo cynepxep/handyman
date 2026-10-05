@@ -7,7 +7,7 @@ set -e
 
 case "${1:-web}" in
   web) ;;
-  migrate|seed|reindex|ensure-search|backup-now|backup-check|backup-restore|help) exec hm "$@" ;;
+  migrate|seed|reindex|ensure-search|backup-now|backup-check|backup-restore|notify|help) exec hm "$@" ;;
   *) exec "$@" ;;
 esac
 

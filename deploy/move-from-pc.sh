@@ -98,7 +98,8 @@ if ! "${COMPOSE[@]}" run --rm -T web backup-restore "$NAME" --yes; then
 fi
 
 step "Запускаю сайт (база обновится до текущей версии сама)"
-"${COMPOSE[@]}" up -d web || fail "не удалось запустить сайт."
+# заново, а не тот же контейнер: иначе витрина минутами показывает закэшированное с пустой базы (меню без разделов)
+"${COMPOSE[@]}" up -d --force-recreate web || fail "не удалось запустить сайт."
 wait_healthy 300 || fail "сайт не отвечает после восстановления. Журнал: docker compose -f docker-compose.prod.yml logs --tail 200 web"
 
 step "Пересобираю поиск по перенесённым товарам"
