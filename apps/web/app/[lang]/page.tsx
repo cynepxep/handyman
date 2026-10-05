@@ -17,6 +17,8 @@ import { ProductCard, cardLabels } from "@/components/shop/product-card";
 import { contactLinks } from "@/components/shop/site-chrome";
 import { GroupTile, TaskTile } from "@/components/shop/tiles";
 import { btn } from "@/components/shop/ui";
+import { CallbackButton } from "@/components/shop/plus";
+import { callbackLabels } from "@/lib/shop/cart-labels";
 
 export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const { lang } = await params;
@@ -49,8 +51,9 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   const tasks = menu.tasks.filter((x) => !x.task.hidden && x.total > 0);
   const groups = menu.groups.filter((g) => !g.group.hidden && g.total > 0);
   const hints = await getSearchHints(c);
-  // Кнопки «Не знайшли?»: Telegram и звонок — только те, что владелец заполнил в «Сайт → Контакти».
-  const phone = contactLinks(c, t("help.call")).find((l) => l.icon === "phone");
+  // Кнопки «Не знайшли?»: Telegram, Viber и звонок — только те, что владелец заполнил в «Сайт → Контакти»;
+  // «Передзвоніть мені» — всегда (иначе без контактов блок без единой кнопки).
+  const helpLinks = contactLinks(c, t("help.call")).map((l) => (l.icon === "telegram" ? { ...l, label: t("help.telegram") } : l));
   // «Яка у вас батарея?» ведёт в раздел, где быстрый выбор — серия батареи (по умолчанию «Акумуляторний інструмент»), с уже выбранной серией.
   const batteryGroup = c.menu.groups.find((g) => !g.hidden && g.quickPick.includes("series"));
   const batteryHref = (series: string) =>
@@ -128,12 +131,14 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       <section key="help" className="hm-help" aria-labelledby="h-help">
         <h2 id="h-help" className="hm-h2">{t("help.title")}</h2>
         <p>{t("help.text")}</p>
-        {(c.contacts.telegram || phone) && (
-          <div className="hm-help-btns">
-            {c.contacts.telegram && <a className={btn("primary")} href={c.contacts.telegram} target="_blank" rel="noopener"><Icon name="chat" size={20} />{t("help.telegram")}</a>}
-            {phone && <a className={btn("secondary")} href={phone.href}><Icon name="phone" size={20} />{phone.label}</a>}
-          </div>
-        )}
+        <div className="hm-help-btns">
+          {helpLinks.map((l, i) => (
+            <a key={l.href} className={btn(i === 0 ? "primary" : "secondary")} href={l.href} target={l.href.startsWith("http") ? "_blank" : undefined} rel="noopener">
+              <Icon name={l.icon === "telegram" ? "chat" : l.icon} size={20} />{l.label}
+            </a>
+          ))}
+          <CallbackButton lang={lang} labels={callbackLabels(t)} className={btn(helpLinks.length === 0 ? "primary" : "secondary")} />
+        </div>
       </section>
     ),
   };

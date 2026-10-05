@@ -444,7 +444,7 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
   .hm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-battery-list { grid-template-columns: repeat(3, 1fr); }
   .hm-trust { grid-template-columns: repeat(3, 1fr); }
-  .hm-help-btns { grid-template-columns: repeat(2, max-content); }
+  .hm-help-btns { display: flex; flex-wrap: wrap; }
 }
 
 /* ---------- планшет (≥ 700) ---------- */

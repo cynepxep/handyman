@@ -300,21 +300,22 @@ export function CompareView({ lang, labels, catalogHref }: { lang: ShopLang; lab
 
 export type CallbackLabels = { btn: string; title: string; lead: string; phone: string; name: string; send: string; sending: string; close: string };
 
-export function CallbackButton({ lang, productId, labels, variant = "pill" }: { lang: ShopLang; productId?: string; labels: CallbackLabels; variant?: "pill" | "link" }) {
+/** className — вид кнопки снаружи (например, btn("secondary") в блоке «Не знайшли?»); без него — «таблетка» или ссылка (variant). */
+export function CallbackButton({ lang, productId, labels, variant = "pill", className }: { lang: ShopLang; productId?: string; labels: CallbackLabels; variant?: "pill" | "link"; className?: string }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(0);
   return (
     <>
       <button
         type="button"
-        className={variant === "pill" ? "hm-pill" : "hm-linkbtn"}
+        className={className ?? (variant === "pill" ? "hm-pill" : "hm-linkbtn")}
         data-action="callback"
         onClick={() => {
           setOpen((n) => n + 1);
           dlg.current?.showModal();
         }}
       >
-        {variant === "pill" && <Icon name="phone" size={18} />}{labels.btn}
+        {(className || variant === "pill") && <Icon name="phone" size={className ? 20 : 18} />}{labels.btn}
       </button>
       <dialog ref={dlg} className="hm-modal" aria-label={labels.title} onClick={(e) => e.target === dlg.current && dlg.current?.close()}>
         {open > 0 && <CallbackForm key={open} lang={lang} productId={productId} labels={labels} onClose={() => dlg.current?.close()} />}
