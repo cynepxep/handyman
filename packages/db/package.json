@@ -45,7 +45,8 @@
     "./launch-check": "./src/launch-check.ts",
     "./sitemap": "./src/sitemap.ts",
     "./analytics": "./src/analytics.ts",
-    "./ad-events": "./src/ad-events.ts"
+    "./ad-events": "./src/ad-events.ts",
+    "./metrics": "./src/metrics.ts"
   },
   "scripts": {
     "generate": "prisma generate",

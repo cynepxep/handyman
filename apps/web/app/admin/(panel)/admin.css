@@ -55,6 +55,23 @@ a.adm-stat.link:focus-visible { outline: 2px solid var(--adm-accent); outline-of
 .adm-stat.warn b { color: var(--adm-warn); }
 .adm-stat.bad b { color: var(--adm-bad); }
 .adm-stat.ok b { color: var(--adm-ok); }
+/* «Отчёты → Метрики»: воронка и плитки с пояснением */
+.adm-funnel { display: grid; gap: 6px; margin: 8px 0 10px; max-width: 900px; }
+.adm-funnel-row { display: grid; grid-template-columns: minmax(130px, 200px) 1fr 160px; gap: 12px; align-items: center; }
+.adm-funnel-name, .adm-funnel-num { display: flex; flex-direction: column; line-height: 1.25; }
+.adm-funnel-name small, .adm-funnel-num small { font-size: 12px; }
+.adm-funnel-num { text-align: right; }
+.adm-funnel-bar { height: 22px; border-radius: 6px; background: var(--adm-soft); overflow: hidden; }
+.adm-funnel-bar i { display: block; height: 100%; border-radius: 6px; background: var(--adm-accent); }
+.adm-metrics { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+.adm-metric { display: flex; flex-direction: column; gap: 2px; }
+.adm-metric b span { font-size: 13px; font-weight: 500; }
+.adm-metric-title { font-weight: 600; color: var(--foreground) !important; }
+.adm-metric-note { font-size: 12px; }
+@media (max-width: 560px) {
+  .adm-funnel-row { grid-template-columns: 1fr auto; }
+  .adm-funnel-bar { grid-column: 1 / -1; grid-row: 2; height: 14px; }
+}
 
 .adm-flash { border-radius: 8px; padding: 10px 14px; margin: 12px 0; border: 1px solid; }
 .adm-flash.err { border-color: var(--adm-bad); color: var(--adm-bad); background: color-mix(in srgb, var(--adm-bad) 8%, transparent); }

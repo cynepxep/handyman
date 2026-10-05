@@ -1239,3 +1239,23 @@ model AdEvent {
   @@unique([orderId, platform, kind])
   @@index([state, nextTryAt])
 }
+
+// «Отчёты → Метрики»: свой счётчик воронки без cookies — посетители, добавили в корзину, начали оформление (уникальные за день).
+// step: visit | cart | checkout; channel: google | meta | tiktok | other | none (по рекламным меткам, core/src/shop/metrics.ts)
+model MetricDay {
+  day     DateTime @db.Date
+  step    String
+  channel String
+  count   Int      @default(0)
+
+  @@id([day, step, channel])
+}
+
+// Кто уже посчитан сегодня: отпечаток = sha256(соль дня + адрес + браузер), 16 знаков; соль меняется каждый день, строки старше вчера удаляются.
+model MetricSeen {
+  day     DateTime @db.Date
+  step    String
+  visitor String
+
+  @@id([day, step, visitor])
+}

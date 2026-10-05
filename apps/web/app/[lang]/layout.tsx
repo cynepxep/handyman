@@ -17,6 +17,7 @@ import { MiniAppBridge } from "@/components/shop/miniapp-bridge";
 import { CartSync } from "@/components/shop/cart/cart-sync";
 import { FavSync } from "@/components/shop/fav-store";
 import { AnalyticsTags } from "@/components/shop/analytics";
+import { MetricsBeacon } from "@/components/shop/metrics-beacon";
 import { analyticsConfig } from "@handyman/db/analytics";
 import { analyticsInitScript } from "@handyman/core/shop";
 import Script from "next/script";
@@ -79,6 +80,7 @@ export default async function ShopRootLayout({ children, params }: LayoutProps<"
         <MiniAppBridge loggedIn={Boolean(client)} />{/* Этап 5: вход в Telegram Mini App */}
         <CartSync loggedIn={Boolean(client)} />{/* шаг 5.5: общая корзина сайт ↔ Mini App */}
         <FavSync loggedIn={Boolean(client)} />
+        {!staff && <MetricsBeacon />}{/* «Отчёты → Метрики»: свой счётчик посетителей без cookies */}
         {/* шаг А1: контейнер Google Tag Manager — если аналитика включена; в браузере с входом в админку не грузится (не засорять рекламу) */}
         {analytics?.on && !staff && (
           <>

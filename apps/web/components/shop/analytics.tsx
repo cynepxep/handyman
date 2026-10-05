@@ -9,6 +9,7 @@ import {
   ECOMMERCE_EVENTS, LIST_ITEMS_MAX, analyticsPageType, contactClick, ecommerceOf, type AnalyticsItem, type EcommerceData,
 } from "@handyman/core/shop";
 import { analyticsItemsAction, claimPurchaseAction } from "@/app/[lang]/analytics-actions";
+import { countStep } from "./metrics-beacon";
 
 type DataLayerEntry = Record<string, unknown>;
 type W = Window & { dataLayer?: DataLayerEntry[]; __hmA?: number; __hmCh?: "web" | "miniapp" };
@@ -32,6 +33,9 @@ export function track(event: string, data: DataLayerEntry = {}): void {
  * стало в корзине (от него зависит оптовая цена).
  */
 export function trackItems(event: string, lines: Array<{ sku: string; qty: number; atQty?: number }>, extra: Omit<EcommerceData, "currency" | "items"> = {}): void {
+  // свой счётчик воронки («Отчёты → Метрики») — и без Google Analytics
+  if (lines.length && event === "add_to_cart") countStep("cart");
+  if (lines.length && event === "begin_checkout") countStep("checkout");
   if (!analyticsOn() || !lines.length) return;
   void analyticsItemsAction(lines).then(
     (items) => {

@@ -14,6 +14,7 @@ import { PhoneInput } from "./phone-input";
 import { useFillTimer } from "../fill-timer";
 import { cartStore, useCart } from "./store";
 import { trackItems, trackPurchase } from "../analytics";
+import { countStep } from "../metrics-beacon";
 
 const SHOWN_KEY = "hm.cartShown";
 
@@ -106,6 +107,7 @@ export function ShopCartProvider({ lang, labels, checkoutHref, cartHref, childre
     openOneClick: (sku, name) => {
       setOc({ sku, name });
       oneClick.current?.showModal();
+      countStep("checkout"); // «Отчёты → Метрики»: «1 клік» — тоже начатое оформление
     },
   };
 

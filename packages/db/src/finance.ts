@@ -24,7 +24,7 @@ export async function saveFinance(raw: unknown, who: string): Promise<FinanceSet
   return value;
 }
 
-const orderSelect = {
+export const orderSelect = {
   id: true, no: true, total: true, payMode: true, shopDeliveryCost: true, status: true, doneAt: true, createdAt: true, source: true, recipientName: true,
   items: { select: { qty: true, unitPrice: true, unitCost: true, product: { select: { purchasePrice: true } } } },
 } satisfies Prisma.OrderSelect;
@@ -34,7 +34,7 @@ type OrderRow = Prisma.OrderGetPayload<{ select: typeof orderSelect }>;
 const linesOf = (o: OrderRow): ProfitLine[] =>
   o.items.map((i) => ({ qty: i.qty, unitPrice: i.unitPrice.toNumber(), unitCost: i.unitCost?.toNumber() ?? null, currentCost: i.product?.purchasePrice?.toNumber() ?? null }));
 
-const profitOf = (o: OrderRow, s: FinanceSettings): OrderProfit =>
+export const profitOf = (o: OrderRow, s: FinanceSettings): OrderProfit =>
   orderProfit({ lines: linesOf(o), total: o.total.toNumber(), payMode: o.payMode, shopDeliveryCost: o.shopDeliveryCost.toNumber() }, s);
 
 /** Прибыль одного заказа (для карточки заказа, право «Финансы»). */
