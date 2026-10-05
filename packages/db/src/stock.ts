@@ -149,6 +149,19 @@ async function releaseOrder(tx: Prisma.TransactionClient, orderId: string, who: 
   return changed;
 }
 
+/** Удаление заказа: снять только резерв. Уже списанное (отправленное) не возвращается — товар физически ушёл; если не уходил, заказ сначала отменяют. */
+export async function unreserveOrder(tx: Prisma.TransactionClient, orderId: string, who: string): Promise<string[]> {
+  const { state, productOf } = await orderMoves(tx, orderId);
+  const changed: string[] = [];
+  for (const [stockItemId, s] of state) {
+    if (s.reserved <= 0) continue;
+    await tx.$executeRaw`UPDATE "StockItem" SET "reserved" = GREATEST("reserved" - ${s.reserved}, 0) WHERE "id" = ${stockItemId}`;
+    await tx.stockMovement.create({ data: { stockItemId, delta: -s.reserved, reason: "UNRESERVE", refOrderId: orderId, who } });
+    changed.push(productOf.get(stockItemId)!);
+  }
+  return changed;
+}
+
 /**
  * Склад при смене статуса заказа: отмена/возврат — снять резерв и вернуть отправленное; отправлен/выполнен — списать резерв;
  * вернули из отмены в работу — зарезервировать снова (сколько есть).

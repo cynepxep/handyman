@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { kyivDayStart, parseOrderFilters, validateManualOrder, validateSeller } from "../src/shop";
+import { kyivDayStart, orderDeleteBlock, parseOrderFilters, validateManualOrder, validateSeller } from "../src/shop";
 
 const KNOWN = { statuses: ["NEW", "DONE"], pays: ["PREPAY"], deliveries: ["NOVA_POSHTA"] };
 
@@ -40,4 +40,15 @@ test("реквизиты продавца: IBAN UA+27 цифр (пробелы �
   assert.equal(validateSeller({ iban: "UA12" }).ok, false);
   assert.equal(validateSeller({ code: "123" }).ok, false);
   assert.ok(validateSeller({}).ok);
+});
+
+test("удаление заказа: мешают только настоящие деньги, живая ссылка на оплату и настоящий чек", () => {
+  const inv = (over: Partial<{ stub: boolean; status: string; paid: number; checkUntil: Date | null }> = {}) => ({ stub: false, status: "expired", paid: 0, checkUntil: null, ...over });
+  assert.equal(orderDeleteBlock({ invoices: [], receipts: [] }), null);
+  assert.equal(orderDeleteBlock({ invoices: [inv()], receipts: [] }), null); // просроченная неоплаченная ссылка
+  assert.equal(orderDeleteBlock({ invoices: [inv({ stub: true, status: "success", paid: 500 })], receipts: [{ stub: true }] }), null);
+  assert.match(orderDeleteBlock({ invoices: [inv({ status: "success", paid: 500 })], receipts: [] })!, /оплачен/);
+  assert.match(orderDeleteBlock({ invoices: [inv({ status: "processing" })], receipts: [] })!, /ссылка на оплату/);
+  assert.match(orderDeleteBlock({ invoices: [inv({ status: "reversed", checkUntil: new Date() })], receipts: [] })!, /ссылка на оплату/);
+  assert.match(orderDeleteBlock({ invoices: [], receipts: [{ stub: false }] })!, /чек/);
 });

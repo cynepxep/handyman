@@ -5,7 +5,7 @@
 import { randomBytes } from "node:crypto";
 import { prisma, type Prisma, type OrderStatus } from "./client";
 import {
-  ACTION_STATUSES, CANCEL_REASON_RU, DUPLICATE_ORDER_MS, cartSignature, SELLER_SETTING_KEY, clientDiscountPct, kyivDayStart, needsCancelReason, parseSeller, type TierKey,
+  ACTION_STATUSES, CANCEL_REASON_RU, DUPLICATE_ORDER_MS, cartSignature, SELLER_SETTING_KEY, clientDiscountPct, kyivDayStart, needsCancelReason, orderDeleteBlock, parseSeller, type TierKey,
   type ManualOrderInput, type OrderFilters, type SellerDetails, type Utm,
 } from "@handyman/core/shop";
 import {
@@ -19,7 +19,7 @@ import { notifyManagers } from "./notify";
 import { npPointByRef } from "./novaposhta";
 import { photoStyleOn, pickImage } from "./photo-choice";
 import { loadLoyalty, recalcClient } from "./clients";
-import { applyOrderStock, notifyLowStock, ownStockOf, reserveForOrder } from "./stock";
+import { applyOrderStock, notifyLowStock, ownStockOf, reserveForOrder, unreserveOrder } from "./stock";
 import { logError } from "./errors";
 
 // склад переехал в stock.ts (шаг 4.4); старые импорты из orders продолжают работать
@@ -529,4 +529,47 @@ export async function setOrderTtn(orderId: string, ttn: string, who: string): Pr
     prisma.order.update({ where: { id: orderId }, data: { ttn: clean || null } }),
     prisma.orderHistory.create({ data: { orderId, text: `ТТН: ${clean || "—"} (${who})` } }),
   ]);
+}
+
+/**
+ * Удалить заказ совсем (право «Заказы: удаление»; для тестовых, ошибочных и спам-заказов). Нельзя, если прошли настоящие деньги,
+ * есть живая ссылка на оплату или настоящий чек (orderDeleteBlock) — тогда заказ отменяют. Резерв на складе снимается, история
+ * склада (StockMovement) остаётся; сумма покупок клиента пересчитывается; задачи и уведомления по заказу удаляются,
+ * гарантийные обращения остаются без ссылки на заказ. В журнал действий — номер, сумма, телефон и товары. KeyCRM не трогаем.
+ */
+export async function deleteOrder(orderId: string, who: string): Promise<{ ok: true; no: string } | { ok: false; error: string }> {
+  const res = await prisma.$transaction(async (tx) => {
+    const o = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: { select: { sku: true, qty: true, unitPrice: true } },
+        invoices: { select: { stub: true, status: true, paid: true, checkUntil: true } },
+        receipts: { select: { stub: true } },
+      },
+    });
+    if (!o) return { ok: false as const, error: "Заказ не найден — возможно, его уже удалили." };
+    const block = orderDeleteBlock({ invoices: o.invoices.map((i) => ({ ...i, paid: i.paid.toNumber() })), receipts: o.receipts });
+    if (block) return { ok: false as const, error: block };
+    const changed = await unreserveOrder(tx, orderId, who);
+    await tx.task.deleteMany({ where: { orderId } });
+    await tx.serviceCase.updateMany({ where: { orderId }, data: { orderId: null } });
+    await tx.outbox.deleteMany({ where: { orderId } });
+    await tx.payment.deleteMany({ where: { orderId } });
+    await tx.partnerReferral.deleteMany({ where: { orderId } });
+    await tx.order.delete({ where: { id: orderId } }); // позиции, история, счета-заглушки, тестовые чеки, рекламные события — каскадом
+    if (o.status === "DONE") await recalcClient(tx, o.clientId);
+    await tx.auditLog.create({
+      data: {
+        who, action: "order.delete", target: o.no,
+        details: json({
+          no: o.no, status: o.status, total: o.total.toNumber(), isTest: o.isTest, phone: o.recipientPhone, name: o.recipientName, createdAt: o.createdAt,
+          keycrmId: o.keycrmStub ? null : o.keycrmId, items: o.items.map((i) => ({ sku: i.sku, qty: i.qty, price: i.unitPrice.toNumber() })),
+        }),
+      },
+    });
+    return { ok: true as const, no: o.no, changed };
+  });
+  if (!res.ok) return res;
+  if (res.changed.length) await reindexSafely(() => reindexProducts(res.changed));
+  return { ok: true, no: res.no };
 }

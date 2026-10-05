@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import type { OrderStatus } from "@handyman/db";
-import { ORDER_STATUSES, clearSuspicious, placeManualOrder, saveSeller, setOrderStatus, setOrderTtn } from "@handyman/db/orders";
+import { ORDER_STATUSES, clearSuspicious, deleteOrder, placeManualOrder, saveSeller, setOrderStatus, setOrderTtn } from "@handyman/db/orders";
 import { sendOrderMessages } from "@handyman/db/messages";
 import { retryOutbox } from "@handyman/db/notify";
 import { MONO_PENDING, unpaidOf, validateInvoiceAmount, validateManualOrder, validateManualReceipt, validateRefund, validateSeller } from "@handyman/core/shop";
@@ -69,6 +69,16 @@ export async function clearSuspiciousAction(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   const done = await clearSuspicious(id, session.name || session.username);
   redirect(back(id, "ok", done ? "Отметка «подозрительный» снята. В KeyCRM заказ можно отправить кнопкой ниже." : "Отметки уже нет."));
+}
+
+/** Удалить заказ совсем (право «Заказы: удаление», по умолчанию — только владелец). Оплаченный или с чеком — нельзя, только отменить. */
+export async function deleteOrderAction(formData: FormData): Promise<void> {
+  const session = await requirePermission("orders.delete");
+  const id = String(formData.get("id") ?? "");
+  if (formData.get("confirm") !== "on") redirect(back(id, "error", "Поставьте галочку «Подтверждаю удаление» — заказ исчезнет без возможности вернуть."));
+  const r = await deleteOrder(id, session.name || session.username);
+  if (!r.ok) redirect(back(id, "error", r.error));
+  redirect(`/admin/orders?ok=${encodeURIComponent(`Заказ ${r.no} удалён.`)}`);
 }
 
 export async function setTtnAction(formData: FormData): Promise<void> {
