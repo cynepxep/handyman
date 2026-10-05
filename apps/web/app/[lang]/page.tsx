@@ -33,12 +33,12 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
   ]);
   const homeBanner = homeBanners[0] ?? null;
   const cl = cardLabels(t);
-  const rail = (id: string, title: string, cards: ShopCard[], allHref?: string) =>
+  const rail = (id: string, title: string, cards: ShopCard[], allHref?: string, allLabel = t("home.all")) =>
     cards.length > 0 && (
       <section key={id} className="hm-section" aria-labelledby={`h-${id}`}>
         <div className="hm-section-head">
           <h2 id={`h-${id}`} className="hm-h2">{title}</h2>
-          {allHref && <Link className="hm-link" href={allHref}>{t("home.all")} →</Link>}
+          {allHref && <Link className="hm-link" href={allHref}>{allLabel} →</Link>}
         </div>
         <ul className="hm-rail">
           {cards.map((card) => <li key={card.id}><ProductCard card={card} labels={cl} rail /></li>)}
@@ -112,7 +112,7 @@ export default async function HomePage({ params }: PageProps<"/[lang]">) {
       
     ),
     // товары, которые владелец выбрал сам (что есть на руках, из видео в TikTok); распроданные скрываются сами
-    instock: rail("instock", t("home.instock.title"), instock),
+    instock: rail("instock", t("home.instock.title"), instock, shopHref(lang, paths.inStock()), t("home.instock.all")),
     hits: hits && rail("hits", t("home.hits.title"), hits.cards, shopHref(lang, paths.hits())),
     sale: rail("sale", t("home.sale.title"), sale),
     new: news && rail("new", t("home.new.title"), news.cards, shopHref(lang, paths.news())),

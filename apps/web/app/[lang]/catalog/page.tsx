@@ -7,7 +7,8 @@ import { notFound } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
 import { isShopLang, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
-import { getMenuView } from "@/lib/shop/catalog";
+import { getInstockCards, getMenuView } from "@/lib/shop/catalog";
+import { loadHomeSettings } from "@handyman/db/site-content";
 import { Breadcrumbs } from "@/components/shop/ui";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/catalog">): Promise<Metadata> {
@@ -24,6 +25,10 @@ export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog
   const { t, pick } = c;
   const { groups } = await getMenuView(c.menu);
   const visible = groups.filter((g) => !g.group.hidden && g.total > 0);
+  // «Є в наявності» — отдельный пункт первым (товары, которые владелец выбрал для полки на главной); пусто — пункта нет
+  const home = await loadHomeSettings().catch(() => null);
+  const inStock = home?.blocks.some((b) => b.id === "instock" && b.on) && home.instock.length ? await getInstockCards(lang, home.instock) : [];
+  const inStockImg = inStock.find((x) => x.image)?.image ?? null;
 
   return (
     <section className="hm-section" aria-labelledby="h-catalog">
@@ -33,6 +38,20 @@ export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog
       {/* Телефон — раскрывающийся список (одна группа на экран); планшет и компьютер — все подразделы сразу,
           карточки идут колонками друг под другом, без пустых мест рядом с раскрытой группой. */}
       <ul className="hm-menu">
+        {inStock.length > 0 && (
+          <li className="hm-menu-group hm-menu-instock">
+            <Link className="hm-menu-head" href={shopHref(lang, paths.inStock())}>
+              <span className="hm-group-img hm-menu-img">
+                {inStockImg && <Image src={inStockImg} alt="" fill sizes="56px" unoptimized={!optimizable(inStockImg)} />}
+              </span>
+              <span className="hm-menu-title">
+                <b>{t("home.instock.title")}</b>
+                <small>{t("instock.lead")}</small>
+              </span>
+              <span className="hm-group-count">{inStock.length}</span>
+            </Link>
+          </li>
+        )}
         {visible.map((g) => {
           const groupHref = shopHref(lang, paths.group(slugOf(g.group)));
           const name = pick(g.group.nameUk, g.group.nameRu);

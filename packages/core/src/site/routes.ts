@@ -77,6 +77,8 @@ export const paths = {
   info: (slug: string) => `/info/${encodeURIComponent(slug)}`,
   /** все «Хіти» / «Новинки» (ссылка «Усі» с главной) */
   hits: () => "/search?hit=1",
+  /** «Є в наявності»: все товары, которые владелец выбрал для полки на главной (ссылка «Дивитись усі», пункт в каталоге) */
+  inStock: () => "/in-stock",
   news: () => "/search?new=1",
   cart: () => "/cart",
   checkout: () => "/checkout",
@@ -103,7 +105,7 @@ export type ShopSection = "catalog" | "search" | "cart" | "favorites" | "account
 /** В каком разделе покупатель по адресу страницы (можно с /ru и ?запросом). Каталог — и разделы, и задачи, и товар. */
 export function shopSection(path: string): ShopSection | null {
   const p = stripLang(path).replace(/[?#].*$/, "");
-  if (/^\/(?:catalog|task|product)(?:\/|$)/.test(p)) return "catalog";
+  if (/^\/(?:catalog|task|product|in-stock)(?:\/|$)/.test(p)) return "catalog";
   if (p === "/search") return "search";
   if (p === "/cart" || p === "/checkout") return "cart";
   if (p === "/favorites") return "favorites";
