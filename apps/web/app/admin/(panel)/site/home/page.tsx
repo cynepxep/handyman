@@ -36,6 +36,7 @@ export default async function HomeSettingsPage({ searchParams }: { searchParams:
     instock: <>товаров: <b>{s.instock.length}</b>, на сайте видно: <b>{inShown}</b> — список ниже</>,
     hits: <>отмечено: <b>{hits}</b> — <Link className="adm-link" href="/admin/products?flag=hit">список</Link></>,
     new: <>отмечено: <b>{news}</b> — <Link className="adm-link" href="/admin/products?flag=new">список</Link></>,
+    callback: <>заявки — в <Link className="adm-link" href="/admin/tasks">«Задачах»</Link> и в Telegram; надписи — «Сайт → Тексты» (<code>home.callback.*</code>)</>,
     banner: <>баннеры места «Главная» — в <Link className="adm-link" href="/admin/banners">«Реклама и баннеры»</Link></>,
   };
 

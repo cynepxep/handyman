@@ -15,7 +15,7 @@ test("главная: без настроек — все блоки по пор�
 
 test("главная: сохранённый порядок, выключенные блоки, мусор и новые блоки", () => {
   const s = parseHomeSettings({ blocks: [{ id: "sale", on: false }, { id: "hits" }, { id: "xxx" }, { id: "sale" }, 5], banner: { on: true, titleUk: "Знижки", href: "javascript:alert(1)", image: "http://x/a.png" } });
-  assert.deepEqual(s.blocks.slice(0, 2), [{ id: "banner", on: true }, { id: "tasks", on: true }]); // первые по умолчанию — в начало
+  assert.deepEqual(s.blocks.slice(0, 3), [{ id: "banner", on: true }, { id: "callback", on: true }, { id: "tasks", on: true }]); // первые по умолчанию — в начало
   assert.deepEqual(s.blocks.filter((b) => b.id === "sale" || b.id === "hits"), [{ id: "sale", on: false }, { id: "hits", on: true }]); // сохранённый порядок не тронут
   assert.equal(s.blocks.length, HOME_BLOCKS.length);
   assert.equal(s.banner.href, ""); // опасная ссылка отброшена
@@ -27,10 +27,20 @@ test("главная: новый блок «Є в наявності» вста�
   // так сохранено у владельца до появления блока: свой порядок, «Каталог» поднят выше задач
   const old = ["banner", "groups", "tasks", "battery", "hits", "sale", "new", "viewed", "trust", "help"].map((id) => ({ id, on: id !== "battery" }));
   const s = parseHomeSettings({ blocks: old });
-  assert.deepEqual(s.blocks.map((b) => b.id), ["banner", "groups", "instock", "tasks", "battery", "hits", "sale", "new", "viewed", "trust", "help"]);
+  assert.deepEqual(s.blocks.map((b) => b.id), ["banner", "callback", "groups", "instock", "tasks", "battery", "hits", "sale", "new", "viewed", "trust", "help"]);
   assert.equal(s.blocks.find((b) => b.id === "instock")?.on, true);
   assert.equal(s.blocks.find((b) => b.id === "battery")?.on, false);
   assert.deepEqual(s.instock, []);
+});
+
+test("главная: новый блок «Передзвонимо» встаёт сразу после баннера (под заголовком), включённым; выключенный владельцем — остаётся выключенным", () => {
+  const old = ["groups", "banner", "instock", "tasks", "battery", "hits", "sale", "new", "viewed", "trust", "help"].map((id) => ({ id, on: true }));
+  const s = parseHomeSettings({ blocks: old });
+  assert.deepEqual(s.blocks.slice(0, 3).map((b) => b.id), ["groups", "banner", "callback"]);
+  assert.equal(s.blocks.find((b) => b.id === "callback")?.on, true);
+  const off = parseHomeSettings({ blocks: [...old, { id: "callback", on: false }] });
+  assert.equal(off.blocks.find((b) => b.id === "callback")?.on, false);
+  assert.equal(off.blocks.at(-1)?.id, "callback", "сохранённое место не трогаем");
 });
 
 test("главная: список «Є в наявності» — артикулы по порядку, без повторов и мусора", () => {
