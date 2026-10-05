@@ -2,10 +2,10 @@ import Link from "next/link";
 import type { Permission } from "@handyman/core";
 import { requireStaff } from "@/lib/auth";
 import { logoutAction } from "../actions";
-import { AdminNav, type NavItem } from "./nav";
+import { AdminNav, AdminSideNav, type NavItem } from "./nav";
 import "./admin.css";
 
-// group — раздел меню на телефоне (шаг 4.8)
+// group — группа в меню слева на компьютере и в «☰» на телефоне (шаг 4.8)
 const SECTIONS: Array<{ href: string; label: string; group: string; permission?: Permission; ownerOnly?: boolean }> = [
   { href: "/admin", label: "Главная", group: "Продажи" },
   { href: "/admin/orders", label: "Заказы", group: "Продажи", permission: "orders.view" },
@@ -43,25 +43,40 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     ({ href, label, group }) => ({ href, label, group }),
   );
 
+  const brand = (
+    <Link className="adm-brand" href="/admin">
+      Handyman
+    </Link>
+  );
+  const user = (
+    <form action={logoutAction} className="adm-user">
+      <Link href="/admin/account" title="Мой аккаунт: пароль, код из приложения, где я вошёл">
+        <span>{session.name} · {session.roleTitle}</span> {session.hasTwoFactor ? "🔒" : "👤"}
+      </Link>
+      <button type="submit" className="adm-btn">
+        Выйти
+      </button>
+    </form>
+  );
+
+  // компьютер — разделы списком слева; телефон — полоса сверху с кнопкой «☰» (что из них видно — решает admin.css)
   return (
-    <div className="adm">
-      <header className="adm-bar">
-        <div className="adm-bar-in">
-          <Link className="adm-brand" href="/admin">
-            Handyman
-          </Link>
-          <AdminNav items={items} />
-          <form action={logoutAction} className="adm-user">
-            <Link href="/admin/account" title="Мой аккаунт: пароль, код из приложения, где я вошёл">
-              <span>{session.name} · {session.roleTitle}</span> {session.hasTwoFactor ? "🔒" : "👤"}
-            </Link>
-            <button type="submit" className="adm-btn">
-              Выйти
-            </button>
-          </form>
-        </div>
-      </header>
-      <main className="adm-page">{children}</main>
+    <div className="adm adm-shell">
+      <aside className="adm-side">
+        {brand}
+        <AdminSideNav items={items} />
+        {user}
+      </aside>
+      <div className="adm-main">
+        <header className="adm-topbar">
+          <div className="adm-topbar-in">
+            {brand}
+            <AdminNav items={items} />
+            {user}
+          </div>
+        </header>
+        <main className="adm-page">{children}</main>
+      </div>
     </div>
   );
 }
