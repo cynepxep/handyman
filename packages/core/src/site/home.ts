@@ -5,7 +5,7 @@ import { parseHidden } from "./search-hints";
 
 export const HOME_SETTING_KEY = "shop.home";
 
-export const HOME_BLOCKS = ["banner", "tasks", "battery", "groups", "hits", "sale", "new", "viewed", "trust", "help"] as const;
+export const HOME_BLOCKS = ["banner", "tasks", "battery", "groups", "instock", "hits", "sale", "new", "viewed", "trust", "help"] as const;
 export type HomeBlock = (typeof HOME_BLOCKS)[number];
 
 /** Подписи блоков для админки (по-русски). */
@@ -14,6 +14,7 @@ export const HOME_BLOCK_RU: Record<HomeBlock, string> = {
   tasks: "«Що потрібно зробити?» — задачи",
   battery: "«Яка у вас батарея?»",
   groups: "Разделы каталога",
+  instock: "«Є в наявності» — товары, которые вы выбрали сами (например, из видео в TikTok)",
   hits: "Хиты продаж (товары, отмеченные «Хит»)",
   sale: "Акции (товары со старой ценой)",
   new: "Новинки (товары, отмеченные «Новинка»)",
@@ -39,7 +40,31 @@ export type HomeSettings = {
   banner: HomeBanner;
   /** подсказки поиска («часто шукають»): сколько показывать и какие слова скрыть */
   hints: { max: number; hidden: string[] };
+  /** «Є в наявності»: артикулы товаров по порядку показа (выбирает владелец; распроданные на сайте скрываются сами) */
+  instock: string[];
 };
+
+/** Сколько товаров можно положить в «Є в наявності». */
+export const INSTOCK_MAX = 60;
+
+/** Список артикулов «Є в наявності»: по строкам или через запятую/точку с запятой, без повторов, порядок сохраняется. */
+export function parseInstockSkus(v: unknown): string[] {
+  const parts = Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" ? v.split(/[\n,;]+/) : [];
+  const out: string[] = [];
+  for (const p of parts) {
+    const sku = p.trim();
+    if (!sku || sku.length > 40 || out.includes(sku)) continue;
+    out.push(sku);
+    if (out.length >= INSTOCK_MAX) break;
+  }
+  return out;
+}
+
+/** Добавить товар в «Є в наявності» (в начало — свежее видео первым) или убрать. */
+export function toggleInstock(list: string[], sku: string, on: boolean): string[] {
+  const rest = list.filter((s) => s !== sku);
+  return on ? parseInstockSkus([sku, ...rest]) : rest;
+}
 
 export const EMPTY_BANNER: HomeBanner = { on: false, titleUk: "", titleRu: "", textUk: "", textRu: "", buttonUk: "", buttonRu: "", href: "", image: "" };
 
@@ -47,6 +72,7 @@ export const DEFAULT_HOME: HomeSettings = {
   blocks: HOME_BLOCKS.map((id) => ({ id, on: true })),
   banner: EMPTY_BANNER,
   hints: { max: 8, hidden: [] },
+  instock: [],
 };
 
 const hintsMax = (v: unknown) => {
@@ -68,7 +94,10 @@ export function safeBannerHref(v: string): string {
 /** Картинка баннера: только https://. */
 export const safeImageUrl = (v: string) => (/^https:\/\/[^\s"'<>]+$/i.test(v.trim()) ? v.trim().slice(0, 500) : "");
 
-/** Прочитать сохранённое. Незнакомые блоки выбрасываются, новые (появившиеся в коде позже) добавляются в конец включёнными. */
+/**
+ * Прочитать сохранённое. Незнакомые блоки выбрасываются, новые (появившиеся в коде позже) добавляются включёнными
+ * сразу после блока, за которым они стоят в HOME_BLOCKS (например, «Є в наявності» — после «Каталога»).
+ */
 export function parseHomeSettings(raw: unknown): HomeSettings {
   const o = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
   const seen = new Set<HomeBlock>();
@@ -81,7 +110,10 @@ export function parseHomeSettings(raw: unknown): HomeSettings {
       blocks.push({ id: id as HomeBlock, on: (b as { on?: unknown }).on !== false });
     }
   }
-  for (const id of HOME_BLOCKS) if (!seen.has(id)) blocks.push({ id, on: true });
+  // предыдущий в HOME_BLOCKS к этому моменту уже в списке (сохранён или вставлен на прошлом шаге); у первого его нет — в начало
+  HOME_BLOCKS.forEach((id, i) => {
+    if (!seen.has(id)) blocks.splice(i === 0 ? 0 : blocks.findIndex((b) => b.id === HOME_BLOCKS[i - 1]) + 1, 0, { id, on: true });
+  });
   const b = o.banner && typeof o.banner === "object" ? (o.banner as Record<string, unknown>) : {};
   const banner: HomeBanner = {
     on: b.on === true,
@@ -93,7 +125,7 @@ export function parseHomeSettings(raw: unknown): HomeSettings {
   };
   const h = o.hints && typeof o.hints === "object" ? (o.hints as Record<string, unknown>) : {};
   const hints = { max: hintsMax(h.max), hidden: Array.isArray(h.hidden) ? parseHidden(h.hidden.filter((x): x is string => typeof x === "string")) : [] };
-  return { blocks, banner, hints };
+  return { blocks, banner, hints, instock: parseInstockSkus(o.instock) };
 }
 
 /** Баннер показывается, если включён и есть заголовок (на языке сайта или украинский). */
@@ -104,7 +136,7 @@ export function bannerVisible(b: HomeBanner): boolean {
 export type HomeFormResult = { ok: true; value: HomeSettings } | { ok: false; error: string };
 
 /**
- * Форма админки: `order.<id>` — число (порядок), `on.<id>` = "on", `banner.*` — поля баннера.
+ * Форма админки: `order.<id>` — число (порядок), `on.<id>` = "on", `banner.*` — поля баннера, `instock.skus` — артикулы «Є в наявності».
  * Ошибки — для владельца, по-русски.
  */
 export function validateHomeForm(input: Record<string, string | undefined>): HomeFormResult {
@@ -128,5 +160,6 @@ export function validateHomeForm(input: Record<string, string | undefined>): Hom
   if ((banner.buttonUk || banner.buttonRu) && !banner.href) return { ok: false, error: "У кнопки баннера нет ссылки — впишите, куда она ведёт." };
   const hidden = parseHidden([input["hints.hidden"] ?? "", ...Object.entries(input).filter(([k, v]) => k.startsWith("hide.") && v).map(([, v]) => v as string)].join("\n"));
   const hints = { max: hintsMax(input["hints.max"]), hidden };
-  return { ok: true, value: { blocks: rows.map(({ id, on }) => ({ id, on })), banner, hints } };
+  const instock = parseInstockSkus(input["instock.skus"] ?? "");
+  return { ok: true, value: { blocks: rows.map(({ id, on }) => ({ id, on })), banner, hints, instock } };
 }

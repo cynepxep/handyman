@@ -178,6 +178,8 @@ ID в контейнер не вписываются — теги берут и�
 **Метрики** (просьба владельца 2026-10-05): вкладка «Отчёты → Метрики» (`reports/metrics.tsx`, данные — `db/src/metrics.ts`, формулы — `core/src/shop/metrics.ts`).
 Свой счётчик воронки без cookies (`MetricDay`/`MetricSeen`, соль дня): визит — `MetricsBeacon` в layout витрины, корзина/оформление — `countStep()` из
 `components/shop/metrics-beacon.tsx` (уже вызывается в `trackItems`). Расход на рекламу для CAC/ROAS — `Expense` с категорией «Реклама», канал — по названию.
+**«Є в наявності»** (просьба владельца 2026-10-05): блок главной `instock` сразу после «Каталога» — артикулы в `HomeSettings.instock` (Setting `shop.home`),
+gалочка в карточке товара → `setHomeInstock`; на витрине `getInstockCards` (распроданные скрыты). Новый блок главной встаёт после соседа по `HOME_BLOCKS`, не в конец.
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 

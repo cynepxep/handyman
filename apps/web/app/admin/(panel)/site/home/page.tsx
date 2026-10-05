@@ -2,7 +2,9 @@ import Link from "next/link";
 import { prisma } from "@handyman/db";
 import { loadHomeSettings } from "@handyman/db/site-content";
 import { topQueries } from "@handyman/db/search-stats";
-import { HOME_BLOCK_RU } from "@handyman/core/site";
+import { HOME_BLOCK_RU, INSTOCK_MAX } from "@handyman/core/site";
+import { availableQty, stockLevel } from "@handyman/core/shop";
+import { HIDDEN_CATEGORY_IDS } from "@handyman/core/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import { saveHomeAction } from "./actions";
 
@@ -18,7 +20,20 @@ export default async function HomeSettingsPage({ searchParams }: { searchParams:
     topQueries({ found: false, limit: 15 }),
   ]);
   const hidden = new Set(s.hints.hidden);
+  // «Є в наявності»: что с каждым товаром на сайте (не найден / скрыт / распродан — не показывается)
+  const inRows = s.instock.length
+    ? await prisma.product.findMany({
+        where: { sku: { in: s.instock } },
+        select: { id: true, sku: true, nameUk: true, visible: true, categoryId: true, supplierAvailable: true, stockItems: { select: { onHand: true, reserved: true } } },
+      })
+    : [];
+  const inBySku = new Map(inRows.map((r) => [r.sku, r]));
+  const inShown = s.instock.filter((sku) => {
+    const r = inBySku.get(sku);
+    return r && r.visible && !HIDDEN_CATEGORY_IDS.includes(r.categoryId) && stockLevel(availableQty(r.stockItems), r.supplierAvailable) !== "order";
+  }).length;
   const note: Partial<Record<string, React.ReactNode>> = {
+    instock: <>товаров: <b>{s.instock.length}</b>, на сайте видно: <b>{inShown}</b> — список ниже</>,
     hits: <>отмечено: <b>{hits}</b> — <Link className="adm-link" href="/admin/products?flag=hit">список</Link></>,
     new: <>отмечено: <b>{news}</b> — <Link className="adm-link" href="/admin/products?flag=new">список</Link></>,
     banner: <>баннеры места «Главная» — в <Link className="adm-link" href="/admin/banners">«Реклама и баннеры»</Link></>,
@@ -51,6 +66,43 @@ export default async function HomeSettingsPage({ searchParams }: { searchParams:
             </tbody>
           </table>
         </div>
+
+        <h2 id="instock">«Є в наявності» — товары сразу после каталога</h2>
+        <p className="adm-muted">
+          Для тех, кто пришёл с видео (TikTok, Instagram): товары, которые у вас есть, — сразу на главной под разделами каталога. Впишите артикулы,
+          по одному в строке, в том порядке, в каком показывать (до {INSTOCK_MAX}). Ещё проще — галочка «На главной в «Є в наявності»» в карточке товара
+          (добавит его первым). Распроданный товар (нет на нашем складе и у поставщика) на сайте скрывается сам и вернётся, когда появится, —
+          убирать его не обязательно. Чтобы на сайте было «В наявності в Одесі», впишите остаток в карточке товара.
+        </p>
+        <div className="adm-field">
+          <label htmlFor="instock-skus">Артикулы (по одному в строке)</label>
+          <textarea id="instock-skus" name="instock.skus" rows={Math.min(12, Math.max(4, s.instock.length + 1))} className="adm-textarea" defaultValue={s.instock.join("\n")} placeholder={"000237651\n000241318"} />
+        </div>
+        {s.instock.length > 0 && (
+          <div className="adm-table-wrap">
+            <table className="adm-table">
+              <thead><tr><th>№</th><th>Артикул</th><th>Товар</th><th>На сайте</th></tr></thead>
+              <tbody>
+                {s.instock.map((sku, i) => {
+                  const r = inBySku.get(sku);
+                  const level = r ? stockLevel(availableQty(r.stockItems), r.supplierAvailable) : null;
+                  const status = !r ? <span className="adm-chip bad">нет такого артикула</span>
+                    : !r.visible || HIDDEN_CATEGORY_IDS.includes(r.categoryId) ? <span className="adm-chip bad">скрыт с сайта — не показывается</span>
+                    : level === "order" ? <span className="adm-chip warn">нет в наличии — не показывается</span>
+                    : level === "local" ? <span className="adm-chip ok">показывается · в наличии в Одессе</span>
+                    : <span className="adm-chip ok">показывается · у поставщика</span>;
+                  return (
+                    <tr key={sku}>
+                      <td>{i + 1}</td><td>{sku}</td>
+                      <td>{r ? <Link className="adm-link" href={`/admin/products/${r.id}`}>{r.nameUk}</Link> : "—"}</td>
+                      <td>{status}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <h2>Баннер акции</h2>
         <p className="adm-muted">
