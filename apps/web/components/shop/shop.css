@@ -283,6 +283,11 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
 .hm-help { background: var(--c-surface); border: 2px solid var(--c-primary); border-radius: var(--radius); padding: 18px; display: grid; gap: 10px; }
 .hm-help p { color: var(--c-muted); }
 .hm-help-btns { display: grid; gap: 8px; }
+.hm-callback { background: var(--c-surface); border-left: 6px solid var(--c-primary); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; display: grid; gap: 12px; }
+.hm-callback p { color: var(--c-muted); margin: 0; }
+.hm-callback .hm-h2 { margin: 0 0 4px; }
+.hm-callback-form { display: grid; gap: 8px; }
+.hm-callback-form .hm-field-error { margin: 0; }
 
 /* ---------- меню каталога ---------- */
 .hm-menu { display: grid; gap: 10px; }
@@ -444,11 +449,14 @@ p.hm-stock:has(.hm-stock-note)::before { margin-top: 5px; }
   .hm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hm-battery-list { grid-template-columns: repeat(3, 1fr); }
   .hm-trust { grid-template-columns: repeat(3, 1fr); }
-  .hm-help-btns { grid-template-columns: repeat(2, max-content); }
+  .hm-help-btns { display: flex; flex-wrap: wrap; }
+  .hm-callback-form { grid-template-columns: minmax(0, 1fr) max-content; }
+  .hm-callback-form .hm-field-error { grid-column: 1 / -1; }
 }
 
 /* ---------- планшет (≥ 700) ---------- */
 @media (min-width: 700px) {
+  .hm-callback { grid-template-columns: minmax(0, 1fr) minmax(300px, 440px); align-items: center; gap: 24px; padding: 20px 24px; }
   .hm-header { position: sticky; top: 0; }
   .hm-headrow { grid-template-columns: auto auto 1fr auto; grid-template-areas: "logo catalog search cart"; gap: 12px 16px; padding: 12px var(--gutter); }
   .hm-catalog-btn { display: inline-flex; }
