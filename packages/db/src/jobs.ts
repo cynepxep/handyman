@@ -20,6 +20,7 @@ import { runBackupJobs } from "./backups";
 import { alertErrors, logError, pruneErrors } from "./errors";
 import { markJobsRun } from "./health";
 import { pruneRateLimits } from "./rate-limit";
+import { autoPlaceMenu } from "./menu-auto";
 
 const money = (n: number) => `${Math.round(n).toLocaleString("ru-RU").replace(/ /g, " ")} ₴`;
 
@@ -107,11 +108,13 @@ export type JobsReport = {
   backup: "backup" | "check" | null;
   /** шаг 8.2: о скольких группах ошибок отправлена тревога */
   errorAlerts: number;
+  /** автораскладка: сколько разделов каталога положено в меню (больше нуля — витрине сбросить кэш меню) */
+  menu: number;
 };
 
 /** Сделать всё, что пора. Ошибка одной задачи не мешает остальным (пишется в консоль и журнал ошибок). */
 export async function runJobs(now = new Date()): Promise<JobsReport> {
-  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, keycrm: 0, adEvents: 0, backup: null, errorAlerts: 0 };
+  const rep: JobsReport = { daily: false, weekly: false, reminders: 0, alerts: 0, retried: 0, watches: 0, payments: 0, receipts: 0, shiftClosed: false, keycrm: 0, adEvents: 0, backup: null, errorAlerts: 0, menu: 0 };
   const s = await loadNotify();
   const c = kyivClock(now);
   const step = async (name: string, fn: () => Promise<void>) => {
@@ -220,6 +223,24 @@ export async function runJobs(now = new Date()): Promise<JobsReport> {
     // сообщения, которые не ушли из-за сбоя сети/Telegram: до 3 попыток, не чаще раза в 5 минут
     const stuck = await prisma.outbox.findMany({ where: { state: "FAILED", attempts: { lt: 3 }, createdAt: { lte: new Date(now.getTime() - 5 * 60_000), gte: new Date(now.getTime() - 24 * 3600_000) } }, take: 10 });
     for (const m of stuck) if ((await retryOutbox(m.id)) === "SENT") rep.retried++;
+  });
+
+  // автораскладка разделов по меню — один раз после каждой завершённой загрузки каталога (выключить: HM_MENU_AUTO=off, тесты)
+  await step("menuAuto", async () => {
+    if (process.env.HM_MENU_AUTO === "off") return;
+    const runs = await prisma.importRun.findMany({ where: { status: "DONE", finishedAt: { gte: new Date(now.getTime() - 7 * 86400_000) } }, select: { id: true } });
+    let fresh = false;
+    for (const r of runs) if (await claimOnce(`menu-auto:${r.id}`)) fresh = true;
+    if (!fresh) return;
+    const res = await autoPlaceMenu();
+    rep.menu = res.placed;
+    if (!res.placed && !res.left) return;
+    const lines = [
+      res.placed ? `🗂 Каталог: новые разделы разложены по меню сами — ${res.placed} (товаров: ${res.products}).` : "🗂 Каталог: после загрузки есть разделы вне меню.",
+      res.created.length ? `Новые подгруппы (${res.created.length}): ${res.created.slice(0, 15).join("; ")}${res.created.length > 15 ? "; …" : ""}.` : "",
+      res.left ? `Не удалось подобрать: ${res.left} — разложите в админке «Сайт → Меню и задачи».` : "Проверить и поправить можно в «Сайт → Меню и задачи».",
+    ];
+    await notifyManagers(lines.filter(Boolean).join("\n"));
   });
 
   // шаг 8.2: «фоновые задачи живы» — для «здоровья» сайта

@@ -15,6 +15,7 @@ process.env.BOT_TOKEN = "";
 process.env.ADMIN_CHAT_ID = "";
 // Ночные резервные копии из runJobs в тестах не делаются (тест копий включает их сам, в своей временной папке).
 process.env.HM_BACKUPS = "off";
+process.env.HM_MENU_AUTO = "off"; // автораскладка меню в runJobs — свой тест (menu-auto.test.ts)
 // Защита от повторного заказа (шаг 8.3) в тестах выключена: они много раз оформляют одну и ту же корзину. Её тест включает защиту сам.
 process.env.HM_ORDER_DEDUPE = "off";
 
