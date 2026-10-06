@@ -45,13 +45,6 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
         <h1 className="hm-h1">{title}</h1>
         {data && data.result.total > 0 && <p className="hm-muted">{goods(data.result.total)}</p>}
       </div>
-      {data?.brands && (
-        <BrandSwitch
-          label={t("brands.label")}
-          options={data.brands.options.map((o) => ({ ...o, label: o.label ?? t("brands.all"), href: href({ ...state, brand: o.key, page: 1 }) }))}
-        />
-      )}
-      {data?.brands?.fellBack && <p className="hm-muted">{t("brands.fellBack", { brand: data.brands.options[0]?.label ?? "" })}</p>}
       {subs && subs.length > 1 && (
         <ul className="hm-chips hm-chips-scroll" aria-label={t("listing.subs")}>
           {subs.map((s) => (
@@ -244,20 +237,5 @@ export async function ProductListing({ c, resolved, data, state, path, title, cr
         </div>
       </div>
     </section>
-  );
-}
-
-/** Переключатель «Milwaukee / Vitals / Усі бренди» над списком: выбор запоминается (кука hm_brand, proxy.ts). */
-export function BrandSwitch({ label, options }: { label: string; options: Array<{ key: string; label: string; current: boolean; href: string }> }) {
-  return (
-    <ul className="hm-chips hm-chips-scroll" aria-label={label}>
-      {options.map((o) => (
-        <li key={o.key}>
-          <Link className={`hm-chip${o.current ? " is-on" : ""}`} href={o.href} aria-current={o.current ? "true" : undefined} rel="nofollow">
-            {o.label}
-          </Link>
-        </li>
-      ))}
-    </ul>
   );
 }

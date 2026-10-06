@@ -180,10 +180,6 @@ ID в контейнер не вписываются — теги берут и�
 `components/shop/metrics-beacon.tsx` (уже вызывается в `trackItems`). Расход на рекламу для CAC/ROAS — `Expense` с категорией «Реклама», канал — по названию.
 **«Є в наявності»** (просьба владельца 2026-10-05): блок главной `instock` сразу после «Каталога» — артикулы в `HomeSettings.instock` (Setting `shop.home`),
 gалочка в карточке товара → `setHomeInstock`; на витрине `getInstockCards` (распроданные скрыты); все — на `/in-stock` (`paths.inStock()`, «Дивитись усі», первый пункт `/catalog`). Новый блок главной встаёт после соседа по `HOME_BLOCKS`, не в конец.
-**Milwaukee — основной бренд** (2026-10-06): `core/src/site/brand-focus.ts` + `apps/web/lib/shop/brand.ts` (`getBrandState`): по умолчанию витрина —
-основной бренд (`HomeSettings.focusBrand`, «Milwaukee») **или наш склад**; `?b=<бренд>|all` + кука `hm_brand` (`proxy.ts`). Новый список товаров на витрине —
-`searchProducts({ …, scope })` из `getBrandState()`, счётчики меню — `getMenuView(menu, state.brand)`. Разделы вне меню — подсказки `suggestMenuPlacement`
-(`core/src/catalog/menu-suggest.ts`) на «Сайт → Меню и задачи». Стандарт характеристик Milwaukee **не сделан** — нет файла фида (Д84).
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 

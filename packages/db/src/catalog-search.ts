@@ -298,8 +298,6 @@ export type SearchParams = {
   fits?: string[];
   /** шаг 5.6: инструменты этих групп совместимости */
   tools?: string[];
-  /** основной бренд витрины (brand-focus.ts): только эти бренды, а с orLocal — ещё и всё, что есть на нашем складе */
-  scope?: { brands: string[]; orLocal: boolean } | null;
   sort?: SearchSort;
   page?: number;
   perPage?: number;
@@ -335,8 +333,6 @@ export type SearchResult = {
   localCount: number;
   /** категория (и все её родители) → сколько товаров, без учёта выбранной части подраздела (счётчики чипов «Викрутки · Біти») */
   categoryCounts: Record<string, number>;
-  /** при scope: бренд → сколько товаров без ограничения по бренду (кнопки «Milwaukee / Vitals / Усі») */
-  brandCounts?: Record<string, number>;
   facets: {
     brand: FacetValue[];
     categories: { id: string; name: string; count: number }[];
@@ -372,7 +368,7 @@ type MeiliResponse = {
 };
 
 /** Поле, по которому дополнительный запрос считает счётчики «без своей группы». */
-const extraField = (g: string) => (g === "brand" || g === "scope" ? "brand" : g === "part" ? "categoryIds" : facetField(g.slice(2)));
+const extraField = (g: string) => (g === "brand" ? "brand" : g === "part" ? "categoryIds" : facetField(g.slice(2)));
 
 const RETRIEVE = ["id", "sku", "nameUk", "nameRu", "brand", "price", "oldPrice", "discountPct", "available", "stock", "hit", "isNew", "image", "categoryId"];
 
@@ -397,11 +393,6 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
   if (params.fits) groups.fits = params.fits.length ? inList("fits", params.fits.slice(0, 100)) : "fits IN [\"-\"]";
   if (params.tools) groups.tools = params.tools.length ? inList("tools", params.tools.slice(0, 100)) : "tools IN [\"-\"]";
   if (brands.length) groups.brand = inList("brand", brands);
-  if (params.scope) {
-    const b = params.scope.brands.filter(Boolean);
-    const parts = [b.length ? inList("brand", b) : "", params.scope.orLocal ? "local = true" : ""].filter(Boolean);
-    groups.scope = parts.length ? `(${parts.join(" OR ")})` : "brand IN [\"-\"]";
-  }
   if (params.min != null && Number.isFinite(params.min)) groups.min = `price >= ${params.min}`;
   if (params.max != null && Number.isFinite(params.max)) groups.max = `price <= ${params.max}`;
   if (params.available) groups.available = "available = true";
@@ -424,7 +415,6 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     if (groups.brand) extra.push("brand");
     if (groups.part) extra.push("part");
     for (const k of Object.keys(selectedFacets)) extra.push(`f:${k}`);
-    if (groups.scope) extra.push("scope");
     for (const g of extra) queries.push({ indexUid: uid, q, filter: filterWithout(g), limit: 0, facets: [extraField(g)] });
     let { status, data } = await meili<{ results: MeiliResponse[]; message?: string }>("POST", "/multi-search", { queries });
     // индекс собран до шага 5.6 (нет фильтров совместимости) — обновить настройки и повторить один раз
@@ -455,13 +445,8 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
 
   const total = res.main.estimatedTotalHits ?? res.main.totalHits ?? res.main.hits.length;
   const dist: Distribution = { ...(res.main.facetDistribution ?? {}) };
-  let brandCounts: Record<string, number> | undefined;
   res.extraGroups.forEach((g, i) => {
     const field = extraField(g);
-    if (g === "scope") {
-      brandCounts = res.extra[i]?.facetDistribution?.brand ?? {};
-      return;
-    }
     if (res.extra[i]?.facetDistribution?.[field]) dist[field] = res.extra[i].facetDistribution![field];
   });
 
@@ -502,7 +487,6 @@ export async function searchProducts(params: SearchParams): Promise<SearchResult
     /** сколько товаров выдачи есть на нашем складе (показывать ли фильтр «Швидка відправка з Одеси») */
     localCount: res.main.facetDistribution?.local?.["true"] ?? 0,
     categoryCounts: dist.categoryIds ?? {},
-    ...(brandCounts ? { brandCounts } : {}),
     correctedQuery,
     facets: { brand: toValues("brand", brands, 30), categories, price: stats ? { min: Math.floor(stats.min), max: Math.ceil(stats.max) } : null, attrs },
     processingMs: res.main.processingTimeMs,

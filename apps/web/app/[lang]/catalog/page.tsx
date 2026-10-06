@@ -5,13 +5,11 @@ import { optimizable } from "@/lib/image-hosts";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { slugOf } from "@handyman/core/catalog";
-import { isShopLang, parseListing, paths, shopHref } from "@handyman/core/site";
+import { isShopLang, paths, shopHref } from "@handyman/core/site";
 import { alternatesFor, getShopContent } from "@/lib/shop/content";
 import { getInstockCards, getMenuView } from "@/lib/shop/catalog";
 import { loadHomeSettings } from "@handyman/db/site-content";
 import { Breadcrumbs } from "@/components/shop/ui";
-import { BrandSwitch } from "@/components/shop/listing";
-import { getCatalogBrandSwitch } from "@/lib/shop/brand";
 
 export async function generateMetadata({ params }: PageProps<"/[lang]/catalog">): Promise<Metadata> {
   const { lang } = await params;
@@ -20,13 +18,12 @@ export async function generateMetadata({ params }: PageProps<"/[lang]/catalog">)
   return { title: t("menu.title"), alternates: alternatesFor(lang, paths.catalog()) };
 }
 
-export default async function CatalogPage({ params, searchParams }: PageProps<"/[lang]/catalog">) {
+export default async function CatalogPage({ params }: PageProps<"/[lang]/catalog">) {
   const { lang } = await params;
   if (!isShopLang(lang)) notFound();
   const c = await getShopContent(lang);
   const { t, pick } = c;
-  const brand = parseListing(await searchParams, []).brand; // «Milwaukee / Vitals / Усі» (?b=)
-  const [{ groups }, brandOptions] = await Promise.all([getMenuView(c.menu, brand), getCatalogBrandSwitch(brand)]);
+  const { groups } = await getMenuView(c.menu);
   const visible = groups.filter((g) => !g.group.hidden && g.total > 0);
   // «Є в наявності» — отдельный пункт первым (товары, которые владелец выбрал для полки на главной); пусто — пункта нет
   const home = await loadHomeSettings().catch(() => null);
@@ -38,12 +35,6 @@ export default async function CatalogPage({ params, searchParams }: PageProps<"/
       <Breadcrumbs label={t("crumbs.label")} items={[{ href: shopHref(lang, paths.home()), label: t("crumbs.home") }, { label: t("menu.title") }]} />
       <h1 id="h-catalog" className="hm-h1">{t("menu.title")}</h1>
       <p className="hm-lead">{t("menu.lead")}</p>
-      {brandOptions.length > 0 && (
-        <BrandSwitch
-          label={t("brands.label")}
-          options={brandOptions.map((o) => ({ ...o, label: o.label ?? t("brands.all"), href: `${shopHref(lang, paths.catalog())}?b=${encodeURIComponent(o.key)}` }))}
-        />
-      )}
       {/* Телефон — раскрывающийся список (одна группа на экран); планшет и компьютер — все подразделы сразу,
           карточки идут колонками друг под другом, без пустых мест рядом с раскрытой группой. */}
       <ul className="hm-menu">

@@ -130,23 +130,6 @@ test("свой склад: товар из Одессы первым в спис
   assert.equal((await search.searchProducts({ local: true })).total, 0);
 });
 
-test("основной бренд витрины: только бренд или наш склад, счётчики брендов без ограничения", async (t) => {
-  if (!ready) return t.skip(noMeili);
-  const orders = await import("../src/orders");
-  // бренда Milwaukee в образце нет: по нему пусто, но счётчики показывают Vitals (для кнопок «Milwaukee / Vitals / Усі»)
-  const none = await search.searchProducts({ scope: { brands: ["Milwaukee"], orLocal: false } });
-  assert.equal(none.total, 0);
-  assert.equal(none.brandCounts?.Vitals, 19);
-  const one = (await search.searchProducts({ sort: "name", perPage: 1 })).items[0];
-  await orders.setOwnStock(one.id, 2, "test");
-  // «Milwaukee + наш склад»: товар Vitals с нашего склада виден
-  const focus = await search.searchProducts({ scope: { brands: ["Milwaukee"], orLocal: true } });
-  assert.deepEqual(focus.items.map((i) => i.id), [one.id]);
-  assert.equal((await search.searchProducts({ scope: { brands: ["Vitals"], orLocal: false } })).total, 19);
-  assert.equal((await search.searchProducts({ scope: null })).brandCounts, undefined);
-  await orders.setOwnStock(one.id, 0, "test");
-});
-
 test("отметки «Хіт» и «Новинка»: ставятся массово, видны в поиске и фильтруются", async (t) => {
   if (!ready) return t.skip(noMeili);
   const products = await import("../src/catalog-products");
