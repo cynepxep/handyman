@@ -94,3 +94,34 @@ export function signInitData(fields: Record<string, string>, botToken: string): 
   const hash = createHmac("sha256", secret).update(check).digest("hex");
   return new URLSearchParams({ ...fields, hash }).toString();
 }
+
+// ---------- долгий опрос: кратковременные сбои связи с Telegram ----------
+
+/**
+ * Сбой «сам пройдёт»: Telegram не ответил вовремя (тайм-аут), обрыв сети, 429 (слишком часто) или 5xx (Bad Gateway и т. п. на стороне Telegram).
+ * Такие сбои бот пережидает и повторяет; в журнал «Ошибки» они попадают, только если связи нет дольше `BOT_OUTAGE_REPORT_MS`.
+ */
+export function isTransientTelegramFailure(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const { name, message, code } = e as { name?: unknown; message?: unknown; code?: unknown };
+  if (typeof code === "number" && code !== 0) return code === 429 || code >= 500;
+  if (name === "TimeoutError" || name === "AbortError") return true;
+  return typeof message === "string" && /fetch failed|aborted due to timeout|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|socket hang up|terminated/i.test(message);
+}
+
+export const BOT_OUTAGE_REPORT_MS = 5 * 60_000;
+
+/** Состояние «связи с Telegram нет»: когда началось и сообщили ли уже в журнал. */
+export type BotOutage = { since: number | null; reported: boolean; fails: number };
+export const botOutageStart = (): BotOutage => ({ since: null, reported: false, fails: 0 });
+
+/**
+ * Очередной сбой опроса. `report` — пора записать в журнал (один раз за сбой: связи нет дольше 5 минут),
+ * `waitMs` — пауза перед повтором (5 с, 10 с, 20 с … до минуты).
+ */
+export function botOutageFail(s: BotOutage, now: number): { next: BotOutage; report: boolean; waitMs: number } {
+  const since = s.since ?? now;
+  const report = !s.reported && now - since >= BOT_OUTAGE_REPORT_MS;
+  const fails = s.fails + 1;
+  return { next: { since, reported: s.reported || report, fails }, report, waitMs: Math.min(60_000, 5_000 * 2 ** Math.min(fails - 1, 4)) };
+}

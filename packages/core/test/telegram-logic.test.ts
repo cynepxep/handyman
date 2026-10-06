@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { botLang, isChatIdCommand, mainKeyboard, parseStart, shopUrlFor, signInitData, verifyInitData, whichButton } from "../src/shop/telegram-logic";
+import { BOT_OUTAGE_REPORT_MS, botLang, botOutageFail, botOutageStart, isChatIdCommand, isTransientTelegramFailure, mainKeyboard, parseStart, shopUrlFor, signInitData, verifyInitData, whichButton } from "../src/shop/telegram-logic";
 import { defaultTexts } from "../src/site";
 
 test("/start: вход, реферал, привязка; мусор и чужие команды", () => {
@@ -53,4 +53,32 @@ test("Mini App: подпись Telegram проверяется, подделка
   const old = signInitData({ auth_date: String(now / 1000 - 2 * 86400), user }, token);
   assert.equal(verifyInitData(old, token, now).ok, false);
   assert.equal(verifyInitData("", token, now).ok, false);
+});
+
+test("опрос бота: кратковременные сбои Telegram не идут в журнал, долгий (5+ минут) — один раз", () => {
+  const timeout = Object.assign(new Error("The operation was aborted due to timeout"), { name: "TimeoutError" });
+  assert.equal(isTransientTelegramFailure(timeout), true);
+  assert.equal(isTransientTelegramFailure(new TypeError("fetch failed")), true);
+  assert.equal(isTransientTelegramFailure(Object.assign(new Error("Bad Gateway"), { code: 502 })), true);
+  assert.equal(isTransientTelegramFailure(Object.assign(new Error("Too Many Requests"), { code: 429 })), true);
+  assert.equal(isTransientTelegramFailure(Object.assign(new Error("Unauthorized"), { code: 401 })), false);
+  assert.equal(isTransientTelegramFailure(Object.assign(new Error("Conflict"), { code: 409 })), false);
+  assert.equal(isTransientTelegramFailure(new Error("relation \"Setting\" does not exist")), false);
+
+  let s = botOutageStart();
+  const t0 = 1_000_000;
+  const a = botOutageFail(s, t0);
+  assert.equal(a.report, false);
+  assert.equal(a.waitMs, 5_000);
+  s = a.next;
+  const b = botOutageFail(s, t0 + 60_000);
+  assert.equal(b.report, false);
+  assert.equal(b.waitMs, 10_000);
+  s = b.next;
+  const c = botOutageFail(s, t0 + BOT_OUTAGE_REPORT_MS);
+  assert.equal(c.report, true);
+  const d = botOutageFail(c.next, t0 + BOT_OUTAGE_REPORT_MS + 60_000);
+  assert.equal(d.report, false, "о том же сбое — один раз");
+  assert.equal(d.waitMs, 40_000);
+  assert.equal(botOutageFail(d.next, t0 + BOT_OUTAGE_REPORT_MS + 120_000).waitMs, 60_000, "не реже раза в минуту");
 });
