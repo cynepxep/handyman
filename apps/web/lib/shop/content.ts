@@ -5,7 +5,6 @@ import { loadSiteContent, type SiteContent } from "@handyman/db/site-content";
 import { EMPTY_CONTACTS, TEXT_ENTRIES, defaultTexts, fillText, shopHref, type ShopLang } from "@handyman/core/site";
 import { defaultMenuConfig } from "@handyman/core/catalog";
 import { TAG_SHOP, cached } from "./cache";
-import { shopGeneration } from "./generation";
 import { logError } from "@handyman/db/errors";
 
 /**
@@ -13,14 +12,7 @@ import { logError } from "@handyman/db/errors";
  * В ключ входит «версия» реестра текстов: обновление кода с новыми текстами сразу даёт свежий кэш (иначе час были бы видны ключи).
  */
 const REGISTRY_VERSION = `${TEXT_ENTRIES.length}:${TEXT_ENTRIES.at(-1)?.key ?? ""}`;
-// второй аргумент — «поколение» (generation.ts): фоновая автораскладка меню увеличивает его, и кэш берётся заново
-const loadCached = cached(
-  (lang: ShopLang, gen: number) => {
-    void gen; // только для ключа кэша
-    return loadSiteContent(lang);
-  },
-  `site-content:${REGISTRY_VERSION}`, [TAG_SHOP], 3600,
-);
+const loadCached = cached((lang: ShopLang) => loadSiteContent(lang), `site-content:${REGISTRY_VERSION}`, [TAG_SHOP], 3600);
 
 /** Текст по ключу с подстановкой {переменных}. */
 export type T = (key: string, vars?: Record<string, string | number>) => string;
@@ -30,7 +22,7 @@ export type ShopContent = SiteContent & { lang: ShopLang; t: T; pick: (uk: strin
 export const getShopContent = cache(async (lang: ShopLang): Promise<ShopContent> => {
   let content: SiteContent;
   try {
-    content = await loadCached(lang, shopGeneration());
+    content = await loadCached(lang);
   } catch (e) {
     // База недоступна: сайт не падает, показывает стандартные тексты и меню.
     logError("[shop] не удалось загрузить контент сайта", e);
