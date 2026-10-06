@@ -183,7 +183,8 @@ gалочка в карточке товара → `setHomeInstock`; на вит
 **Milwaukee — основной бренд** (2026-10-06): `core/src/site/brand-focus.ts` + `apps/web/lib/shop/brand.ts` (`getBrandState`): по умолчанию витрина —
 основной бренд (`HomeSettings.focusBrand`, «Milwaukee») **или наш склад**; `?b=<бренд>|all` + кука `hm_brand` (`proxy.ts`). Новый список товаров на витрине —
 `searchProducts({ …, scope })` из `getBrandState()`, счётчики меню — `getMenuView(menu, state.brand)`. Разделы вне меню — подсказки `suggestMenuPlacement`
-(`core/src/catalog/menu-suggest.ts`) на «Сайт → Меню и задачи». Стандарт характеристик Milwaukee **не сделан** — нет файла фида (Д84).
+(`core/src/catalog/menu-suggest.ts`) на «Сайт → Меню и задачи»; после каждой загрузки каталога `runJobs` раскладывает их сам (`db/src/menu-auto.ts`,
+`HM_MENU_AUTO=off` в тестах); фоновое изменение контента витрины → `bumpShopGeneration()` (`lib/shop/generation.ts`), не `shopChanged()`. Стандарт характеристик Milwaukee **не сделан** — нет файла фида (Д84).
 
 ## Если владелец пишет «Этап 2» (старт нового чата)
 

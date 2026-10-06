@@ -3,6 +3,7 @@
 // Запускается из instrumentation.ts один раз на процесс. Выключить: HM_WORKER=off (всё) или HM_BOT=off (только чтение бота).
 import { hostname } from "node:os";
 import { runJobs } from "@handyman/db/jobs";
+import { bumpShopGeneration } from "./shop/generation";
 import { TelegramError, pollOnce, releaseBotLease } from "@handyman/db/bot";
 import { secret } from "@handyman/db/integrations";
 import { logError } from "@handyman/db/errors";
@@ -16,6 +17,7 @@ export function startWorker(): void {
   const tick = () =>
     runJobs()
       .then((r) => {
+        if (r.menu > 0) bumpShopGeneration(); // меню разложено фоновой задачей — витрина сразу покажет новые разделы
         if (r.daily || r.weekly || r.reminders || r.alerts || r.retried) console.info("[worker]", JSON.stringify(r));
       })
       .catch((e) => logError("[worker]", e instanceof Error ? e.message : e));
