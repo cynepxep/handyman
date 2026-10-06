@@ -26,7 +26,6 @@
     "./reports": "./src/reports.ts",
     "./staff": "./src/staff.ts",
     "./jobs": "./src/jobs.ts",
-    "./menu-auto": "./src/menu-auto.ts",
     "./bot": "./src/bot.ts",
     "./telegram": "./src/telegram.ts",
     "./client-auth": "./src/client-auth.ts",

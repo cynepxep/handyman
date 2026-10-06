@@ -7,7 +7,6 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { routeStorefront } from "@handyman/core/site/routes";
 import { UTM_COOKIE, UTM_COOKIE_DAYS, utmFromParams } from "@handyman/core/shop/analytics";
-import { BRAND_COOKIE, BRAND_PARAM } from "@handyman/core/site/brand-focus";
 
 const SESSION_COOKIE = "hm_staff_session";
 
@@ -33,11 +32,6 @@ export function proxy(request: NextRequest) {
   const utm = utmFromParams(request.nextUrl.searchParams, pathname);
   if (utm) {
     res.cookies.set(UTM_COOKIE, JSON.stringify(utm), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: UTM_COOKIE_DAYS * 86400 });
-  }
-  // бренд витрины («Milwaukee / Vitals / Усі», ?b=…) — запоминаем на 30 дней: в разделах и на главной покажем тот же бренд
-  const brand = request.nextUrl.searchParams.get(BRAND_PARAM);
-  if (brand && /^[\p{L}\p{N}-]{1,40}$/u.test(brand)) {
-    res.cookies.set(BRAND_COOKIE, brand.toLowerCase(), { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 30 * 86400 });
   }
   return res;
 }

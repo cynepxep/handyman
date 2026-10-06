@@ -10,7 +10,6 @@
     "./site": "./src/site/index.ts",
     "./site/routes": "./src/site/routes.ts",
     "./site/listing": "./src/site/listing.ts",
-    "./site/brand-focus": "./src/site/brand-focus.ts",
     "./shop": "./src/shop/index.ts",
     "./shop/warehouse": "./src/shop/warehouse.ts",
     "./shop/analytics": "./src/shop/analytics.ts",
