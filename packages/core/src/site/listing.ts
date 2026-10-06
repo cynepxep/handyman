@@ -22,6 +22,8 @@ export type ListingState = {
   tool?: string;
   /** шаг 5.6: «До мого інструменту» (покупатель вошёл, инструмент — из его заказов) */
   mine?: boolean;
+  /** бренд витрины (?b=): код бренда или «all» (brand-focus.ts); нет — основной бренд (или выбор из куки). Проверяет сервер */
+  brand?: string;
   min?: number;
   max?: number;
   sort?: ListingSort;
@@ -66,6 +68,7 @@ export function parseListing(raw: Raw, facetKeys: readonly string[]): ListingSta
     ...(/^[\w-]{1,60}$/.test(first(raw, "fit") ?? "") ? { fit: first(raw, "fit") } : {}),
     ...(/^[\w-]{1,60}$/.test(first(raw, "tool") ?? "") ? { tool: first(raw, "tool") } : {}),
     ...(first(raw, "mine") === "1" ? { mine: true } : {}),
+    ...(/^[\p{L}\p{N}-]{1,40}$/u.test(first(raw, "b") ?? "") ? { brand: first(raw, "b")!.toLowerCase() } : {}),
     ...(min != null ? { min } : {}),
     ...(max != null ? { max } : {}),
     ...(sort && (LISTING_SORTS as readonly string[]).includes(sort) ? { sort: sort as ListingSort } : {}),
@@ -87,6 +90,7 @@ export function listingQuery(state: ListingState, q?: string): string {
   if (state.fit) qs.set("fit", state.fit);
   if (state.tool) qs.set("tool", state.tool);
   if (state.mine) qs.set("mine", "1");
+  if (state.brand) qs.set("b", state.brand);
   if (state.min != null) qs.set("min", String(state.min));
   if (state.max != null) qs.set("max", String(state.max));
   if (state.sort) qs.set("sort", state.sort);
@@ -113,7 +117,7 @@ export const hasFilters = (s: ListingState) =>
 /** Сбросить все фильтры, оставив сортировку, выбранную часть подраздела и группу совместимости (это не фильтр, а место в каталоге). */
 export const clearFilters = (s: ListingState): ListingState => ({
   facets: {}, available: false, local: false, sale: false, page: 1, ...(s.sort ? { sort: s.sort } : {}), ...(s.part ? { part: s.part } : {}),
-  ...(s.fit ? { fit: s.fit } : {}), ...(s.tool ? { tool: s.tool } : {}),
+  ...(s.fit ? { fit: s.fit } : {}), ...(s.tool ? { tool: s.tool } : {}), ...(s.brand ? { brand: s.brand } : {}),
 });
 
 /** Сколько фильтров выбрано (число на кнопке «Фільтри»). */

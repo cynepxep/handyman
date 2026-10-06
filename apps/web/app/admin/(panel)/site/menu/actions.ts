@@ -1,11 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { prisma } from "@handyman/db";
 import { loadMenuConfig, resetMenuConfig, saveMenuConfig } from "@handyman/db/site-content";
 import { reindexSafely, updateMenuRanks } from "@handyman/db/catalog-search";
 import {
-  TASK_ICONS, addGroup, addSub, addTask, changeSlug, cleanName, claimOf, isValidSlug, moveClaim, removeGroup, removeSub, removeTask, slugOf,
-  type MenuConfig,
+  TASK_ICONS, addGroup, addSub, addTask, applyMenuPlacement, changeSlug, cleanName, claimOf, isValidSlug, lostCategories, moveClaim, removeGroup,
+  removeSub, removeTask, slugOf, suggestMenuPlacement, type MenuConfig,
 } from "@handyman/core/catalog";
 import { requirePermission } from "@/lib/auth";
 import { shopChanged } from "@/lib/shop/cache";
@@ -128,12 +129,26 @@ export async function removeSubAction(formData: FormData): Promise<void> {
   });
 }
 
-/** Категория, не попавшая в меню, — положить в выбранную подгруппу. */
-export async function assignLostAction(formData: FormData): Promise<void> {
-  await run(formData, (cfg, f) => {
-    const catId = S(f, "catId"), subId = S(f, "subId");
-    if (!subId) return { cfg, error: "Выберите подгруппу, куда положить категорию.", message: "", anchor: "lost" };
-    return { cfg: moveClaim(cfg, catId, subId), message: "Категория добавлена в меню.", anchor: "lost" };
+/**
+ * Все категории вне меню разом (экран с подсказками): `catId` (повторяется) и `to.<catId>` — код подгруппы, «new:<ключ>» (новая подгруппа
+ * из подсказки) или пусто (не трогать). Подсказки пересчитываются здесь же: из браузера берём только выбор.
+ */
+export async function assignLostBulkAction(formData: FormData): Promise<void> {
+  await run(formData, async (cfg, f) => {
+    const [rows, counts] = await Promise.all([
+      prisma.category.findMany({ select: { id: true, parentId: true, nameUk: true, nameRu: true } }),
+      prisma.product.groupBy({ by: ["categoryId"], where: { visible: true }, _count: { _all: true } }),
+    ]);
+    const direct = new Map(counts.map((c) => [c.categoryId, c._count._all]));
+    const lost = new Set(lostCategories(rows, direct, cfg).map((l) => l.id));
+    const choices = [...new Set(f.getAll("catId").map(String))]
+      .filter((catId) => lost.has(catId))
+      .map((catId) => ({ catId, target: S(f, `to.${catId}`) }))
+      .filter((c) => c.target);
+    if (!choices.length) return { cfg, error: "Ничего не выбрано: у всех строк стоит «— не трогать —».", message: "", anchor: "lost" };
+    const r = applyMenuPlacement(cfg, choices, suggestMenuPlacement(rows, cfg, [...lost]));
+    if (!r.placed) return { cfg, error: "Не удалось разложить: меню изменилось, обновите страницу.", message: "", anchor: "lost" };
+    return { cfg: r.cfg, message: `В меню добавлено категорий: ${r.placed}${r.created ? `, новых подгрупп: ${r.created}` : ""}.`, anchor: "lost" };
   });
 }
 

@@ -1,10 +1,10 @@
 import { prisma } from "@handyman/db";
 import { hasCustomMenu, loadMenuConfig } from "@handyman/db/site-content";
-import { TASK_ICONS, lostCategories, slugOf, type CatNode, type MenuGroup, type MenuSub } from "@handyman/core/catalog";
+import { TASK_ICONS, lostCategories, slugOf, suggestMenuPlacement, type CatNode, type MenuGroup, type MenuSub } from "@handyman/core/catalog";
 import { loadCategories } from "@/lib/catalog";
 import { SubmitButton } from "../../import/client-bits";
 import {
-  addGroupAction, addSubAction, addTaskAction, assignLostAction, removeGroupAction, removeSubAction, removeTaskAction,
+  addGroupAction, addSubAction, addTaskAction, assignLostBulkAction, removeGroupAction, removeSubAction, removeTaskAction,
   resetMenuAction, saveGroupAction, saveTaskAction,
 } from "./actions";
 
@@ -27,6 +27,15 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
   const nodes: CatNode[] = [...cats.byId.values()].map((n) => ({ id: n.id, parentId: n.parentId }));
   const lost = lostCategories(nodes, direct, cfg);
   const lostProducts = lost.reduce((a, l) => a + l.count, 0);
+  // подсказки «куда положить» для категорий вне меню (по словам названий), владелец проверяет и сохраняет одной кнопкой
+  const named = [...cats.byId.values()].map((n) => ({ id: n.id, parentId: n.parentId, nameUk: n.nameUk, nameRu: n.nameRu }));
+  const suggest = lost.length ? suggestMenuPlacement(named, cfg, lost.map((l) => l.id)) : new Map();
+  const groupName = new Map(cfg.groups.map((g) => [g.id, g.nameUk]));
+  const lostRows = lost
+    .map((l) => ({ ...l, label: cats.labelOf(l.id), sug: suggest.get(l.id) }))
+    .sort((a, b) => a.label.localeCompare(b.label, "uk"));
+  const suggested = lostRows.filter((r) => r.sug).length;
+  const newSubs = new Set(lostRows.flatMap((r) => (r.sug?.kind === "new" ? [r.sug.key] : []))).size;
   const nameOf = (id: string) => cats.byId.get(id)?.nameUk ?? `нет в базе: ${id}`;
   const total = (id: string, own: boolean) => (own ? direct.get(id) ?? 0 : cats.subtreeIds(id).reduce((a, x) => a + (direct.get(x) ?? 0), 0));
   const subOptions = cfg.groups.flatMap((g) => g.subs.map((s) => ({ id: s.id, label: `${g.nameUk} › ${s.nameUk}` })));
@@ -140,18 +149,28 @@ export default async function MenuPage({ searchParams }: { searchParams: Promise
       {lost.length > 0 ? (
         <div className="adm-card" id="lost" style={{ borderColor: "var(--adm-bad)" }}>
           <b style={{ color: "var(--adm-bad)" }}>Не видны в меню: категорий {lost.length}, товаров {lostProducts}.</b>
-          <p className="adm-muted">Такие товары остаются на сайте и находятся поиском, но в меню их нет. Чаще всего это новые категории после импорта. Выберите подгруппу для каждой.</p>
-          {lost.map((l) => (
-            <form key={l.id} action={assignLostAction} className="adm-row" style={{ margin: "6px 0" }}>
-              <input type="hidden" name="catId" value={l.id} />
-              <span style={{ flex: "1 1 220px" }}>{nameOf(l.id)} <span className="adm-muted">· {l.count}</span></span>
-              <select name="subId" className="adm-select" defaultValue="" aria-label={`Куда положить: ${nameOf(l.id)}`}>
-                <option value="">— выберите подгруппу —</option>
-                {subOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-              </select>
-              <SubmitButton pendingText="…">Добавить в меню</SubmitButton>
-            </form>
-          ))}
+          <p className="adm-muted">
+            Такие товары остаются на сайте и находятся поиском, но в «Каталоге» их нет. Чаще всего это разделы нового поставщика после импорта.
+            {suggested > 0 && <> Сайт сам подобрал подгруппу для <b>{suggested}</b> из {lost.length} по названиям{newSubs > 0 && <> (и предлагает <b>{newSubs}</b> новых подгрупп — помечены «＋ новая»)</>}. Проверьте и нажмите «Добавить в меню». Строки с «— не трогать —» останутся как есть.</>}
+          </p>
+          <form action={assignLostBulkAction}>
+            <div className="adm-row" style={{ margin: "6px 0" }}><SubmitButton pendingText="Раскладываю…">Добавить в меню выбранное</SubmitButton></div>
+            {lostRows.map((l) => (
+              <div key={l.id} className="adm-row" style={{ margin: "6px 0" }}>
+                <input type="hidden" name="catId" value={l.id} />
+                <span style={{ flex: "1 1 260px" }}>{l.label} <span className="adm-muted">· {l.count}</span></span>
+                <select
+                  name={`to.${l.id}`} className="adm-select" aria-label={`Куда положить: ${nameOf(l.id)}`}
+                  defaultValue={l.sug ? (l.sug.kind === "new" ? `new:${l.sug.key}` : l.sug.subId) : ""}
+                >
+                  <option value="">— не трогать —</option>
+                  {l.sug?.kind === "new" && <option value={`new:${l.sug.key}`}>＋ новая: {groupName.get(l.sug.groupId)} › {l.sug.nameUk}</option>}
+                  {subOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                </select>
+              </div>
+            ))}
+            <div className="adm-row" style={{ margin: "10px 0 0" }}><SubmitButton pendingText="Раскладываю…">Добавить в меню выбранное</SubmitButton></div>
+          </form>
         </div>
       ) : (
         <p className="adm-flash ok">Все {[...direct.values()].reduce((a, b) => a + b, 0)} товаров попадают в меню: ничего не потеряно.</p>

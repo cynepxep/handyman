@@ -15,6 +15,7 @@ import { loadMenuConfig } from "@handyman/db/site-content";
 import { photoStyleOn, pickImage } from "@handyman/db/photo-choice";
 import type { CardData } from "@/components/shop/product-card";
 import { TAG_CATALOG, TAG_SHOP, cached } from "./cache";
+import { getBrandState } from "./brand";
 
 /** Карточка товара для списка (с готовой ссылкой на страницу товара на языке сайта). */
 export type ShopCard = CardData & { specs: Spec[] };
@@ -38,6 +39,25 @@ const loadCategoryRows = cached(
     return { cats, counts: counts.map((c) => ({ categoryId: c.categoryId, n: c._count._all })) };
   },
   "category-rows", [TAG_CATALOG], 300,
+);
+
+/**
+ * Число товаров в категориях с учётом основного бренда (brand-focus): только эти бренды, а с orLocal — ещё и всё, что свободно на нашем складе
+ * (как `local` в поиске: сумма max(0, onHand − reserved) > 0). Кэш как у счётчиков.
+ */
+const loadScopedCounts = cached(
+  async (brands: string[], orLocal: boolean) => {
+    const rows = await prisma.$queryRaw<Array<{ categoryId: string; n: number }>>`
+      SELECT p."categoryId", count(*)::int AS n
+      FROM "Product" p LEFT JOIN "Brand" b ON b.id = p."brandId"
+      WHERE p.visible AND (
+        b.name = ANY(${brands}::text[])
+        OR (${orLocal} AND (SELECT COALESCE(SUM(GREATEST(s."onHand" - s.reserved, 0)), 0) FROM "StockItem" s WHERE s."productId" = p.id) > 0)
+      )
+      GROUP BY p."categoryId"`;
+    return rows.map((r) => ({ categoryId: r.categoryId, n: r.n }));
+  },
+  "category-rows-scoped", [TAG_CATALOG], 300,
 );
 
 /** Фото для плиток разделов: самый дорогой товар с фото в каждой категории, в наличии — в первую очередь (кэш как у счётчиков). */
@@ -130,18 +150,28 @@ export async function toCards(items: SearchItem[], lang: ShopLang): Promise<Shop
   }));
 }
 
-/** Группы меню со счётчиками товаров и фото (самый дорогой товар в наличии из группы — обычно самый «представительный»). */
-export async function getMenuView(menu: MenuConfig) {
-  const { cats, direct } = await getCategoryStats();
+/**
+ * Группы меню со счётчиками товаров и фото (самый дорогой товар в наличии из группы — обычно самый «представительный»).
+ * Основной бренд витрины (brandRaw — ?b= страницы; нет — кука): счётчики — его товары и наш склад; группа, где их нет, считается по всем брендам
+ * (страница раздела тогда тоже покажет все бренды).
+ */
+export async function getMenuView(menu: MenuConfig, brandRaw?: string) {
+  const { cats, direct: all } = await getCategoryStats();
+  const bs = await getBrandState(brandRaw);
+  const scoped = bs.scope ? new Map((await loadScopedCounts(bs.scope.brands, bs.scope.orLocal)).map((c) => [c.categoryId, c.n])) : null;
   const { subOf, conflicts, missing } = assignCategories(cats, menu.groups);
   const tops = await loadCategoryTops(await photoStyleOn());
   const topOf = new Map(tops.map((t) => [t.categoryId, t]));
 
-  const subTotal = new Map<string, number>();
   const catsOfSub = new Map<string, string[]>();
-  for (const [catId, subId] of subOf) {
-    subTotal.set(subId, (subTotal.get(subId) ?? 0) + (direct.get(catId) ?? 0));
-    (catsOfSub.get(subId) ?? catsOfSub.set(subId, []).get(subId)!).push(catId);
+  for (const [catId, subId] of subOf) (catsOfSub.get(subId) ?? catsOfSub.set(subId, []).get(subId)!).push(catId);
+  const sumOf = (ids: string[], m: ReadonlyMap<string, number>) => ids.reduce((a, id) => a + (m.get(id) ?? 0), 0);
+  // в группе есть товары основного бренда (или склада) — считаем только их, иначе — все бренды; выбранный покупателем бренд — строго
+  const countsFor = (catIds: string[]) => (scoped && (bs.explicit || sumOf(catIds, scoped) > 0) ? scoped : all);
+  const subTotal = new Map<string, number>();
+  for (const group of menu.groups) {
+    const m = countsFor(group.subs.flatMap((s) => catsOfSub.get(s.id) ?? []));
+    for (const s of group.subs) subTotal.set(s.id, sumOf(catsOfSub.get(s.id) ?? [], m));
   }
 
   const groups: GroupView[] = menu.groups.map((group) => {
@@ -150,15 +180,20 @@ export async function getMenuView(menu: MenuConfig) {
     const subs = group.subs.map((s) => ({ id: s.id, slug: slugOf(s), nameUk: s.nameUk, nameRu: s.nameRu, total: subTotal.get(s.id) ?? 0, hidden: s.hidden === true }));
     return { group, total: subs.reduce((a, s) => a + s.total, 0), image: best?.url ?? null, subs };
   });
-  const tasks: TaskView[] = menu.tasks.map((task) => ({ task, total: taskCategoryIds(cats, task).reduce((a, id) => a + (direct.get(id) ?? 0), 0) }));
-  const lost = cats.filter((c) => !HIDDEN_CATEGORY_IDS.includes(c.id) && (direct.get(c.id) ?? 0) > 0 && !subOf.has(c.id)).length;
+  const tasks: TaskView[] = menu.tasks.map((task) => {
+    const ids = taskCategoryIds(cats, task);
+    return { task, total: sumOf(ids, countsFor(ids)) };
+  });
+  const lost = cats.filter((c) => !HIDDEN_CATEGORY_IDS.includes(c.id) && (all.get(c.id) ?? 0) > 0 && !subOf.has(c.id)).length;
   return { groups, tasks, problems: { conflicts, missing, lost } };
 }
 
 /** Серии аккумуляторов со счётчиками — для «Яка у вас батарея?». Если поиск недоступен — пусто. */
 export async function getBatteries(): Promise<Array<{ value: string; count: number }>> {
   try {
-    const ak = await searchProducts({ cat: BATTERY_CATEGORY_ID, perPage: 1 });
+    // основной бренд витрины и наш склад (без подмены на все бренды: главная — витрина основного бренда)
+    const { scope } = await getBrandState();
+    const ak = await searchProducts({ cat: BATTERY_CATEGORY_ID, perPage: 1, scope });
     return (ak.facets.attrs.find((a) => a.key === "series")?.values ?? []).map((v) => ({ value: v.value, count: v.count }));
   } catch (e) {
     if (e instanceof SearchUnavailableError) return [];
@@ -171,11 +206,15 @@ export async function getBatteries(): Promise<Array<{ value: string; count: numb
  * «В наличии» (шаг Л2) — как в поиске: свободно на нашем складе (availableQty) или есть у поставщика.
  */
 export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[]> {
+  // основной бренд витрины и наш склад (без подмены на все бренды: главная — витрина основного бренда)
+  const { scope } = await getBrandState();
   const styleOn = await photoStyleOn();
   const rows = await prisma.product.findMany({
     where: {
       visible: true, oldPrice: { not: null }, categoryId: { notIn: HIDDEN_CATEGORY_IDS }, images: { some: {} },
       OR: [{ supplierAvailable: true }, { stockItems: { some: { onHand: { gt: 0 } } } }],
+      // склад: «есть что-то на полке» (точный остаток минус резерв проверяется ниже, stock !== "order")
+      ...(scope ? { AND: [{ OR: [{ brand: { name: { in: scope.brands } } }, ...(scope.orLocal ? [{ stockItems: { some: { onHand: { gt: 0 } } } }] : [])] }] } : {}),
     },
     select: { id: true, sku: true, nameUk: true, nameRu: true, price: true, oldPrice: true, categoryId: true, isHit: true, isNew: true, supplierAvailable: true, images: { take: 1, orderBy: { sort: "asc" }, select: { url: true, localUrl: true, styledUrl: true } }, stockItems: { select: { onHand: true, reserved: true } } },
   });
@@ -199,7 +238,9 @@ export async function getSaleCards(lang: ShopLang, limit = 8): Promise<ShopCard[
 /** «Хіти» или «Новинки» для главной: товары, отмеченные владельцем (сначала те, что можно отправить быстрее). Поиск недоступен — пусто. */
 export async function getFlaggedCards(lang: ShopLang, flag: "hit" | "isNew", limit = 12): Promise<{ cards: ShopCard[]; total: number }> {
   try {
-    const r = await searchProducts({ [flag]: true, perPage: limit });
+    // основной бренд витрины и наш склад (без подмены на все бренды: главная — витрина основного бренда)
+    const { scope } = await getBrandState();
+    const r = await searchProducts({ [flag]: true, perPage: limit, scope });
     return { cards: await toCards(r.items, lang), total: r.total };
   } catch (e) {
     if (e instanceof SearchUnavailableError) return { cards: [], total: 0 };
