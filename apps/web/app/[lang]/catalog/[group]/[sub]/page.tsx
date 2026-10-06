@@ -27,7 +27,7 @@ export default async function SubPage({ params, searchParams }: PageProps<"/[lan
   const current = r.sub;
   const state = parseListing(await searchParams, FACET_KEYS);
   if (r.redirectTo) permanentRedirect(`${shopHref(lang, r.redirectTo)}${listingQuery(state)}`); // адрес сменили в админке
-  const [data, view] = await Promise.all([runListing(r, state, lang), getMenuView(c.menu)]);
+  const [data, view] = await Promise.all([runListing(r, state, lang), getMenuView(c.menu, state.brand)]);
   const gv = view.groups.find((x) => x.group.id === g.id);
   const subs = (gv?.subs ?? [])
     .filter((s) => !s.hidden && s.total > 0)

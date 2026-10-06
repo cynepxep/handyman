@@ -8,3 +8,4 @@ export * from "./storefront-menu";
 export * from "./xml-entities";
 export * from "./card-specs";
 export * from "./brands";
+export * from "./menu-suggest";

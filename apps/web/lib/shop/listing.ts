@@ -6,10 +6,11 @@ import {
   FACET_DEFS, findGroup, findSub, findTask, pickQuickPick, slugOf, sortFacetValues, subCategoryMap, taskCategoryIds,
   type MenuConfig, type MenuGroup, type MenuSub, type Task,
 } from "@handyman/core/catalog";
-import { paths, type ListingState, type ShopLang } from "@handyman/core/site";
+import { brandSwitchOptions, paths, type ListingState, type ShopLang } from "@handyman/core/site";
 import { myToolGroups } from "@handyman/db/storefront-plus";
 import { getClient } from "@/lib/client-auth";
 import { getCategoryStats, toCards, type ShopCard } from "./catalog";
+import { getBrandState } from "./brand";
 
 export const PER_PAGE = 24;
 export const FACET_KEYS = FACET_DEFS.map((d) => d.key);
@@ -88,7 +89,12 @@ export type ListingData = {
   parts: ListingPart[];
   /** шаг 5.6: инструмент вошедшего покупателя (из его заказов и «Мій інструмент» в кабинете) — есть, значит показываем фильтр «До мого інструменту» */
   mine: { tools: string[] } | null;
+  /** переключатель «Milwaukee / Vitals / Усі» (null — основной бренд выключен или других брендов в списке нет) */
+  brands: ListingBrands | null;
 };
+
+/** Кнопки бренда; `fellBack` — у основного бренда здесь ничего нет, поэтому показаны все бренды. */
+export type ListingBrands = { options: Array<{ key: string; label: string | null; current: boolean }>; fellBack: boolean };
 
 /** Инструмент вошедшего покупателя для фильтра «До мого інструменту» (нет входа или инструмента — null). */
 async function myTools() {
@@ -135,13 +141,24 @@ export async function runListing(
       page,
       perPage: opts.countOnly ? 1 : PER_PAGE,
     };
-    const result = await searchProducts(params);
+    // основной бренд витрины: его товары и наш склад; у бренда здесь ничего нет и покупатель сам не выбирал — все бренды
+    const bs = await getBrandState(state.brand);
+    let result = await searchProducts({ ...params, scope: bs.scope });
+    // счётчики брендов без ограничения по бренду: при scope — отдельный подсчёт поиска, без scope — обычный фильтр «Бренд»
+    const brandCounts = result.brandCounts ?? Object.fromEntries(result.facets.brand.map((v) => [v.value, v.count]));
+    let fellBack = false;
+    if (bs.scope && !bs.explicit && result.total === 0 && Object.values(brandCounts).some((n) => n > 0)) {
+      result = await searchProducts(params);
+      fellBack = true;
+    }
+    const options = bs.focus ? brandSwitchOptions(bs.focus, fellBack ? { mode: "all" } : bs.choice, brandCounts) : [];
+    const brands = options.length ? { options, fellBack } : null;
     const mine = my ? { tools: my.tools } : null;
-    if (opts.countOnly) return { result, cards: [], quick: null, parts: [], mine };
+    if (opts.countOnly) return { result, cards: [], quick: null, parts: [], mine, brands };
     const cards = await toCards(result.items, lang);
     const q = pickQuickPick(r.quickPick, result.facets.attrs);
     const quick = q ? { key: q.key, label: q.label, values: sortFacetValues(q.key, q.values.map((v) => ({ value: v.value, count: v.count }))) } : null;
-    return { result, cards, quick, parts: await listParts(r, result.categoryCounts, lang), mine };
+    return { result, cards, quick, parts: await listParts(r, result.categoryCounts, lang), mine, brands };
   } catch (e) {
     if (e instanceof SearchUnavailableError) return null;
     throw e;

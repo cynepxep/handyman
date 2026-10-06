@@ -2,6 +2,7 @@
 // правится владельцем в админке «Сайт → Главная». Шапка с поиском и подсказками всегда первая и сюда не входит.
 
 import { parseHidden } from "./search-hints";
+import { DEFAULT_FOCUS_BRAND } from "./brand-focus";
 
 export const HOME_SETTING_KEY = "shop.home";
 
@@ -43,6 +44,8 @@ export type HomeSettings = {
   hints: { max: number; hidden: string[] };
   /** «Є в наявності»: артикулы товаров по порядку показа (выбирает владелец; распроданные на сайте скрываются сами) */
   instock: string[];
+  /** основной бренд витрины (см. brand-focus.ts): по умолчанию показываются его товары и наш склад; пусто — все бренды вместе */
+  focusBrand: string;
 };
 
 /** Сколько товаров можно положить в «Є в наявності». */
@@ -74,6 +77,7 @@ export const DEFAULT_HOME: HomeSettings = {
   banner: EMPTY_BANNER,
   hints: { max: 8, hidden: [] },
   instock: [],
+  focusBrand: DEFAULT_FOCUS_BRAND,
 };
 
 const hintsMax = (v: unknown) => {
@@ -126,7 +130,9 @@ export function parseHomeSettings(raw: unknown): HomeSettings {
   };
   const h = o.hints && typeof o.hints === "object" ? (o.hints as Record<string, unknown>) : {};
   const hints = { max: hintsMax(h.max), hidden: Array.isArray(h.hidden) ? parseHidden(h.hidden.filter((x): x is string => typeof x === "string")) : [] };
-  return { blocks, banner, hints, instock: parseInstockSkus(o.instock) };
+  // не сохраняли ни разу — бренд по умолчанию; сохранили пустым — выключено
+  const focusBrand = typeof o.focusBrand === "string" ? str(o.focusBrand, 80) : DEFAULT_HOME.focusBrand;
+  return { blocks, banner, hints, instock: parseInstockSkus(o.instock), focusBrand };
 }
 
 /** Баннер показывается, если включён и есть заголовок (на языке сайта или украинский). */
@@ -162,5 +168,7 @@ export function validateHomeForm(input: Record<string, string | undefined>): Hom
   const hidden = parseHidden([input["hints.hidden"] ?? "", ...Object.entries(input).filter(([k, v]) => k.startsWith("hide.") && v).map(([, v]) => v as string)].join("\n"));
   const hints = { max: hintsMax(input["hints.max"]), hidden };
   const instock = parseInstockSkus(input["instock.skus"] ?? "");
-  return { ok: true, value: { blocks: rows.map(({ id, on }) => ({ id, on })), banner, hints, instock } };
+  // поля нет в форме (старая страница) — бренд не трогаем: undefined → оставить сохранённый (решает вызывающий)
+  const focusBrand = input["focus.brand"] === undefined ? undefined : str(input["focus.brand"], 80);
+  return { ok: true, value: { blocks: rows.map(({ id, on }) => ({ id, on })), banner, hints, instock, focusBrand: focusBrand ?? DEFAULT_HOME.focusBrand } };
 }
