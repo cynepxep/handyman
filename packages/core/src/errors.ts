@@ -173,6 +173,17 @@ export function isNextControlFlow(e: unknown): boolean {
   return /^(NEXT_REDIRECT|NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK|DYNAMIC_SERVER_USAGE|BAILOUT_TO_CLIENT_SIDE_RENDERING|NEXT_PRERENDER_INTERRUPTED)/.test(digest);
 }
 
+/**
+ * «Failed to find Server Action»: форма прислала номер действия, которого в этой сборке нет — страница открыта до обновления сайта
+ * или запрос прислал сканер. Сайт отвечает сам (у Next.js это предупреждение), исправлять в коде нечего — в журнал и тревоги не пишем.
+ */
+export function isStaleServerAction(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const code = (e as { __NEXT_ERROR_CODE?: unknown }).__NEXT_ERROR_CODE;
+  const message = "message" in e ? String((e as { message: unknown }).message) : "";
+  return code === "E975" || /^Failed to find Server Action\b/.test(message);
+}
+
 // ---------- тревоги ----------
 
 export type ErrorGroupState = {

@@ -19,7 +19,8 @@ async function warnDangerousEnv() {
 
 /**
  * Шаг 8.2: ошибки страниц, действий (server actions), адресов API и proxy — в журнал ошибок (/admin/errors).
- * redirect()/notFound() — не ошибки (их Next.js тоже «бросает»), они не пишутся. Журнал сам маскирует телефоны и ключи.
+ * redirect()/notFound() — не ошибки (их Next.js тоже «бросает»), они не пишутся; «Failed to find Server Action» (форма со страницы,
+ * открытой до обновления сайта, или сканер) — тоже. Журнал сам маскирует телефоны и ключи.
  */
 export async function onRequestError(
   error: unknown,
@@ -28,8 +29,8 @@ export async function onRequestError(
 ) {
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
   try {
-    const { isNextControlFlow } = await import("@handyman/core/errors");
-    if (isNextControlFlow(error)) return;
+    const { isNextControlFlow, isStaleServerAction } = await import("@handyman/core/errors");
+    if (isNextControlFlow(error) || isStaleServerAction(error)) return;
     const { recordError } = await import("@handyman/db/errors");
     const digest = error && typeof error === "object" && "digest" in error ? String((error as { digest: unknown }).digest) : null;
     const source = context.routeType === "render" ? "page" : context.routeType;

@@ -70,6 +70,17 @@ echo "Версия: $(git log -1 --format='%h %s') (была $PREV_COMMIT)"
 step "Собираю новую версию сайта (несколько минут; сайт пока работает)"
 # прежний образ — на случай отката
 if docker image inspect "$IMAGE:latest" >/dev/null 2>&1; then docker tag "$IMAGE:latest" "$IMAGE:previous"; fi
+# Постоянный ключ действий сайта: с ним кнопки на страницах, открытых до обновления («В кошик», «Оформити»), работают и после него.
+# Создаётся один раз; потеря файла не страшна — следующая сборка сделает новый (сломаются только вкладки, открытые до неё).
+ACTIONS_KEY=.data/next-actions.key
+if [ ! -s "$ACTIONS_KEY" ]; then
+  mkdir -p .data
+  (umask 077; head -c 32 /dev/urandom | base64 > "$ACTIONS_KEY") || echo "Ключ действий не создан — сборка без него (как раньше)."
+fi
+if [ -s "$ACTIONS_KEY" ]; then
+  NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=$(tr -d '[:space:]' < "$ACTIONS_KEY")
+  export NEXT_SERVER_ACTIONS_ENCRYPTION_KEY
+fi
 "${COMPOSE[@]}" build web || fail "сборка не удалась — сайт продолжает работать в прежней версии."
 
 step "Перезапускаю сайт (база обновится сама при запуске)"
