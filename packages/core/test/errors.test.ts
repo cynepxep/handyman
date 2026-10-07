@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  alertReason, alertText, backupLevel, diskLevel, errorFingerprint, healthStatus, isNextControlFlow, telegramHealth, jobsLevel, makeErrorEntry, maskSensitive, maskUrl,
+  alertReason, alertText, backupLevel, diskLevel, errorFingerprint, healthStatus, isNextControlFlow, isStaleServerAction, telegramHealth, jobsLevel, makeErrorEntry, maskSensitive, maskUrl,
   normalizeMessage, parseLogArgs, stackTop, type ErrorGroupState,
 } from "../src/errors";
 
@@ -86,6 +86,15 @@ test("служебные redirect/notFound Next.js — не ошибки", () =>
   assert.ok(isNextControlFlow({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" }));
   assert.ok(!isNextControlFlow(new Error("boom")));
   assert.ok(!isNextControlFlow({ digest: "12345" }));
+});
+
+test("форма со страницы до обновления сайта («Failed to find Server Action») — не ошибка", () => {
+  const stale = new Error("Failed to find Server Action. This request might be from an older or newer deployment.\nRead more: https://nextjs.org/docs/messages/failed-to-find-server-action");
+  assert.ok(isStaleServerAction(stale));
+  assert.ok(isStaleServerAction(Object.assign(new Error("other text"), { __NEXT_ERROR_CODE: "E975" })));
+  assert.ok(!isStaleServerAction(new Error("Failed to load order")));
+  assert.ok(!isStaleServerAction("Failed to find Server Action"));
+  assert.ok(!isStaleServerAction(null));
 });
 
 test("тревоги: новая группа, всплеск ≥ 20 за 10 минут, не чаще раза в час; браузер — только всплеск", () => {

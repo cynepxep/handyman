@@ -27,6 +27,10 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 RUN pnpm --filter @handyman/db run generate
+# Постоянный ключ действий (server actions): от него зависят их номера. С одним ключом номера не меняются от сборки к сборке,
+# и кнопки на страницах, открытых до обновления сайта, продолжают работать. Ключ хранит и передаёт deploy/update.sh
+# (файл .data/next-actions.key на сервере); пусто — Next.js придумает новый ключ на эту сборку (как раньше).
+ARG NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=""
 # NEXT_STANDALONE=1 включает output: "standalone" (apps/web/next.config.ts)
 RUN NEXT_STANDALONE=1 pnpm --filter web build
 

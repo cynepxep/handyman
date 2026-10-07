@@ -52,6 +52,8 @@ services:
       dockerfile: apps/web/Dockerfile
       args:
         NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm}
+        # постоянный ключ действий сайта (кнопки старых вкладок работают после обновления); его передаёт deploy/update.sh
+        NEXT_SERVER_ACTIONS_ENCRYPTION_KEY: ${NEXT_SERVER_ACTIONS_ENCRYPTION_KEY:-}
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
