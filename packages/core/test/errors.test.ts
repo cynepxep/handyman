@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  alertReason, alertText, backupLevel, diskLevel, errorFingerprint, healthStatus, isNextControlFlow, isStaleServerAction, telegramHealth, jobsLevel, makeErrorEntry, maskSensitive, maskUrl,
+  alertReason, alertText, backupLevel, diskLevel, errorFingerprint, healthStatus, isClientDisconnect, isNextControlFlow, isStaleServerAction, telegramHealth, jobsLevel, makeErrorEntry, maskSensitive, maskUrl,
   normalizeMessage, parseLogArgs, stackTop, type ErrorGroupState,
 } from "../src/errors";
 
@@ -95,6 +95,14 @@ test("форма со страницы до обновления сайта («F
   assert.ok(!isStaleServerAction(new Error("Failed to load order")));
   assert.ok(!isStaleServerAction("Failed to find Server Action"));
   assert.ok(!isStaleServerAction(null));
+});
+
+test("покупатель ушёл, не дождавшись страницы («The destination stream closed early») — не ошибка", () => {
+  assert.ok(isClientDisconnect(new Error("The destination stream closed early.")));
+  assert.ok(!isClientDisconnect(new Error("The destination stream closed early. Also something else")));
+  assert.ok(!isClientDisconnect(new Error("Failed to load product")));
+  assert.ok(!isClientDisconnect("The destination stream closed early."));
+  assert.ok(!isClientDisconnect(null));
 });
 
 test("тревоги: новая группа, всплеск ≥ 20 за 10 минут, не чаще раза в час; браузер — только всплеск", () => {

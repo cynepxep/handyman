@@ -184,6 +184,16 @@ export function isStaleServerAction(e: unknown): boolean {
   return code === "E975" || /^Failed to find Server Action\b/.test(message);
 }
 
+/**
+ * «The destination stream closed early.»: браузер закрыл соединение, пока страница ещё догружалась (ушли со страницы, закрыли вкладку,
+ * пропала связь, бот оборвал запрос). React так прерывает отрисовку — у сайта ничего не сломалось, в журнал и тревоги не пишем.
+ */
+export function isClientDisconnect(e: unknown): boolean {
+  if (!e || typeof e !== "object") return false;
+  const message = "message" in e ? String((e as { message: unknown }).message) : "";
+  return /^The destination stream closed early\.?$/.test(message);
+}
+
 // ---------- тревоги ----------
 
 export type ErrorGroupState = {
